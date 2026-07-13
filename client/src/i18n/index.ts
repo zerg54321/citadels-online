@@ -1,13 +1,13 @@
 import { createI18n } from 'vue-i18n';
 
-import fr from './locale.fr.json';
+import zh from './locale.zh.json';
 import en from './locale.en.json';
 
-export const messages = { fr, en };
+export const messages = { zh, en };
 
 const i18n = createI18n({
-  locale: 'fr',
-  fallbackLocale: 'fr',
+  locale: 'zh',
+  fallbackLocale: 'en',
   messages,
   warnHtmlInMessage: 'off',
 });

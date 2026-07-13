@@ -1,0 +1,262 @@
+{
+    "flag": "🇨🇳",
+    "name": "中文",
+    "ui": {
+        "title": "富饶之城",
+        "subtitle1": "Bruno Faidutti 作品",
+        "subtitle2": "经典版",
+        "loading": "加载中...",
+        "cancel": "取消",
+        "confirm": "确认",
+        "close": "关闭",
+        "unknown_error": "未知错误。",
+        "about": {
+            "title": "关于",
+            "text": "原版桌游由 <a target='_blank' href='http://faidutti.com'>Bruno Faidutti</a> 创作。<br> 非官方在线版本由 <a target='_blank' href='https://brule.info'>Antoine Brûlé</a> 开发。<br> 本项目为 <a target='_blank' href='https://github.com/antbrl/citadels-online'>开源</a>。<br> Emoji CC-BY 4.0 <a target='_blank' href='https://twemoji.twitter.com/'>Twemoji</a>",
+            "picture_credits": "图片来源",
+            "by": "作者"
+        },
+        "homepage": {
+            "intro_text": "创建新房间",
+            "create_room": "创建房间"
+        },
+        "room": {
+            "username": "用户名",
+            "connect": "进入",
+            "not_open": "该房间已关闭，无法加入。",
+            "error_does_not_exist": "房间不存在。",
+            "error_join": "加入房间失败：{msg}"
+        },
+        "lobby": {
+            "title": "游戏设置",
+            "players": "玩家",
+            "you": "你",
+            "online": "在线",
+            "offline": "离线",
+            "manager": "房主",
+            "start_game": "开始游戏",
+            "wait_message": "等待房主开始游戏。",
+            "not_enough_players": "至少需要 2 名玩家才能开始。",
+            "too_many_players": "玩家过多（最多 7 人）。",
+            "settings": {
+                "complete_city_size": "建成城市所需城区数量"
+            }
+        },
+        "game": {
+            "characters": "角色",
+            "messages": {
+                "welcome": "欢迎来到《富饶之城》经典版！",
+                "choose_characters": {
+                    "initial": "持有王冠的玩家将开始选择角色。",
+                    "put_aside_face_up": "{0} 需要选择一张角色牌正面朝上弃置。",
+                    "put_aside_face_down": "{0} 需要选择一张角色牌背面朝上弃置。",
+                    "choose_character": "{0} 需要选择一个角色。",
+                    "done": "角色选择完毕。"
+                },
+                "actions": {
+                    "initial": "即将开始点名行动。",
+                    "choose_card": "选择要保留的牌。",
+                    "choose_action": "选择要执行的行动。",
+                    "assassin_kill": "选择要刺杀的角色。",
+                    "thief_rob": "选择要偷窃的角色。",
+                    "magician_exchange_hand": "选择要与之交换手牌的玩家。",
+                    "magician_discard_cards": "选择要弃掉的手牌。",
+                    "merchant_take_1_gold": "是否额外拿 1 枚金币？",
+                    "architect_draw_2_cards": "是否额外抽 2 张牌？",
+                    "warlord_destroy_district": "选择要摧毁的城区。",
+                    "graveyard_recover_district": "是否花费 1 金币从墓地回收被摧毁的城区？",
+                    "graveyard_recover_district_others": "拥有墓地的玩家需要决定是否回收被摧毁的城区。",
+                    "laboratory_discard_card": "选择要弃掉以获得 2 金币的牌。",
+                    "build_district": "选择要建造的城区。",
+                    "done": "回合结束！"
+                },
+                "end": "游戏结束。",
+                "errors": {
+                    "invalid_state": "错误：无效的游戏状态。"
+                }
+            },
+            "actions": {
+                "accept": "接受",
+                "decline": "拒绝",
+                "confirm": "确认",
+                "cancel": "取消",
+                "take_gold": "拿 2 金币",
+                "draw_cards": "抽 2 张牌",
+                "draw_cards_3": "抽 3 张牌",
+                "assassin_kill": "刺杀角色",
+                "thief_rob": "偷窃角色",
+                "magician_exchange_hand": "交换手牌",
+                "choose_hand": "选择这副手牌",
+                "magician_discard_cards": "换牌",
+                "take_gold_earnings": "收取收入（{0}）",
+                "warlord_destroy_district": "摧毁城区",
+                "graveyard_recover_district": "回收城区",
+                "smithy_draw_cards": "使用铁匠铺",
+                "laboratory_discard_card": "使用实验室",
+                "build_district": "建造城区",
+                "finish_turn": "结束回合"
+            }
+        },
+        "score": {
+            "title": "得分",
+            "base": "城区价值",
+            "extra_stash": "帝国宝库",
+            "extra_hand": "地图室",
+            "extra_district_types": "五种城区类型",
+            "extra_complete_city": "建成城市",
+            "total": "总计"
+        }
+    },
+    "characters": [
+        {
+            "name": "",
+            "description": "未知角色",
+            "turn": ""
+        },
+        {
+            "name": "刺客",
+            "description": "点名一个你想刺杀的角色。被刺杀的角色本回合跳过。",
+            "turn": "点名刺客。"
+        },
+        {
+            "name": "盗贼",
+            "description": "点名一个你想偷窃的角色。当该角色被揭示时，你获得其全部金币。",
+            "turn": "点名盗贼。"
+        },
+        {
+            "name": "魔术师",
+            "description": "可与另一名玩家交换全部手牌，或弃掉任意数量手牌并抽取相同数量的新牌。",
+            "turn": "点名魔术师。"
+        },
+        {
+            "name": "国王",
+            "description": "获得王冠。你的每个贵族城区使你获得 1 金币。",
+            "turn": "点名国王。"
+        },
+        {
+            "name": "主教",
+            "description": "军阀不能对你的城区使用能力。你的每个宗教城区使你获得 1 金币。",
+            "turn": "点名主教。"
+        },
+        {
+            "name": "商人",
+            "description": "额外获得 1 金币。你的每个商业城区使你获得 1 金币。",
+            "turn": "点名商人。"
+        },
+        {
+            "name": "建筑师",
+            "description": "额外获得 2 张牌。你最多可建造 3 个城区。",
+            "turn": "点名建筑师。"
+        },
+        {
+            "name": "军阀",
+            "description": "支付比造价少 1 的金币摧毁 1 个城区。你的每个军事城区使你获得 1 金币。",
+            "turn": "点名军阀。"
+        }
+    ],
+    "districts": {
+        "manor": {
+            "name": "庄园"
+        },
+        "castle": {
+            "name": "城堡"
+        },
+        "palace": {
+            "name": "宫殿"
+        },
+        "temple": {
+            "name": "神庙"
+        },
+        "church": {
+            "name": "教堂"
+        },
+        "monastery": {
+            "name": "修道院"
+        },
+        "cathedral": {
+            "name": "大教堂"
+        },
+        "tavern": {
+            "name": "酒馆"
+        },
+        "market": {
+            "name": "市场"
+        },
+        "trading_post": {
+            "name": "商栈"
+        },
+        "docks": {
+            "name": "码头"
+        },
+        "harbor": {
+            "name": "港口"
+        },
+        "town_hall": {
+            "name": "市政厅"
+        },
+        "watchtower": {
+            "name": "瞭望塔"
+        },
+        "prison": {
+            "name": "监狱"
+        },
+        "barracks": {
+            "name": "兵营"
+        },
+        "fortress": {
+            "name": "要塞"
+        },
+        "dragon_gate": {
+            "name": "龙门",
+            "description": "游戏结束时额外获得 2 分。"
+        },
+        "university": {
+            "name": "大学",
+            "description": "游戏结束时额外获得 2 分。"
+        },
+        "map_room": {
+            "name": "地图室",
+            "description": "游戏结束时，你手牌中的每张牌使你额外获得 1 分。"
+        },
+        "imperial_treasury": {
+            "name": "帝国宝库",
+            "description": "游戏结束时，你库中的每枚金币使你额外获得 1 分。"
+        },
+        "haunted_quarter": {
+            "name": "闹鬼城区",
+            "description": "游戏结束时，闹鬼城区可算作你指定的任意一种城区类型。"
+        },
+        "school_of_magic": {
+            "name": "魔法学校",
+            "description": "当按城区类型获得资源时，魔法学校可算作你指定的任意一种城区类型。"
+        },
+        "keep": {
+            "name": "要塞堡垒",
+            "description": "军阀不能对要塞堡垒使用能力。"
+        },
+        "great_wall": {
+            "name": "长城",
+            "description": "军阀摧毁你的其他城区时需额外支付 1 金币。"
+        },
+        "graveyard": {
+            "name": "墓地",
+            "description": "当军阀摧毁一个城区时，你可以支付 1 金币将其收回手牌。若你自己是军阀则不能使用此能力。"
+        },
+        "observatory": {
+            "name": "天文台",
+            "description": "若你选择抽牌获取资源，则抽 3 张而非 2 张。"
+        },
+        "library": {
+            "name": "图书馆",
+            "description": "若你选择抽牌获取资源，则保留抽到的全部牌。"
+        },
+        "laboratory": {
+            "name": "实验室",
+            "description": "每回合一次，弃掉 1 张手牌获得 2 金币。"
+        },
+        "smithy": {
+            "name": "铁匠铺",
+            "description": "每回合一次，支付 2 金币获得 3 张牌。"
+        }
+    }
+}

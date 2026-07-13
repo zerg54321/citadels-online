@@ -4,21 +4,26 @@
       "path": ".."
     },
     {
-      "path": "../common"
+      "path": "../common",
+      "name": "common"
     },
     {
-      "path": "../client"
+      "path": "../client",
+      "name": "client"
     },
     {
-      "path": "../server"
-    },
+      "path": "../server",
+      "name": "server"
+    }
   ],
   "settings": {
     "files.exclude": {
       "node_modules/": true,
       "client/": true,
       "server/": true,
-      "common/": true,
+      "common/": true
     },
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "typescript.tsdk": "node_modules/typescript/lib"
   }
 }

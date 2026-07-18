@@ -1,0 +1,11 @@
+node_modules/
+dist/
+data/
+.env
+*.sqlite
+*.sqlite-*
+.dev-pids/
+.dev-logs/
+.DS_Store
+.dev
+.vscode/

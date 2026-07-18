@@ -6,7 +6,7 @@
         "heroku-postbuild": "cd ./server && npm run build && cd ../client && npm run build"
     },
     "engines": {
-        "node": "^16.5.0",
-        "npm": "^7.19.1"
+        "node": "^20.0.0",
+        "npm": ">=10.0.0"
     }
 }

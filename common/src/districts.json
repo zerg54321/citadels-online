@@ -94,14 +94,6 @@
         "cost": 6,
         "extra_points": 2
     },
-    "map_room": {
-        "type": 5,
-        "cost": 5
-    },
-    "imperial_treasury": {
-        "type": 5,
-        "cost": 5
-    },
     "haunted_quarter": {
         "type": 5,
         "cost": 2

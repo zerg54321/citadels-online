@@ -41,6 +41,12 @@
         <h6>{{ $t('ui.subtitle2') }}</h6>
       </div>
       <div class="text-right">
+        <AuthPanel class="mb-1" />
+        <div class="mb-1">
+          <router-link class="text-reset text-decoration-none mr-2" :to="{ name: 'stats' }">
+            {{ $t('ui.stats.title') }}
+          </router-link>
+        </div>
         <LocaleSelector class="opacity-4" />
         <a
           class="text-reset text-decoration-none"
@@ -52,27 +58,22 @@
     </div>
   </div>
 </header>
-<header v-else>
+<header v-else class="header-in-game">
   <div class="container-fluid">
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3">
-      <div class="flex-grow-1 text-center pb-1">
-        <h2 class="mt-1"><a href="/" class="text-reset">{{ $t('ui.title') }}</a></h2>
+    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 py-0">
+      <div class="flex-grow-1 text-center">
+        <h2 class="mt-0 mb-0 h5"><a href="/" class="text-reset">{{ $t('ui.title') }}</a></h2>
+      </div>
+      <div>
+        <AuthPanel class="mb-0" />
       </div>
       <div>
         <LocaleSelector class="opacity-4" />
       </div>
-      <div>
-        <a
-          class="text-reset text-decoration-none"
-          href="#"
-          data-toggle="modal"
-          data-target="#aboutModal"
-        >{{ $t('ui.about.title') }}</a>
-      </div>
     </div>
   </div>
 </header>
-<div class="body flex-fill overflow-auto">
+<div class="body flex-fill" :class="{ 'body--game': inGame }">
   <router-view></router-view>
 </div>
 </div>
@@ -81,12 +82,15 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import LocaleSelector from './components/LocaleSelector.vue';
+import AuthPanel from './components/AuthPanel.vue';
 import credits from './data/credits.json';
+import { store } from './store';
 
 export default defineComponent({
   name: 'App',
   components: {
     LocaleSelector,
+    AuthPanel,
   },
   computed: {
     credits() {
@@ -95,6 +99,9 @@ export default defineComponent({
     inGame() {
       return this.$route.name === 'room';
     },
+  },
+  created() {
+    store.dispatch('initAuth');
   },
 });
 </script>
@@ -114,5 +121,19 @@ header {
 
 .body {
   background: wheat;
+  min-height: 0;
+}
+
+.body--game {
+  background: #1a1410;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-in-game {
+  padding: 0.25rem 0.5rem !important;
+  background: #1a1410 !important;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
 }
 </style>

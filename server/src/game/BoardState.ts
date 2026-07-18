@@ -31,9 +31,9 @@ export default class BoardState {
     this.gamePhase = GamePhase.INITIAL;
     this.districtsDeck = new DistrictsDeck();
 
-    // initialize each player hand with 2 gold and 4 district cards
+    // initialize each player hand with 2 gold and 1 district card
     players.forEach((playerId) => {
-      this.players.set(playerId, new PlayerBoardState(2, this.districtsDeck.drawCards(4)));
+      this.players.set(playerId, new PlayerBoardState(2, this.districtsDeck.drawCards(1)));
     });
   }
 
@@ -88,7 +88,11 @@ export default class BoardState {
     return PlayerPosition.SPECTATOR;
   }
 
-  getCurrentPlayerId() {
-    return this.playerOrder[this.getCurrentPlayerPosition()];
+  getCurrentPlayerId(): PlayerId {
+    const pos = this.getCurrentPlayerPosition();
+    if (pos < 0 || pos >= this.playerOrder.length) {
+      return '' as PlayerId;
+    }
+    return this.playerOrder[pos];
   }
 }

@@ -7,25 +7,18 @@
     <div v-else-if="error">
       {{ $t(errorMessage, { msg: errorReason }) }}
     </div>
-    <div v-else-if="askForUsername">
-      <form @submit.prevent="joinRoom" autocomplete="off">
-        <div class="form-group">
-          <label for="username">{{ $t('ui.room.username') }}</label>
-          <input
-            type="text"
-            class="form-control"
-            v-model="username"
-            id="username"
-            v-focus
-          >
-        </div>
-        <div class="form-group">
-          <input class="btn btn-primary" type="submit" :value="$t('ui.room.connect')">
-        </div>
-      </form>
+    <div v-else-if="needLogin" class="card p-4 text-center" style="min-width: 20rem;">
+      <p class="mb-3">{{ $t('ui.room.login_required') }}</p>
+      <p class="text-muted small mb-3">{{ $t('ui.room.login_required_hint') }}</p>
+      <button type="button" class="btn btn-primary mb-2" @click="openLogin">
+        {{ $t('ui.auth.login') }}
+      </button>
+      <button type="button" class="btn btn-outline-secondary" @click="joinAsSpectator">
+        {{ $t('ui.room.spectate') }}
+      </button>
     </div>
-    <div v-else>
-      {{ $t('ui.unknown_error') }}
+    <div v-else class="text-muted small">
+      {{ $t('ui.room.connecting') }}
     </div>
   </transition>
 </div>
@@ -33,41 +26,65 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { mapGetters, mapActions } from 'vuex';
+import { mapGetters } from 'vuex';
 import { RoomId } from 'citadels-common';
+import $ from 'jquery';
 import { store } from '../../store';
 import LoadingSpinner from './elements/LoadingSpinner.vue';
 
+/**
+ * Auto-enter room: logged-in users join as player (or spectator if full / mid-game).
+ * Role can be switched inside the lobby — no intermediate choose screen.
+ */
 export default defineComponent({
   components: { LoadingSpinner },
   name: 'RoomEntryScreen',
   data() {
     return {
-      username: '',
       loading: true,
       open: false,
       error: false,
-      errorMessage: undefined,
-      errorReason: undefined,
-      askForUsername: false,
+      errorMessage: undefined as string | undefined,
+      errorReason: undefined as string | undefined,
+      needLogin: false,
     };
   },
   computed: {
     ...mapGetters([
       'isConnected',
+      'isLoggedIn',
+      'authUser',
+      'authReady',
     ]),
     roomId() {
-      return this.$route.params.roomId;
+      return this.$route.params.roomId as string;
+    },
+    wantSpectate() {
+      const q = this.$route.query.spectate;
+      return q === '1' || q === 'true';
+    },
+  },
+  watch: {
+    authReady(val) {
+      if (val) this.getRoomInfo(this.roomId);
+    },
+    isLoggedIn(val) {
+      if (val && this.needLogin) {
+        this.getRoomInfo(this.roomId);
+      }
     },
   },
   methods: {
-    ...mapActions([
-      'connect',
-    ]),
+    openLogin() {
+      $('#authModal').modal('show');
+    },
     async getRoomInfo(roomId: RoomId) {
+      if (!this.authReady) return;
       try {
         this.loading = true;
         this.open = false;
+        this.error = false;
+        this.needLogin = false;
         const roomInfo = await store.dispatch('getRoomInfo', roomId);
         switch (roomInfo.status) {
           case 'open':
@@ -81,43 +98,96 @@ export default defineComponent({
             this.error = true;
             break;
           default:
-            console.log('get room info error:', roomInfo);
             this.errorMessage = 'ui.unknown_error';
             this.error = true;
         }
         if (this.error) {
           this.loading = false;
-        } else if (localStorage.getItem(this.roomId)) {
-          this.joinRoom();
-        } else if (this.open) {
-          this.askForUsername = true;
+          return;
+        }
+
+        // Deep link spectate
+        if (this.wantSpectate) {
+          await this.doJoin('', true);
+          return;
+        }
+
+        // reconnect saved seat
+        const savedPlayerId = localStorage.getItem(this.roomId);
+        if (savedPlayerId && this.isLoggedIn) {
+          await this.doJoin(savedPlayerId, false);
+          return;
+        }
+
+        // not logged in: can only spectate, or login first
+        if (!this.isLoggedIn) {
+          if (!this.open) {
+            // mid-game: allow anonymous spectate
+            await this.doJoin('', true);
+            return;
+          }
+          this.needLogin = true;
           this.loading = false;
+          return;
+        }
+
+        // logged in: auto join as player if open, else spectator
+        if (this.open) {
+          await this.doJoin(localStorage.getItem(this.roomId), false);
         } else {
-          this.errorMessage = 'ui.room.not_open';
-          this.error = true;
-          this.loading = false;
+          await this.doJoin('', true);
         }
       } catch (error) {
         console.log(error);
+        this.loading = false;
+        this.error = true;
+        this.errorMessage = 'ui.unknown_error';
       }
     },
-    joinRoom() {
+    async doJoin(playerId: string | null, asSpectator: boolean) {
       this.loading = true;
-      const playerId = localStorage.getItem(this.roomId);
-      store.dispatch('joinRoom', { roomId: this.roomId, playerId, username: this.username }).catch((reason: Error) => {
-        if (reason.message === 'game state is null') {
-          this.getRoomInfo(this.roomId);
-        } else {
-          this.loading = false;
-          this.error = true;
-          this.errorMessage = 'ui.room.error_join';
-          this.errorReason = reason.message;
+      this.error = false;
+      try {
+        await store.dispatch('joinRoom', {
+          roomId: this.roomId,
+          playerId: playerId || '',
+          username: this.authUser?.displayName || 'Spectator',
+          asSpectator,
+        });
+      } catch (reason: any) {
+        this.loading = false;
+        const msg = reason?.message || String(reason);
+        // room full as player → fall back to spectator
+        if (!asSpectator && (msg.includes('full') || msg.includes('cannot'))) {
+          try {
+            await store.dispatch('joinRoom', {
+              roomId: this.roomId,
+              playerId: '',
+              username: this.authUser?.displayName || 'Spectator',
+              asSpectator: true,
+            });
+            return;
+          } catch (e2) {
+            /* fall through */
+          }
         }
-      });
+        if (msg.includes('login required')) {
+          this.needLogin = true;
+          return;
+        }
+        this.error = true;
+        this.errorMessage = 'ui.room.error_join';
+        this.errorReason = msg;
+      }
+    },
+    joinAsSpectator() {
+      this.doJoin('', true);
     },
   },
   mounted() {
-    this.getRoomInfo(this.roomId);
+    if (this.authReady) {
+      this.getRoomInfo(this.roomId);
+    }
   },
 });
 </script>

@@ -1,3 +1,4 @@
+import path from 'path';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
@@ -7,13 +8,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/s/': 'http://localhost:8081/s/',
+      '/api': 'http://localhost:8081',
     },
   },
   define: { 'process.env': {} },
   resolve: {
     alias: {
       vue: 'vue/dist/vue.esm-bundler.js',
-      'citadels-common': 'citadels-common/src/index.ts',
+      // Point to common source so Vite does not hit package exports
+      'citadels-common': path.resolve(__dirname, '../common/src/index.ts'),
     },
   },
 });

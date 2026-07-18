@@ -142,7 +142,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-  $cards: laboratory smithy library observatory graveyard imperial_treasury haunted_quarter map_room
+  $cards: laboratory smithy library observatory graveyard haunted_quarter
     school_of_magic docks barracks watchtower monastery fortress cathedral manor tavern market
     trading_post prison temple castle harbor church dragon_gate great_wall palace university keep
     town_hall;

@@ -83,7 +83,9 @@ function getActions(
   switch (turnState) {
     case ClientTurnState.TAKE_RESOURCES:
     case ClientTurnState.CHOOSE_ACTION:
-      if (extraData.canTakeEarnings && extraData.earningsValue > 0) {
+      // earnings only before regular resource action
+      if (turnState === ClientTurnState.TAKE_RESOURCES
+          && extraData.canTakeEarnings && extraData.earningsValue > 0) {
         actions.push({ title: 'take_gold_earnings', args: [extraData.earningsValue.toString()], move: { type: MoveType.TAKE_GOLD_EARNINGS } });
       }
       if (extraData.canDoSpecialAction) {
@@ -120,6 +122,10 @@ function getActions(
             break;
         }
       }
+      // build allowed before resources (then still earnings) or after
+      if (extraData.districtsToBuild > 0) {
+        actions.push({ title: 'build_district', move: { type: MoveType.BUILD_DISTRICT } });
+      }
       if (turnState === ClientTurnState.TAKE_RESOURCES) {
         actions.push({ title: 'take_gold', move: { type: MoveType.TAKE_GOLD } });
         actions.push({
@@ -127,9 +133,6 @@ function getActions(
           move: { type: MoveType.DRAW_CARDS },
         });
       } else {
-        if (extraData.districtsToBuild > 0) {
-          actions.push({ title: 'build_district', move: { type: MoveType.BUILD_DISTRICT } });
-        }
         actions.push({ title: 'finish_turn', move: { type: MoveType.FINISH_TURN } });
       }
       break;
@@ -143,14 +146,6 @@ function getActions(
     case ClientTurnState.MAGICIAN_DISCARD_CARDS:
       actions.push({ title: 'confirm', move: { type: MoveType.MAGICIAN_DISCARD_CARDS, data: store.getters.selectedCards } });
       actions.push({ title: 'cancel', move: { type: MoveType.DECLINE } });
-      break;
-    case ClientTurnState.MERCHANT_TAKE_1_GOLD:
-      actions.push({ title: 'accept', move: { type: MoveType.MERCHANT_TAKE_1_GOLD } });
-      actions.push({ title: 'decline', move: { type: MoveType.DECLINE } });
-      break;
-    case ClientTurnState.ARCHITECT_DRAW_2_CARDS:
-      actions.push({ title: 'accept', move: { type: MoveType.ARCHITECT_DRAW_2_CARDS } });
-      actions.push({ title: 'decline', move: { type: MoveType.DECLINE } });
       break;
     case ClientTurnState.GRAVEYARD_RECOVER_DISTRICT:
       actions.push({ title: 'graveyard_recover_district', move: { type: MoveType.GRAVEYARD_RECOVER_DISTRICT } });

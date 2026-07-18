@@ -10,7 +10,12 @@ export default class PlayerBoardState {
   city: DistrictId[];
   tmpHand: DistrictId[];
   score: PlayerScore;
+  /** true if first player in the match to complete city */
   firstToCompleteCity: boolean;
+  /** true if completed city in the same turn phase as the first completer (not first) */
+  sameTurnCompleteCity: boolean;
+  /** true if haunted_quarter was built during the final (settlement) round */
+  hauntedQuarterBuiltInFinalRound: boolean;
 
   constructor(initialStash: number, initialHand: DistrictId[], initialCity: DistrictId[] = []) {
     this.stash = initialStash;
@@ -19,6 +24,8 @@ export default class PlayerBoardState {
     this.tmpHand = [];
     this.score = {};
     this.firstToCompleteCity = false;
+    this.sameTurnCompleteCity = false;
+    this.hauntedQuarterBuiltInFinalRound = false;
   }
 
   hasCardInCity(card: DistrictId): boolean {
@@ -39,6 +46,11 @@ export default class PlayerBoardState {
 
   buildDistrict(card: DistrictId): boolean {
     if (!this.hand.includes(card)) {
+      return false;
+    }
+
+    // real rule: city may not contain two districts of the same name
+    if (this.hasCardInCity(card)) {
       return false;
     }
 
@@ -99,27 +111,26 @@ export default class PlayerBoardState {
       const card = ALL_DISTRICTS.get(currentValue)?.card;
       return previousValue + (card?.cost ?? 0) + (card?.extraPoints ?? 0);
     }, 0);
-    if (this.city.length >= completeCitySize) {
+    // extraPointsCompleteCity is set by GameState.computeScores before this runs
+    if (this.city.length >= completeCitySize && this.score.extraPointsCompleteCity === undefined) {
       this.score.extraPointsCompleteCity = this.firstToCompleteCity ? 4 : 2;
     }
-    if (this.city.includes('imperial_treasury')) {
-      this.score.extraPointsStash = this.stash;
-    }
-    if (this.city.includes('map_room')) {
-      this.score.extraPointsHand = this.hand.length;
-    }
 
-    const districtTypes = new Set(this.city.filter((card) => card !== 'haunted_quarter').map((card) => ALL_DISTRICTS.get(card)?.card.type).filter((type) => type !== undefined)).size;
-    const hasHauntedQuarter = this.city.includes('haunted_quarter');
+    // haunted_quarter counts as a missing color only if not built in the final round
+    const wildHaunted = this.city.includes('haunted_quarter') && !this.hauntedQuarterBuiltInFinalRound;
+    const districtTypes = new Set(
+      this.city
+        .filter((card) => card !== 'haunted_quarter')
+        .map((card) => ALL_DISTRICTS.get(card)?.card.type)
+        .filter((type) => type !== undefined),
+    ).size;
 
-    if (districtTypes + (hasHauntedQuarter ? 1 : 0) >= 5) {
+    if (districtTypes + (wildHaunted ? 1 : 0) >= 5) {
       this.score.extraPointsDistrictTypes = 3;
     }
 
     this.score.total = this.score.base
       + (this.score.extraPointsCompleteCity ?? 0)
-      + (this.score.extraPointsStash ?? 0)
-      + (this.score.extraPointsHand ?? 0)
       + (this.score.extraPointsDistrictTypes ?? 0);
   }
 }

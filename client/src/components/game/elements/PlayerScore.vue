@@ -1,21 +1,23 @@
 <template>
-<div class="card bg-dark">
-  <ul class="list-group list-group-flush text-dark shadow-sm overflow-auto">
-    <li
-      v-for="line, i in lines" :key="i"
-      class="list-group-item list-group-item-dark p-2
+<div class="card bg-dark border-0">
+  <div class="list-group list-group-flush text-dark">
+    <div
+      class="list-group-item list-group-item-warning p-1 px-2
         d-flex justify-content-between align-items-center"
     >
-      <span class="badge text-wrap">{{ $t(`ui.score.${line.title}`) }}</span>
-      <span class="badge badge-secondary shadow-sm">{{ line.value ?? 0 }}</span>
-    </li>
-  </ul>
-  <ul class="list-group list-group-flush text-dark shadow-sm">
-    <li class="list-group-item list-group-item-warning p-2 d-flex justify-content-between">
-      <span class="badge">{{ $t('ui.score.total') }}</span>
-      <span class="badge badge-warning p-1 shadow-sm">{{ score.total ?? 0 }}</span>
-    </li>
-  </ul>
+      <span class="small font-weight-bold">{{ $t('ui.score.total') }}</span>
+      <span class="badge badge-warning">{{ score?.total ?? 0 }}</span>
+    </div>
+    <div
+      v-for="line, i in lines"
+      :key="i"
+      class="list-group-item list-group-item-dark p-1 px-2
+        d-flex justify-content-between align-items-center small"
+    >
+      <span class="text-muted">{{ $t(`ui.score.${line.title}`) }}</span>
+      <span class="badge badge-secondary">{{ line.value ?? 0 }}</span>
+    </div>
+  </div>
 </div>
 </template>
 
@@ -27,22 +29,19 @@ export default defineComponent({
   props: {
     score: {
       required: true,
+      default: () => ({}),
     },
   },
   computed: {
     lines() {
-      const lines = [{ title: 'base', value: this.score.base }];
-      if (this.score.extraPointsStash) {
-        lines.push({ title: 'extra_stash', value: this.score.extraPointsStash });
+      const s = this.score || {};
+      const lines: { title: string; value: number }[] = [];
+      if (s.base != null) lines.push({ title: 'base', value: s.base });
+      if (s.extraPointsDistrictTypes) {
+        lines.push({ title: 'extra_district_types', value: s.extraPointsDistrictTypes });
       }
-      if (this.score.extraPointsHand) {
-        lines.push({ title: 'extra_hand', value: this.score.extraPointsHand });
-      }
-      if (this.score.extraPointsDistrictTypes) {
-        lines.push({ title: 'extra_district_types', value: this.score.extraPointsDistrictTypes });
-      }
-      if (this.score.extraPointsCompleteCity) {
-        lines.push({ title: 'extra_complete_city', value: this.score.extraPointsCompleteCity });
+      if (s.extraPointsCompleteCity) {
+        lines.push({ title: 'extra_complete_city', value: s.extraPointsCompleteCity });
       }
       return lines;
     },

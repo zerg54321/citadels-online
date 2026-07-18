@@ -26,4 +26,8 @@ export default class InMemoryGameStore extends GameStore {
   findAllRooms() {
     return [...this.rooms.values()];
   }
+
+  removeRoom(roomId: RoomId) {
+    this.rooms.delete(roomId);
+  }
 }

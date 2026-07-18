@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>富饶之城 · 大轮回放</title>
+  <style>
+    :root {
+      --bg: #e8edf5;
+      --panel: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --team-a: #f97316;
+      --team-b: #3b82f6;
+      --kill: #dc2626;
+      --ok: #059669;
+      --border: #dbe3ef;
+      --c-noble: #eab308;
+      --c-rel: #3b82f6;
+      --c-trade: #22c55e;
+      --c-mil: #ef4444;
+      --c-uniq: #a855f7;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text);
+      overflow: hidden;
+    }
+    .wrap {
+      height: 100%; max-width: 1500px; margin: 0 auto;
+      padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .top {
+      flex: 0 0 auto;
+      background: var(--panel); border-radius: 12px; padding: 12px 16px;
+      box-shadow: 0 2px 12px rgba(15,23,42,.06);
+    }
+    .top h1 { margin: 0 0 4px; font-size: 20px; color: var(--text); }
+    .top .meta { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    button, .file-btn {
+      border: none; border-radius: 999px; padding: 7px 12px; font-weight: 600; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), #3b82f6); color: #fff; font-size: 13px;
+    }
+    button.sec { background: #e2e8f0; color: #1e293b; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .file-btn { display: inline-flex; align-items: center; background: #e2e8f0; color: #1e293b; }
+    .file-btn input { display: none; }
+    .jump { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; }
+    .jump input {
+      width: 56px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; color: var(--text); background: #fff;
+    }
+    .grid {
+      flex: 1 1 auto; min-height: 0;
+      display: grid; grid-template-columns: 1.25fr 0.85fr; gap: 10px;
+    }
+    @media (max-width: 1000px) {
+      body { overflow: auto; }
+      .wrap { height: auto; min-height: 100%; }
+      .grid { grid-template-columns: 1fr; min-height: 70vh; }
+    }
+    .panel {
+      background: var(--panel); border-radius: 12px; padding: 12px;
+      box-shadow: 0 2px 12px rgba(15,23,42,.06);
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
+    .panel h2 {
+      flex: 0 0 auto; margin: 0 0 8px; font-size: 15px; color: var(--text);
+    }
+    .board {
+      flex: 1 1 auto; min-height: 0;
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 8px; overflow: hidden;
+    }
+    .pcard {
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+      background: #f8fafc; border-left: 5px solid #94a3b8;
+      font-size: 12px; color: var(--text); overflow: hidden;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .pcard.team-a { border-left-color: var(--team-a); }
+    .pcard.team-b { border-left-color: var(--team-b); }
+    .pcard.active { background: #eff6ff; box-shadow: inset 0 0 0 2px rgba(37,99,235,.22); }
+    .pcard .name { font-weight: 700; font-size: 13px; margin-bottom: 2px; color: var(--text); }
+    .pcard .row { color: #475569; margin: 1px 0; line-height: 1.35; }
+    .pcard .city {
+      margin-top: 4px; color: #334155; line-height: 1.35;
+      overflow: auto; flex: 1 1 auto; min-height: 0; font-size: 11px;
+    }
+    .pcard .delta-pos { color: var(--ok); font-weight: 700; }
+    .pcard .delta-neg { color: var(--kill); font-weight: 700; }
+    .badge {
+      display: inline-block; padding: 1px 6px; border-radius: 999px; font-size: 10px;
+      background: #e0e7ff; color: #3730a3; margin-right: 3px;
+    }
+    .badge.crown { background: #fef3c7; color: #b45309; }
+    .badge.seat { background: #f1f5f9; color: #334155; }
+    .chip {
+      display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 11px;
+      font-weight: 700; margin-right: 4px; color: #fff;
+    }
+    .chip.t1 { background: var(--c-noble); color: #422006; }
+    .chip.t2 { background: var(--c-rel); }
+    .chip.t3 { background: var(--c-trade); color: #052e16; }
+    .chip.t4 { background: var(--c-mil); }
+    .chip.t5 { background: var(--c-uniq); }
+    .timeline {
+      flex: 1 1 auto; min-height: 0; overflow: auto;
+      display: flex; flex-direction: column; gap: 6px;
+      padding-right: 2px;
+    }
+    .block-title {
+      font-weight: 700; font-size: 12px; color: #334155;
+      margin: 6px 0 2px; padding: 4px 6px; background: #f1f5f9; border-radius: 6px;
+    }
+    .ev {
+      text-align: left; width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: #ffffff; color: var(--text); padding: 8px 10px; cursor: pointer;
+      font: inherit;
+    }
+    .ev:hover { border-color: #93c5fd; background: #f8fbff; }
+    .ev.sel {
+      border-color: var(--accent); background: #eff6ff;
+      box-shadow: 0 0 0 1px rgba(37,99,235,.18);
+    }
+    .ev .t { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 2px; }
+    .ev .d { font-size: 12px; color: #475569; line-height: 1.4; }
+    .ev .tg { font-size: 12px; color: #b45309; margin-top: 2px; font-weight: 600; }
+    .empty {
+      color: var(--muted); padding: 14px; background: #f8fafc; border-radius: 10px; font-size: 13px;
+    }
+    .status-bar {
+      flex: 0 0 auto; margin-top: 6px; font-size: 11px; color: var(--muted);
+      padding-top: 6px; border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>富饶之城 · 大轮回放观察器</h1>
+      <div class="meta" id="summary">请加载回放 JSON（v2 大轮格式）</div>
+      <div class="controls">
+        <button type="button" onclick="loadReplay()">加载示例回放</button>
+        <label class="file-btn">打开本地 JSON<input type="file" accept="application/json,.json" onchange="loadLocal(event)" /></label>
+        <button type="button" class="sec" id="btnPrev" onclick="prevRound()" disabled>上一轮</button>
+        <button type="button" class="sec" id="btnNext" onclick="nextRound()" disabled>下一轮</button>
+        <span class="jump">
+          跳转到第
+          <input id="jumpInput" type="number" min="1" value="1" />
+          大轮
+          <button type="button" class="sec" onclick="jumpRound()">确认</button>
+        </span>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <h2 id="boardTitle">棋盘态势（座次固定）</h2>
+        <div class="board" id="board"></div>
+        <div class="status-bar" id="boardStatus"></div>
+      </div>
+      <div class="panel">
+        <h2 id="timeTitle">本轮行动摘要</h2>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let replay = null;
+    let roundIndex = 0;
+    /** -1 start; 0.. cards length-1 */
+    let cardCursor = -1;
+    /** fixed seat order from first frame of first round */
+    let seatOrder = [];
+
+    const CHAR = ['刺客', '盗贼', '魔术师', '国王', '主教', '商人', '建筑师', '军阀'];
+    const COLOR_CN = { 1: '黄', 2: '蓝', 3: '绿', 4: '红', 5: '紫' };
+    const COLOR_CLS = { 1: 't1', 2: 't2', 3: 't3', 4: 't4', 5: 't5' };
+
+    // type from districts.json
+    const DISTRICT = {
+      manor: { type: 1, cost: 3, name: '庄园' },
+      castle: { type: 1, cost: 4, name: '城堡' },
+      palace: { type: 1, cost: 5, name: '皇宫' },
+      temple: { type: 2, cost: 1, name: '神殿' },
+      church: { type: 2, cost: 2, name: '教堂' },
+      monastery: { type: 2, cost: 3, name: '修道院' },
+      cathedral: { type: 2, cost: 5, name: '大教堂' },
+      tavern: { type: 3, cost: 1, name: '酒馆' },
+      market: { type: 3, cost: 2, name: '市场' },
+      trading_post: { type: 3, cost: 2, name: '商栈' },
+      docks: { type: 3, cost: 3, name: '码头' },
+      harbor: { type: 3, cost: 4, name: '港口' },
+      town_hall: { type: 3, cost: 5, name: '市政厅' },
+      watchtower: { type: 4, cost: 1, name: '瞭望塔' },
+      prison: { type: 4, cost: 2, name: '监狱' },
+      barracks: { type: 4, cost: 3, name: '兵营' },
+      fortress: { type: 4, cost: 5, name: '要塞' },
+      dragon_gate: { type: 5, cost: 6, name: '龙门', extra: 2 },
+      university: { type: 5, cost: 6, name: '大学', extra: 2 },
+      haunted_quarter: { type: 5, cost: 2, name: '闹鬼城区' },
+      school_of_magic: { type: 5, cost: 6, name: '魔法学校' },
+      keep: { type: 5, cost: 3, name: '堡垒' },
+      great_wall: { type: 5, cost: 6, name: '长城' },
+      graveyard: { type: 5, cost: 5, name: '墓地' },
+      observatory: { type: 5, cost: 4, name: '天文台' },
+      library: { type: 5, cost: 6, name: '图书馆' },
+      laboratory: { type: 5, cost: 5, name: '实验室' },
+      smithy: { type: 5, cost: 5, name: '铁匠铺' },
+    };
+
+    function dName(id) { return DISTRICT[id]?.name || id; }
+    function dType(id) { return DISTRICT[id]?.type || 0; }
+    function dCost(id) { return DISTRICT[id]?.cost || 0; }
+    function dExtra(id) { return DISTRICT[id]?.extra || 0; }
+    function charName(id) {
+      if (id === undefined || id === null || id < 0) return '—';
+      return CHAR[id] || String(id);
+    }
+
+    function colorCounts(city) {
+      const c = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      (city || []).forEach((id) => {
+        const t = dType(id);
+        if (c[t] !== undefined) c[t] += 1;
+      });
+      return c;
+    }
+
+    function colorChipsHtml(city) {
+      const c = colorCounts(city);
+      return [1, 2, 3, 4, 5]
+        .filter((t) => c[t] > 0)
+        .map((t) => `<span class="chip ${COLOR_CLS[t]}">${COLOR_CN[t]}${c[t]}</span>`)
+        .join('') || '<span class="row">无建筑</span>';
+    }
+
+    function baseScore(city) {
+      return (city || []).reduce((s, id) => s + dCost(id) + dExtra(id), 0);
+    }
+
+    function cityCnList(city) {
+      return (city || []).map((id) => {
+        const t = dType(id);
+        return `${COLOR_CN[t] || '?'}${dName(id)}`;
+      }).join('、') || '（无）';
+    }
+
+    function applyReplay(data) {
+      if (!data || !Array.isArray(data.rounds) || !data.rounds.length) {
+        alert('无效回放：缺少 rounds');
+        return;
+      }
+      replay = data;
+      roundIndex = 0;
+      cardCursor = -1;
+      const first = data.rounds[0].frameStart || data.rounds[0].frameEnd;
+      seatOrder = (first?.players || []).map((p) => p.id);
+      if (!seatOrder.length) seatOrder = (data.players || []).map((_, i) => `p${i + 1}`);
+      document.getElementById('jumpInput').max = String(data.rounds.length || 1);
+      renderAll();
+    }
+
+    function loadLocal(ev) {
+      const f = ev.target?.files?.[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try { applyReplay(JSON.parse(String(r.result || '{}'))); }
+        catch (e) { alert('JSON 解析失败: ' + e); }
+      };
+      r.readAsText(f);
+    }
+
+    async function loadReplay() {
+      if (location.protocol === 'file:') {
+        document.getElementById('board').innerHTML =
+          '<div class="empty">请用 http://127.0.0.1:3000/replay-viewer.html 打开，或使用「打开本地 JSON」。</div>';
+        return;
+      }
+      const origin = location.origin;
+      const urls = [
+        `${origin}/replays/example-replay.json`,
+        '/replays/example-replay.json',
+        './replays/example-replay.json',
+      ];
+      const errors = [];
+      for (const u of urls) {
+        try {
+          const res = await fetch(u, { cache: 'no-store' });
+          if (!res.ok) { errors.push(`${u} → HTTP ${res.status}`); continue; }
+          const data = JSON.parse(await res.text());
+          if (!data?.rounds) { errors.push(`${u} → 无 rounds`); continue; }
+          applyReplay(data);
+          return;
+        } catch (e) {
+          errors.push(`${u} → ${e}`);
+        }
+      }
+      document.getElementById('board').innerHTML =
+        '<div class="empty">未找到回放。<br/><pre style="white-space:pre-wrap;font-size:11px;color:#334155">'
+        + errors.map((x) => String(x).replace(/</g, '&lt;')).join('\n') + '</pre></div>';
+    }
+
+    function currentRound() {
+      return replay?.rounds?.[roundIndex] || null;
+    }
+
+    /** integrated character cards for right panel */
+    function buildCards(round) {
+      if (!round) return [];
+      const events = round.events || [];
+      const actionEvents = events.filter((e) => e.phase === 'actions');
+      const byChar = new Map();
+
+      actionEvents.forEach((ev) => {
+        const cid = ev.characterId;
+        if (cid === undefined || cid === null || cid < 0) return;
+        if (!byChar.has(cid)) {
+          byChar.set(cid, {
+            characterId: cid,
+            characterName: ev.characterName || charName(cid),
+            playerId: ev.playerId,
+            playerName: ev.playerName || '?',
+            events: [],
+            lastFrame: null,
+            firstFrameBefore: null,
+          });
+        }
+        const g = byChar.get(cid);
+        g.events.push(ev);
+        g.lastFrame = ev.frameAfter;
+        if (ev.playerId) {
+          g.playerId = ev.playerId;
+          g.playerName = ev.playerName || g.playerName;
+        }
+      });
+
+      // killed roles with no actions
+      (round.characterBlocks || []).forEach((b) => {
+        if (b.killed && !byChar.has(b.characterId)) {
+          byChar.set(b.characterId, {
+            characterId: b.characterId,
+            characterName: b.characterName || charName(b.characterId),
+            playerId: b.playerId,
+            playerName: b.playerName || '（被刺）',
+            events: [],
+            lastFrame: round.frameEnd,
+            killed: true,
+          });
+        }
+      });
+
+      const cards = [...byChar.values()].sort((a, b) => a.characterId - b.characterId);
+
+      // compute start frame for each card = previous card end or round start
+      let prevFrame = round.frameStart;
+      cards.forEach((card) => {
+        card.frameBefore = prevFrame;
+        if (card.events.length) {
+          card.frameAfter = card.events[card.events.length - 1].frameAfter;
+          prevFrame = card.frameAfter;
+        } else {
+          card.frameAfter = prevFrame;
+        }
+        card.summary = summarizeCard(card);
+      });
+      return cards;
+    }
+
+    function playerInFrame(frame, playerId) {
+      return (frame?.players || []).find((p) => p.id === playerId) || null;
+    }
+
+    function summarizeCard(card) {
+      const before = playerInFrame(card.frameBefore, card.playerId);
+      const after = playerInFrame(card.frameAfter, card.playerId);
+      const gold = (after?.stash ?? 0) - (before?.stash ?? 0);
+      const hand = (after?.handCount ?? 0) - (before?.handCount ?? 0);
+      const built = [];
+      const destroyed = [];
+      // city diff for actor
+      const bc = new Map();
+      (before?.city || []).forEach((c) => bc.set(c, (bc.get(c) || 0) + 1));
+      const ac = new Map();
+      (after?.city || []).forEach((c) => ac.set(c, (ac.get(c) || 0) + 1));
+      const keys = new Set([...bc.keys(), ...ac.keys()]);
+      keys.forEach((k) => {
+        const d = (ac.get(k) || 0) - (bc.get(k) || 0);
+        if (d > 0) for (let i = 0; i < d; i += 1) built.push(k);
+        if (d < 0) for (let i = 0; i < -d; i += 1) destroyed.push(k);
+      });
+
+      const targets = [];
+      card.events.forEach((ev) => {
+        (ev.targets || []).forEach((t) => {
+          if (t.characterName) targets.push({ kind: '角色', name: t.characterName, raw: t });
+          if (t.playerName && ev.type !== 'build_district') {
+            targets.push({
+              kind: '玩家',
+              name: t.playerName + (t.card ? `（${dName(t.card)}）` : ''),
+              raw: t,
+            });
+          }
+        });
+        if (ev.type === 'assassin_kill' || ev.type === 'thief_rob'
+            || ev.type === 'magician_exchange_hand' || ev.type === 'warlord_destroy_district') {
+          // already from targets
+        }
+      });
+
+      // special skill lines
+      const skills = [];
+      card.events.forEach((ev) => {
+        if (ev.type === 'assassin_kill') {
+          const n = ev.targets?.[0]?.characterName || dName(String(ev.data));
+          skills.push(`刺杀 → ${n}`);
+        } else if (ev.type === 'thief_rob') {
+          const n = ev.targets?.[0]?.characterName || String(ev.data);
+          skills.push(`偷窃标记 → ${n}`);
+        } else if (ev.type === 'magician_exchange_hand') {
+          const n = ev.targets?.[0]?.playerName || '他人';
+          skills.push(`与 ${n} 交换手牌`);
+        } else if (ev.type === 'magician_discard_cards') {
+          skills.push('弃牌重摸');
+        } else if (ev.type === 'warlord_destroy_district') {
+          const t = ev.targets?.[0];
+          skills.push(`拆除 ${t?.playerName || ''} 的 ${t?.card ? dName(t.card) : '建筑'}`);
+        }
+      });
+
+      const tookGold = card.events.some((e) => e.type === 'take_gold');
+      const tookCards = card.events.some((e) => e.type === 'draw_cards');
+      const earnings = card.events.some((e) => e.type === 'take_gold_earnings');
+
+      const resParts = [];
+      if (tookGold) resParts.push('拿 2 金');
+      if (tookCards) resParts.push('抽牌');
+      if (earnings) resParts.push('收租');
+      if (gold !== 0) resParts.push(`金币 ${gold > 0 ? '+' : ''}${gold}`);
+      if (hand !== 0) resParts.push(`手牌 ${hand > 0 ? '+' : ''}${hand}`);
+
+      return {
+        gold, hand, built, destroyed, skills, resParts,
+        roleLine: `${card.playerName} · ${card.characterName}`,
+      };
+    }
+
+    function currentCards() {
+      return buildCards(currentRound());
+    }
+
+    function currentFrame() {
+      const round = currentRound();
+      if (!round) return null;
+      if (cardCursor < 0) return round.frameStart;
+      const cards = currentCards();
+      const card = cards[cardCursor];
+      return card?.frameAfter || round.frameEnd;
+    }
+
+    function currentCard() {
+      if (cardCursor < 0) return null;
+      return currentCards()[cardCursor] || null;
+    }
+
+    function orderedPlayers(frame) {
+      const map = new Map((frame?.players || []).map((p) => [p.id, p]));
+      const list = seatOrder.map((id) => map.get(id)).filter(Boolean);
+      // append any missing
+      (frame?.players || []).forEach((p) => {
+        if (!seatOrder.includes(p.id)) list.push(p);
+      });
+      return list;
+    }
+
+    function renderAll() {
+      if (!replay) return;
+      const n = replay.rounds.length;
+      document.getElementById('summary').innerHTML = [
+        `生成：${replay.createdAt || '-'}`,
+        `大轮：${n}`,
+        replay.summary || '',
+        replay.finished ? '已终局' : '未终局',
+        `最大城建 ${replay.maxCity ?? '-'}`,
+        replay.teamScores ? `队分 A:${replay.teamScores.A} B:${replay.teamScores.B}` : '',
+      ].filter(Boolean).map((s) => `<span>${s}</span>`).join('');
+
+      document.getElementById('btnPrev').disabled = roundIndex <= 0;
+      document.getElementById('btnNext').disabled = roundIndex >= n - 1;
+      document.getElementById('jumpInput').value = String(roundIndex + 1);
+
+      const round = currentRound();
+      document.getElementById('boardTitle').textContent =
+        round ? `${round.title} · 棋盘（座次固定）` : '棋盘态势';
+      document.getElementById('timeTitle').textContent =
+        round ? `${round.title} · 角色行动` : '本轮行动摘要';
+
+      renderBoard();
+      renderTimeline();
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      const frame = currentFrame();
+      const card = currentCard();
+      const round = currentRound();
+      if (!frame) {
+        board.innerHTML = '<div class="empty">无数据</div>';
+        return;
+      }
+
+      const actorId = card?.playerId || null;
+      const players = orderedPlayers(frame);
+      board.innerHTML = players.map((p, seat) => {
+        let dGold = '', dHand = '', dCity = '';
+        if (card && card.playerId === p.id && card.summary) {
+          const s = card.summary;
+          if (s.gold) dGold = `<span class="${s.gold > 0 ? 'delta-pos' : 'delta-neg'}">(${s.gold > 0 ? '+' : ''}${s.gold})</span>`;
+          if (s.hand) dHand = `<span class="${s.hand > 0 ? 'delta-pos' : 'delta-neg'}">(${s.hand > 0 ? '+' : ''}${s.hand})</span>`;
+          if (s.built?.length || s.destroyed?.length) {
+            dCity = `<span class="delta-pos">+${s.built.length}</span>/<span class="delta-neg">-${s.destroyed.length}</span>`;
+          }
+        }
+        const score = baseScore(p.city);
+        return `
+          <div class="pcard ${p.team === 'A' ? 'team-a' : 'team-b'} ${p.id === actorId ? 'active' : ''}">
+            <div class="name">
+              <span class="badge seat">座${seat + 1}</span>
+              ${p.name}
+              ${p.hasCrown ? '<span class="badge crown">王冠</span>' : ''}
+              ${p.complete ? '<span class="badge">满城</span>' : ''}
+              <span class="badge">队${p.team}</span>
+            </div>
+            <div class="row">角色：${(p.characters || []).map(charName).join('、') || '—'}</div>
+            <div class="row">金币 ${p.stash}${dGold} · 手牌 ${p.handCount}${dHand} · 城 ${p.citySize}/8 ${dCity} · 分 ${score}</div>
+            <div class="row">${colorChipsHtml(p.city)}</div>
+            <div class="city">${cityCnList(p.city)}</div>
+          </div>`;
+      }).join('');
+
+      const parts = [];
+      if (frame.killedCharacterName) parts.push(`刺杀：${frame.killedCharacterName}`);
+      if (frame.robbedCharacterName) parts.push(`偷窃：${frame.robbedCharacterName}`);
+      if (frame.graveyard) parts.push(`坟场：${dName(frame.graveyard)}`);
+      parts.push(`牌库 ${frame.deckCount}`);
+      if (card) parts.push(`当前：${card.summary.roleLine}`);
+      else if (round) parts.push('当前：大轮开始');
+      document.getElementById('boardStatus').textContent = parts.join(' · ');
+    }
+
+    function renderTimeline() {
+      const el = document.getElementById('timeline');
+      const round = currentRound();
+      if (!round) {
+        el.innerHTML = '<div class="empty">无大轮</div>';
+        return;
+      }
+      const cards = buildCards(round);
+      let html = '';
+      html += `<button type="button" class="ev ${cardCursor === -1 ? 'sel' : ''}" onclick="selectCard(-1)">
+        <div class="t">大轮开始</div>
+        <div class="d">${round.summary || '查看本轮初始态势'}</div>
+      </button>`;
+
+      // role picks one-liner (not six empty resource lines)
+      const picks = (round.events || []).filter((e) => e.phase === 'character_selection');
+      if (picks.length || cards.length) {
+        // map player -> characters from end of selection / start of actions
+        const roleMap = new Map();
+        const frameRoles = cards[0]?.frameBefore || round.frameEnd || round.frameStart;
+        orderedPlayers(frameRoles).forEach((p) => {
+          const roles = (p.characters || []).map(charName).join('、');
+          if (roles) roleMap.set(p.name, roles);
+        });
+        if (roleMap.size) {
+          html += '<div class="block-title">角色分配</div>';
+          html += `<div class="ev" style="cursor:default">
+            <div class="d">${[...roleMap.entries()].map(([n, r]) => `${n}→${r}`).join('　')}</div>
+          </div>`;
+        }
+      }
+
+      html += '<div class="block-title">角色行动（按顺序点击查看左侧变化）</div>';
+      if (!cards.length) {
+        html += '<div class="empty">本轮无角色行动</div>';
+      }
+      cards.forEach((card, idx) => {
+        const s = card.summary;
+        const skillLine = s.skills.length
+          ? `<div class="tg">${s.skills.join('；')}</div>`
+          : '';
+        const buildLine = s.built.length
+          ? `<div class="d">建造：${s.built.map(dName).join('、')}</div>`
+          : '';
+        const destLine = s.destroyed.length
+          ? `<div class="d">失去建筑：${s.destroyed.map(dName).join('、')}</div>`
+          : '';
+        const resLine = s.resParts.length
+          ? `<div class="d">资源：${s.resParts.join('，')}</div>`
+          : '<div class="d">资源：无变化</div>';
+        const killed = card.killed ? '（被刺杀，未行动）' : '';
+        html += `<button type="button" class="ev ${cardCursor === idx ? 'sel' : ''}" onclick="selectCard(${idx})">
+          <div class="t">${charName(card.characterId)} · ${card.playerName}${killed}</div>
+          ${skillLine}
+          ${resLine}
+          ${buildLine}
+          ${destLine}
+        </button>`;
+      });
+
+      el.innerHTML = html;
+    }
+
+    function selectCard(idx) {
+      cardCursor = idx;
+      renderAll();
+    }
+
+    function prevRound() {
+      if (roundIndex <= 0) return;
+      roundIndex -= 1;
+      cardCursor = -1;
+      renderAll();
+    }
+    function nextRound() {
+      if (!replay || roundIndex >= replay.rounds.length - 1) return;
+      roundIndex += 1;
+      cardCursor = -1;
+      renderAll();
+    }
+    function jumpRound() {
+      if (!replay) return;
+      const n = Number(document.getElementById('jumpInput').value);
+      if (!Number.isFinite(n) || n < 1 || n > replay.rounds.length) {
+        alert(`请输入 1 ~ ${replay.rounds.length}`);
+        return;
+      }
+      roundIndex = n - 1;
+      cardCursor = -1;
+      renderAll();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prevRound();
+      if (e.key === 'ArrowRight') nextRound();
+    });
+
+    if (location.protocol !== 'file:') {
+      window.addEventListener('DOMContentLoaded', () => { loadReplay(); });
+    }
+  </script>
+</body>
+</html>

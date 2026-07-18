@@ -1,10 +1,10 @@
 <template>
-<div class="container-fluid p-0">
+<div class="container-fluid p-0 h-100 game-screen">
   <transition name="fade" mode="out-in">
     <div class="container-lg h-100 py-4" v-if="showLobby">
       <LobbyScreen />
     </div>
-    <div class="h-100" v-else-if="showBoard">
+    <div class="h-100 d-flex" v-else-if="showBoard">
       <BoardScreen />
     </div>
     <div class="h-100" v-else>
@@ -36,3 +36,9 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.game-screen {
+  min-height: 0;
+}
+</style>

@@ -9,4 +9,6 @@ export default abstract class GameStore {
   abstract hasRoom(roomId: RoomId): boolean;
 
   abstract findAllRooms(): Room[];
+
+  abstract removeRoom(roomId: RoomId): void;
 }

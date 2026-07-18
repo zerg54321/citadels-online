@@ -1,5 +1,5 @@
 <template>
-<div class="h-100 d-flex">
+<div class="h-100 d-flex room-screen">
   <transition name="fade" mode="out-in">
     <RoomEntryScreen v-if="!isInRoom" />
     <GameScreen v-else />
@@ -27,3 +27,14 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.room-screen {
+  min-height: 0;
+  width: 100%;
+}
+.room-screen :deep(.board-table) {
+  flex: 1 1 auto;
+  width: 100%;
+}
+</style>

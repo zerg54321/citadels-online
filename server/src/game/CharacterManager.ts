@@ -93,6 +93,8 @@ export default class CharacterManager {
 
   // action restriction data
   hasTakenResources!: boolean;
+  /** gold gained from this turn's regular TAKE_GOLD resource action (not earnings/lab) */
+  goldFromResourcesThisTurn!: number;
   districtsToBuild!: number[];
   canTakeEarnings!: boolean[];
   canDoSpecialAction!: boolean[];
@@ -113,9 +115,11 @@ export default class CharacterManager {
     this.killedCharacter = CharacterType.NONE;
     this.robbedCharacter = CharacterType.NONE;
     this.hasTakenResources = false;
+    this.goldFromResourcesThisTurn = 0;
     this.districtsToBuild = [1, 1, 1, 1, 1, 1, 3, 1];
     this.canTakeEarnings = [false, false, false, true, true, true, false, true];
-    this.canDoSpecialAction = [true, true, true, false, false, true, true, true];
+    // merchant/architect passives are auto-applied at turn start (not optional actions)
+    this.canDoSpecialAction = [true, true, true, false, false, false, false, true];
     this.isUsingLaboratory = false;
     this.hasUsedLaboratory = false;
     this.hasUsedSmithy = false;
@@ -133,13 +137,15 @@ export default class CharacterManager {
       TurnState.WARLORD_ACTIONS,
     ][character] ?? TurnState.DONE;
     this.hasTakenResources = false;
+    this.goldFromResourcesThisTurn = 0;
     this.hasUsedLaboratory = false;
     this.hasUsedSmithy = false;
   }
 
   jumpToNextCharacter() {
+    // always land on next ordinal (including killed) so UI can reveal then skip
     const nextCharacter = this.getCurrentCharacter() + 1;
-    this.jumpToCharacter(nextCharacter + (this.killedCharacter === nextCharacter ? 1 : 0));
+    this.jumpToCharacter(nextCharacter);
   }
 
   jumpToBuildState() {
@@ -187,7 +193,8 @@ export default class CharacterManager {
     return Array.from(Array(CharacterType.CHARACTER_COUNT).keys()) as CharacterType[];
   }
 
-  private getCharactersAtPosition(pos: CharacterPosition) {
+  /** public: used by AutoplayPolicy L2 drafting */
+  public getCharactersAtPosition(pos: CharacterPosition): CharacterType[] {
     return this.characters.reduce((characters, position, character) => {
       if (position === pos) characters.push(character);
       return characters;
@@ -273,16 +280,9 @@ export default class CharacterManager {
       case TurnState.MERCHANT_ACTIONS:
       case TurnState.ARCHITECT_ACTIONS:
       case TurnState.WARLORD_ACTIONS:
+        // merchant/architect passives are auto-applied at turn start
         if (!this.hasTakenResources) {
           return ClientTurnState.TAKE_RESOURCES;
-        }
-        if (this.turnState === TurnState.MERCHANT_ACTIONS
-          && this.canDoSpecialAction[CharacterType.MERCHANT]) {
-          return ClientTurnState.MERCHANT_TAKE_1_GOLD;
-        }
-        if (this.turnState === TurnState.ARCHITECT_ACTIONS
-          && this.canDoSpecialAction[CharacterType.ARCHITECT]) {
-          return ClientTurnState.ARCHITECT_DRAW_2_CARDS;
         }
         return ClientTurnState.CHOOSE_ACTION;
 
@@ -328,23 +328,38 @@ export default class CharacterManager {
   }
 
   exportPlayerCharacters(pos: PlayerPosition, dest: PlayerPosition) {
-    // can see all cards if player is spectator, if cards are their own, or if turn phase has ended
+    // Official reveal rule:
+    // - own cards always visible
+    // - others only when that character's call order is reached (id <= current)
+    // - killed/robbed does NOT reveal who owns the role early — only the role number
+    //   is marked on the global 1–8 list; owner is shown when that role is called
     const canSee = dest === PlayerPosition.SPECTATOR
       || dest === pos
       || this.turnState === TurnState.DONE;
     const characterPos = pos + CharacterPosition.PLAYER_1 as CharacterPosition;
     const currentCharacter = this.getCurrentCharacter();
 
-    // characters are sorted so that unknown characters are at the end of the list
-    return this.getCharactersAtPosition(characterPos).map((id) => (
-      (
-        canSee || (id <= currentCharacter && id !== this.killedCharacter)
-      ) ? id : CharacterType.CHARACTER_COUNT
-    )).sort().map((id) => ({
-      id: (id === CharacterType.CHARACTER_COUNT ? CharacterType.NONE : id) + 1,
-      killed: id !== CharacterType.NONE && id === this.killedCharacter,
-      robbed: id !== CharacterType.NONE && id === this.robbedCharacter,
-    }));
+    const held = this.getCharactersAtPosition(characterPos);
+    if (!held.length) {
+      return [];
+    }
+    return held.map((id) => {
+      const isKilled = id === this.killedCharacter;
+      const isRobbed = id === this.robbedCharacter;
+      // reveal identity only when this role's turn is current or has passed
+      // (own cards always face-up for the owner via canSee)
+      const turnReached = id !== CharacterType.NONE && id <= currentCharacter;
+      const showFace = canSee || turnReached;
+      return {
+        // client: id 0 + faceDown = card back; id 1-8 = face up
+        id: showFace ? id + 1 : 0,
+        killed: showFace && isKilled,
+        robbed: showFace && isRobbed,
+        faceDown: !showFace,
+        // true once player has been dealt a role (for UI to always show a card)
+        hasRole: true,
+      };
+    });
   }
 
   exportCurrentPlayerExtraData() {
@@ -389,9 +404,15 @@ export default class CharacterManager {
     return [
       ...(this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_DOWN)?.map(() => ({
         id: 0,
+        faceDown: true,
+        faceUp: false,
+        known: false,
       })) || []),
       ...(this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_UP)?.map((characterType) => ({
         id: characterType + 1,
+        faceDown: false,
+        faceUp: true,
+        known: true,
       })) || [])];
   }
 
@@ -425,6 +446,7 @@ export default class CharacterManager {
       ).map((characterType) => ({
         id: canSeeList ? characterType + 1 : 0,
         selectable: dest === player,
+        known: canSeeList,
       })),
       // characters that are put aside
       aside: this.getAsideCards(),
@@ -432,25 +454,30 @@ export default class CharacterManager {
   }
 
   private exportListDone() {
+    const faceUpAside = new Set(this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_UP) || []);
+    // full 1–8 always; killed/robbed/face-up marked as soon as set (not delayed to that role's turn)
     return {
-      // current character
       current: this.getCurrentCharacter() + 1,
-      // callable characters: all characters except those that are aside and face up
-      callable: CharacterManager.getAllCharacters().filter(
-        (characterType) => !this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_UP)
-          ?.includes(characterType),
-      ).map((characterType) => ({
-        id: characterType + 1,
-        killed: this.killedCharacter === characterType,
-        robbed: this.robbedCharacter === characterType,
-      })),
-      // characters that are put aside
+      callable: CharacterManager.getAllCharacters().map((characterType) => {
+        const faceUp = faceUpAside.has(characterType);
+        const killed = this.killedCharacter === characterType;
+        const robbed = this.robbedCharacter === characterType;
+        return {
+          id: characterType + 1,
+          killed,
+          robbed,
+          faceUp,
+          discardedFaceUp: faceUp,
+          known: true,
+        };
+      }),
       aside: this.getAsideCards(),
     };
   }
 
   chooseRandomCharacter(avoidKing = false): boolean {
     const characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+    if (characters.length === 0) return false;
     let index;
 
     do {
@@ -460,6 +487,76 @@ export default class CharacterManager {
     return this.chooseCharacter(index);
   }
 
+  /**
+   * System-side aside when choosingState.player is SPECTATOR
+   * (e.g. 6p final face-down after all players picked).
+   */
+  autoSpectatorAside(): boolean {
+    const st = this.choosingState.getState();
+    if (st.player !== PlayerPosition.SPECTATOR) return false;
+    if (st.type === CCST.DONE || st.type === CCST.INITIAL) {
+      return st.type === CCST.DONE;
+    }
+    if (st.type === CCST.PUT_ASIDE_FACE_DOWN || st.type === CCST.PUT_ASIDE_FACE_UP) {
+      const characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+      if (characters.length === 0) {
+        try {
+          this.choosingState.step();
+        } catch {
+          return false;
+        }
+        this.drainSpectatorAutoSteps();
+        return true;
+      }
+      if (st.type === CCST.PUT_ASIDE_FACE_UP) {
+        this.characters[characters[0]] = CharacterPosition.ASIDE_FACE_UP;
+      } else {
+        this.characters[characters[0]] = CharacterPosition.ASIDE_FACE_DOWN;
+      }
+      this.choosingState.step();
+      this.drainSpectatorAutoSteps();
+      return true;
+    }
+    if (st.type === CCST.GET_ASIDE_FACE_DOWN) {
+      const aside = this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_DOWN);
+      if (aside.length > 0) {
+        this.characters[aside[0]] = CharacterPosition.NOT_CHOSEN;
+      }
+      this.choosingState.step();
+      this.drainSpectatorAutoSteps();
+      return true;
+    }
+    return false;
+  }
+
+  private drainSpectatorAutoSteps() {
+    while (this.choosingState.getState().player === PlayerPosition.SPECTATOR) {
+      const st = this.choosingState.getState();
+      if (st.type === CCST.DONE) return;
+      if (st.type === CCST.GET_ASIDE_FACE_DOWN) {
+        const aside = this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_DOWN);
+        if (aside.length > 0) {
+          this.characters[aside[0]] = CharacterPosition.NOT_CHOSEN;
+        }
+        this.choosingState.step();
+        continue;
+      }
+      if (st.type === CCST.PUT_ASIDE_FACE_DOWN || st.type === CCST.PUT_ASIDE_FACE_UP) {
+        const characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+        if (characters.length === 0) {
+          this.choosingState.step();
+          continue;
+        }
+        this.characters[characters[0]] = st.type === CCST.PUT_ASIDE_FACE_UP
+          ? CharacterPosition.ASIDE_FACE_UP
+          : CharacterPosition.ASIDE_FACE_DOWN;
+        this.choosingState.step();
+        continue;
+      }
+      break;
+    }
+  }
+
   chooseCharacter(index: number): boolean {
     let characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 
@@ -467,8 +564,9 @@ export default class CharacterManager {
       return false;
     }
 
+    // spectator cannot "choose" as a player — use autoSpectatorAside
     if (this.choosingState.getState().player === PlayerPosition.SPECTATOR) {
-      return false;
+      return this.autoSpectatorAside();
     }
 
     switch (this.choosingState.getState().type) {
@@ -493,30 +591,7 @@ export default class CharacterManager {
     }
 
     this.choosingState.step();
-
-    // apply next automatic steps
-    while (this.choosingState.getState().player === PlayerPosition.SPECTATOR) {
-      characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
-
-      switch (this.choosingState.getState().type) {
-        case CCST.GET_ASIDE_FACE_DOWN:
-          this.characters[this.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_DOWN)[0]] = (
-            CharacterPosition.NOT_CHOSEN
-          );
-          break;
-
-        case CCST.PUT_ASIDE_FACE_DOWN:
-          this.characters[characters[0]] = CharacterPosition.ASIDE_FACE_DOWN;
-          break;
-
-        case CCST.DONE:
-          return true;
-
-        default:
-      }
-
-      this.choosingState.step();
-    }
+    this.drainSpectatorAutoSteps();
 
     return true;
   }

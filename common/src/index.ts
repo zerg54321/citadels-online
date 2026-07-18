@@ -12,6 +12,28 @@ export enum GameProgress {
   FINISHED,
 }
 
+/** competitive_team6 = 6p forced 3v3; casual = all other games */
+export enum GameMode {
+  CASUAL = 1,
+  COMPETITIVE_TEAM6 = 2,
+}
+
+/** Team A = seats 0,2,4; Team B = seats 1,3,5 in playerOrder */
+export enum TeamId {
+  NONE = 0,
+  A = 1,
+  B = 2,
+}
+
+export enum MatchResult {
+  NONE = 0,
+  TEAM_A_WIN = 1,
+  TEAM_B_WIN = 2,
+  DRAW = 3,
+  /** casual / non-team: no team winner */
+  CASUAL_END = 4,
+}
+
 export enum PlayerRole {
   SPECTATOR = 1,
   PLAYER,
@@ -103,14 +125,26 @@ export type PlayerExtraData = {
   earningsValue: number
 };
 
+export type TeamScores = {
+  [TeamId.A]?: number
+  [TeamId.B]?: number
+};
+
 export type ClientGameState = {
   progress: GameProgress
+  gameMode: GameMode
   players: Map<PlayerId, {
     id: PlayerId
     username: string
     manager: boolean
     online: boolean
     role: PlayerRole
+    userId?: string
+    team: TeamId
+    isAi?: boolean
+    /** player is in autoplay / hosted mode */
+    isAutoplay?: boolean
+    hadEffectiveAiControl?: boolean
   }>
   self: PlayerId
   board: {
@@ -139,12 +173,27 @@ export type ClientGameState = {
   }
   settings: {
     completeCitySize: number
+    /** action time limit in seconds (P4) */
+    actionTimeoutSeconds: number
   }
+  /** epoch ms when current actor's turn expires; null if none */
+  turnDeadlineAt?: number | null
+  /** set when progress is FINISHED (and for competitive during end) */
+  teamScores?: { A: number; B: number }
+  matchResult?: MatchResult
+  /** last completed action-round summary (kill/rob/city snapshot) */
+  lastRoundSummary?: string | null
+  /** lobby seat order for 3v3 team preview */
+  lobbyPlayerOrder?: PlayerId[]
+  /** recent human-readable action feed for UI log */
+  actionFeed?: Array<{ text: string; kind?: string }>
 };
 
 export type GameSetupData = {
   players: PlayerId[]
   completeCitySize: number
+  /** action time limit seconds; default 120; clamp 10–180 (10 for tests) */
+  actionTimeoutSeconds?: number
 };
 
 export enum MoveType {

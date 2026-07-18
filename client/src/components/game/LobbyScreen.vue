@@ -19,9 +19,17 @@
       <div class="modal-body">
         <table class="table">
           <tbody>
+            <tr v-if="isSixPlayers">
+              <td>{{ $t('ui.lobby.settings.game_mode') }}</td>
+              <td>{{ $t('ui.lobby.settings.mode_team6') }}</td>
+            </tr>
             <tr>
               <td>{{ $t('ui.lobby.settings.complete_city_size') }}</td>
-              <td>{{ gameSetupData.completeCitySize }}</td>
+              <td>{{ isSixPlayers ? 8 : gameSetupData.completeCitySize }}</td>
+            </tr>
+            <tr>
+              <td>{{ $t('ui.lobby.settings.action_timeout') }}</td>
+              <td>{{ gameSetupData.actionTimeoutSeconds }}s</td>
             </tr>
           </tbody>
         </table>
@@ -69,14 +77,24 @@
   <div class="card-header">{{ $t('ui.lobby.title') }}</div>
   <div class="row no-gutters h-100 overflow-auto">
     <div v-if="isManager" class="col p-3">
+      <div class="alert alert-info py-2">
+        {{ $t('ui.lobby.settings.mode_team6_only') }}
+      </div>
+      <div v-if="hasAiPlayers" class="alert alert-warning py-2">
+        {{ $t('ui.lobby.settings.ai_practice_hint') }}
+      </div>
       <div class="form-group">
-        <label for="completeCitySize">
-          {{ $t('ui.lobby.settings.complete_city_size') }}
+        <label for="actionTimeoutSeconds">
+          {{ $t('ui.lobby.settings.action_timeout') }}
         </label>
-        <select class="form-control" id="completeCitySize" v-model="completeCitySize">
-          <option :value="7">7</option>
-          <option :value="8">8</option>
+        <select class="form-control" id="actionTimeoutSeconds" v-model.number="actionTimeoutSeconds">
+          <option :value="10">10s（测试）</option>
+          <option :value="60">60s</option>
+          <option :value="90">90s</option>
+          <option :value="120">120s</option>
+          <option :value="180">180s</option>
         </select>
+        <small class="form-text text-muted">{{ $t('ui.lobby.settings.action_timeout_hint') }}</small>
       </div>
     </div>
     <div class="col p-3 bg-light">
@@ -109,7 +127,8 @@ export default defineComponent({
   data() {
     return {
       startingGame: false,
-      completeCitySize: 7,
+      completeCitySize: 8,
+      actionTimeoutSeconds: 120,
     };
   },
   computed: {
@@ -121,24 +140,30 @@ export default defineComponent({
     isManager() {
       return this.getPlayerFromId(this.gameState.self)?.manager || false;
     },
+    isSixPlayers() {
+      return Array.from(this.gameState?.players.values() || [])
+        .filter((player: any) => player.role === PlayerRole.PLAYER).length === 6;
+    },
+    hasAiPlayers() {
+      return Array.from(this.gameState?.players.values() || [])
+        .some((player: any) => player.isAi && player.role === PlayerRole.PLAYER);
+    },
     validation() {
       // get players
       const playersCount = Array.from(this.gameState?.players.values() || [])
         .filter((player) => player.role === PlayerRole.PLAYER).length;
 
-      // too many players
-      if (playersCount > 7) {
+      // 3v3 only: exactly 6 seats
+      if (playersCount < 6) {
+        return {
+          disabled: true,
+          message: this.$t('ui.lobby.need_six_players', { n: playersCount }),
+        };
+      }
+      if (playersCount > 6) {
         return {
           disabled: true,
           message: this.$t('ui.lobby.too_many_players'),
-        };
-      }
-
-      // not enough players
-      if (playersCount < 2) {
-        return {
-          disabled: true,
-          message: this.$t('ui.lobby.not_enough_players'),
         };
       }
 
@@ -159,7 +184,10 @@ export default defineComponent({
   },
   methods: {
     showConfirmationModal() {
-      const settings = { completeCitySize: this.completeCitySize };
+      const settings = {
+        completeCitySize: this.completeCitySize,
+        actionTimeoutSeconds: this.actionTimeoutSeconds,
+      };
       store.commit('prepareGameSetupConfirmation', settings);
       $('#setupConfirmationModal').modal();
     },
@@ -168,9 +196,13 @@ export default defineComponent({
         this.startingGame = true;
         await store.dispatch('startGame');
         this.startingGame = false;
+        $('#setupConfirmationModal').modal('hide');
       } catch (error) {
         console.error('error when starting game', error);
         this.startingGame = false;
+        // surface error so host is not stuck on a silent modal
+        // eslint-disable-next-line no-alert
+        window.alert(error instanceof Error ? error.message : String(error));
       }
     },
   },

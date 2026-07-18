@@ -38,7 +38,9 @@
       </div>
       <div v-if="killed" class="char-card__stamp char-card__stamp--kill">💀</div>
       <div v-else-if="robbed" class="char-card__stamp char-card__stamp--rob">💰</div>
-      <div v-if="faceUpMark" class="char-card__tag">{{ $t('ui.game.character_face_up_short') }}</div>
+      <div v-if="faceUpMark" class="char-card__tag">
+        {{ $t('ui.game.character_face_up_short') }}
+      </div>
     </div>
   </div>
 </template>
@@ -177,14 +179,38 @@ export default defineComponent({
     &--c8 { background-color: #7f1d1d; }
 
     /* art — same pattern as DistrictCard */
-    &--art-assassin { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/assassin.jpg'); }
-    &--art-thief { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/thief.jpg'); }
-    &--art-magician { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/magician.jpg'); }
-    &--art-king { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/king.jpg'); }
-    &--art-bishop { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/bishop.jpg'); }
-    &--art-merchant { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/merchant.jpg'); }
-    &--art-architect { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/architect.jpg'); }
-    &--art-warlord { background-image: linear-gradient(to top, #000c 0%, #0000 48%), url('../../../assets/characters/warlord.jpg'); }
+    &--art-assassin {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/assassin.jpg');
+    }
+    &--art-thief {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/thief.jpg');
+    }
+    &--art-magician {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/magician.jpg');
+    }
+    &--art-king {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/king.jpg');
+    }
+    &--art-bishop {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/bishop.jpg');
+    }
+    &--art-merchant {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/merchant.jpg');
+    }
+    &--art-architect {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/architect.jpg');
+    }
+    &--art-warlord {
+      background-image: linear-gradient(to top, #000c 0%, #0000 48%),
+        url('../../../assets/characters/warlord.jpg');
+    }
   }
 
   &__back-pattern {

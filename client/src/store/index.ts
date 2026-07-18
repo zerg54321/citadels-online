@@ -280,6 +280,7 @@ export const store = createStore<State>({
       setSocketAuthToken(state.authToken);
       if (state.socket.connected) return Promise.resolve();
       return new Promise<void>((resolve, reject) => {
+        let cleanup = () => {};
         const onConnect = () => {
           cleanup();
           resolve();
@@ -288,7 +289,7 @@ export const store = createStore<State>({
           cleanup();
           reject(err);
         };
-        const cleanup = () => {
+        cleanup = () => {
           state.socket.off('connect', onConnect);
           state.socket.off('connect_error', onError);
         };

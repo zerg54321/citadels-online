@@ -2,7 +2,8 @@
   <div
     class="seat-panel"
     :class="{
-      'seat-panel--ally': relation === 'ally' || relation === 'self',
+      'seat-panel--ally':
+        relation === 'ally' || relation === 'self',
       'seat-panel--enemy': relation === 'enemy',
       'seat-panel--active': isCurrentPlayer,
       'seat-panel--acting': isActingNow,
@@ -20,9 +21,18 @@
           class="seat-panel__crown"
           :title="$t('ui.game.crown_holder')"
         >👑</span>
-        <span v-if="relation === 'self'" class="seat-panel__tag">{{ $t('ui.lobby.you') }}</span>
-        <span v-else-if="relation === 'ally'" class="seat-panel__tag">{{ $t('ui.team.ally') }}</span>
-        <span v-else-if="relation === 'enemy'" class="seat-panel__tag">{{ $t('ui.team.enemy_short') }}</span>
+        <span
+          v-if="relation === 'self'"
+          class="seat-panel__tag"
+        >{{ $t('ui.lobby.you') }}</span>
+        <span
+          v-else-if="relation === 'ally'"
+          class="seat-panel__tag"
+        >{{ $t('ui.team.ally') }}</span>
+        <span
+          v-else-if="relation === 'enemy'"
+          class="seat-panel__tag"
+        >{{ $t('ui.team.enemy_short') }}</span>
       </div>
 
       <div class="seat-panel__stats">
@@ -124,7 +134,9 @@ export default defineComponent({
     roleCard() {
       const chars = this.board?.characters || [];
       if (!chars.length) {
-        return { show: false, id: 0, faceDown: true, killed: false, robbed: false };
+        return {
+          show: false, id: 0, faceDown: true, killed: false, robbed: false,
+        };
       }
       const revealed = chars.find((c: any) => c.id > 0 && !c.faceDown);
       if (revealed) {

@@ -1,6 +1,9 @@
 import { AuthResponse, AuthUser } from '../types/authTypes';
 
-async function request(path: string, options: RequestInit = {}): Promise<AuthResponse> {
+async function request(
+  path: string,
+  options: any = {},
+): Promise<AuthResponse> {
   const res = await fetch(path, {
     headers: {
       'Content-Type': 'application/json',

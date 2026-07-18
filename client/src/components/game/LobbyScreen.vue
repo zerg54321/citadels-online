@@ -87,14 +87,20 @@
         <label for="actionTimeoutSeconds">
           {{ $t('ui.lobby.settings.action_timeout') }}
         </label>
-        <select class="form-control" id="actionTimeoutSeconds" v-model.number="actionTimeoutSeconds">
+        <select
+          class="form-control"
+          id="actionTimeoutSeconds"
+          v-model.number="actionTimeoutSeconds"
+        >
           <option :value="10">10s（测试）</option>
           <option :value="60">60s</option>
           <option :value="90">90s</option>
           <option :value="120">120s</option>
           <option :value="180">180s</option>
         </select>
-        <small class="form-text text-muted">{{ $t('ui.lobby.settings.action_timeout_hint') }}</small>
+        <small class="form-text text-muted">
+          {{ $t('ui.lobby.settings.action_timeout_hint') }}
+        </small>
       </div>
     </div>
     <div class="col p-3 bg-light">

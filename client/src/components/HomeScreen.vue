@@ -144,7 +144,9 @@
       <div class="col-lg-4">
         <div class="card mb-3 shadow-sm home-side">
           <div class="card-body">
-            <h6 class="text-uppercase text-muted small mb-2">{{ $t('ui.homepage.features_title') }}</h6>
+             <h6 class="text-uppercase text-muted small mb-2">
+               {{ $t('ui.homepage.features_title') }}
+             </h6>
             <div class="home-feature" v-for="(f, i) in featureKeys" :key="i">
               <div class="home-feature__icon">{{ f.icon }}</div>
               <div>

@@ -73,7 +73,9 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
-import { Move, MoveType, DistrictId, TeamId } from 'citadels-common';
+import {
+  Move, MoveType, DistrictId, TeamId,
+} from 'citadels-common';
 import { store } from '../../../store';
 import CharactersList from './CharactersList.vue';
 import DistrictCard from './DistrictCard.vue';

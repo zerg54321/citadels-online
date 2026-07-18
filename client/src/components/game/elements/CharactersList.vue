@@ -51,12 +51,16 @@
       ><emoji emoji="💰"></emoji></span>
 
       <span class="hover-hint">
-        <span v-if="killMode && character.selectable" class="badge badge-pill badge-danger p-1 shadow-sm">
+        <span
+          v-if="killMode && character.selectable"
+          class="badge badge-pill badge-danger p-1 shadow-sm"
+        >
           <emoji emoji="💀"></emoji>
         </span>
-        <span v-else-if="robMode && character.selectable" class="badge badge-pill badge-dark p-1 shadow-sm">
-          <emoji emoji="💰"></emoji>
-        </span>
+      <span
+        v-else-if="robMode && character.selectable"
+        class="badge badge-pill badge-dark p-1 shadow-sm"
+      ><emoji emoji="💰"></emoji></span>
         <span v-else-if="putAsideMode"><emoji emoji="⬇️"></emoji></span>
       </span>
     </li>

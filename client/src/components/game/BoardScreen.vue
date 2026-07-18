@@ -162,7 +162,8 @@
           class="board-table__action-btn"
           :class="{
             'board-table__action-btn--primary': isPrimaryAction(action.title),
-            'board-table__action-btn--danger': action.title === 'finish_turn' || action.title === 'cancel',
+            'board-table__action-btn--danger':
+              action.title === 'finish_turn' || action.title === 'cancel',
           }"
           @click="sendMove(action.move, $event.target)"
         >
@@ -217,7 +218,12 @@
       <div class="modal-content">
         <div class="modal-header" :class="endHeaderClass">
           <h4 class="modal-title mb-0">{{ endTitle }}</h4>
-          <button type="button" class="close text-white" @click="dismissEndModal" aria-label="close">
+          <button
+            type="button"
+            class="close text-white"
+            @click="dismissEndModal"
+            aria-label="close"
+          >
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
@@ -245,7 +251,10 @@
               <tr v-for="row in endScoreRows" :key="row.id">
                 <td>
                   {{ row.name }}
-                  <span v-if="row.isSelf" class="badge badge-info ml-1">{{ $t('ui.lobby.you') }}</span>
+                   <span
+                     v-if="row.isSelf"
+                     class="badge badge-info ml-1"
+                   >{{ $t('ui.lobby.you') }}</span>
                   <span v-if="row.isAi" class="badge badge-dark ml-1">AI</span>
                 </td>
                 <td v-if="showTeamScores">
@@ -293,7 +302,6 @@ import {
   CharacterChoosingStateType as CCST,
   ClientTurnState,
   GameMode,
-  GameProgress,
   MatchResult,
   Move,
   MoveType,
@@ -454,7 +462,12 @@ export default defineComponent({
       }
       const board = this.gameState.board.players.get(this.self);
       return {
-        stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [],
+        stash: 0,
+        hand: [],
+        tmpHand: [],
+        city: [],
+        score: {},
+        characters: [],
         ...(board || {}),
         crown: this.gameState.board.playerOrder[0] === this.self,
       };
@@ -468,7 +481,11 @@ export default defineComponent({
     },
     selfRoleCard() {
       const chars = this.selfBoard?.characters || [];
-      if (!chars.length) return { show: false, id: 0, faceDown: true, killed: false, robbed: false };
+      if (!chars.length) {
+        return {
+          show: false, id: 0, faceDown: true, killed: false, robbed: false,
+        };
+      }
       const revealed = chars.find((c: any) => c.id > 0);
       if (revealed) {
         return {
@@ -561,9 +578,13 @@ export default defineComponent({
       // LoL-style: show "my team" as left blue, enemy as right red when seated
       const mine = this.myTeam;
       if (!this.isSpectator && mine === TeamId.B) {
-        return { A: B, B: A, myLabel: 'B', enemyLabel: 'A' };
+        return {
+          A: B, B: A, myLabel: 'B', enemyLabel: 'A',
+        };
       }
-      return { A, B, myLabel: 'A', enemyLabel: 'B' };
+      return {
+        A, B, myLabel: 'A', enemyLabel: 'B',
+      };
     },
     turnOrderChips() {
       const list = this.charactersList?.callable || [];

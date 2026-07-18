@@ -94,7 +94,6 @@ import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
 import { GameMode, MatchResult, TeamId } from 'citadels-common';
 import statsApi, { MyMatchItem, RankingRow } from '../api/stats';
-import { store } from '../store';
 
 export default defineComponent({
   name: 'StatsScreen',

@@ -75,7 +75,9 @@
             class="btn btn-link"
             @click="mode = mode === 'login' ? 'register' : 'login'"
           >
-            {{ mode === 'login' ? $t('ui.auth.switch_to_register') : $t('ui.auth.switch_to_login') }}
+            {{ mode === 'login'
+              ? $t('ui.auth.switch_to_register')
+              : $t('ui.auth.switch_to_login') }}
           </button>
           <button type="button" class="btn btn-primary" :disabled="busy" @click="submitAuth">
             {{ mode === 'login' ? $t('ui.auth.login') : $t('ui.auth.register') }}

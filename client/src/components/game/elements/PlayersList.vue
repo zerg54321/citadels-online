@@ -12,31 +12,45 @@
         {{ $t('ui.team.a') }}
       </div>
       <ul class="list-group list-group-flush">
-        <li
-          v-for="row in teamARows"
-          :key="row.id"
-          class="list-group-item py-2 px-2 d-flex align-items-center"
-          :class="{ 'bg-light': row.id === self?.id }"
-        >
-          <span class="badge badge-primary badge-pill mr-1">{{ row.seatNo }}</span>
-          <span class="flex-fill text-truncate small">
-            {{ row.username }}
-            <span v-if="row.id === self?.id" class="badge badge-info">{{ $t('ui.lobby.you') }}</span>
-            <span v-if="row.isAi" class="badge badge-dark">AI</span>
-            <span v-if="row.manager" class="badge badge-danger">{{ $t('ui.lobby.manager') }}</span>
-          </span>
-          <span v-if="canManageAi && !row.isAi" class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0" @click="moveSeat(row.id, -1)">↑</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0" @click="moveSeat(row.id, 1)">↓</button>
-          </span>
-          <button
-            v-if="canManageAi && row.isAi"
-            type="button"
-            class="btn btn-sm btn-outline-danger py-0 ml-1"
-            @click="removeAi(row.id)"
-          >×</button>
-        </li>
-        <li v-if="!teamARows.length" class="list-group-item small text-muted text-center py-2">—</li>
+         <li
+           v-for="row in teamARows"
+           :key="row.id"
+           class="list-group-item py-2 px-2 d-flex align-items-center"
+           :class="{ 'bg-light': row.id === self?.id }"
+         >
+           <span class="badge badge-primary badge-pill mr-1">{{ row.seatNo }}</span>
+           <span class="flex-fill text-truncate small">
+             {{ row.username }}
+             <span
+               v-if="row.id === self?.id"
+               class="badge badge-info"
+             >{{ $t('ui.lobby.you') }}</span>
+             <span v-if="row.isAi" class="badge badge-dark">AI</span>
+             <span v-if="row.manager" class="badge badge-danger">{{ $t('ui.lobby.manager') }}</span>
+           </span>
+           <span v-if="canManageAi && !row.isAi" class="btn-group btn-group-sm">
+             <button
+               type="button"
+               class="btn btn-outline-secondary btn-sm py-0"
+               @click="moveSeat(row.id, -1)"
+             >↑</button>
+             <button
+               type="button"
+               class="btn btn-outline-secondary btn-sm py-0"
+               @click="moveSeat(row.id, 1)"
+             >↓</button>
+           </span>
+           <button
+             v-if="canManageAi && row.isAi"
+             type="button"
+             class="btn btn-sm btn-outline-danger py-0 ml-1"
+             @click="removeAi(row.id)"
+           >×</button>
+         </li>
+         <li
+           v-if="!teamARows.length"
+           class="list-group-item small text-muted text-center py-2"
+         >—</li>
       </ul>
     </div>
     <div class="col-6">
@@ -44,31 +58,45 @@
         {{ $t('ui.team.b') }}
       </div>
       <ul class="list-group list-group-flush">
-        <li
-          v-for="row in teamBRows"
-          :key="row.id"
-          class="list-group-item py-2 px-2 d-flex align-items-center"
-          :class="{ 'bg-light': row.id === self?.id }"
-        >
-          <span class="badge badge-danger badge-pill mr-1">{{ row.seatNo }}</span>
-          <span class="flex-fill text-truncate small">
-            {{ row.username }}
-            <span v-if="row.id === self?.id" class="badge badge-info">{{ $t('ui.lobby.you') }}</span>
-            <span v-if="row.isAi" class="badge badge-dark">AI</span>
-            <span v-if="row.manager" class="badge badge-danger">{{ $t('ui.lobby.manager') }}</span>
-          </span>
-          <span v-if="canManageAi && !row.isAi" class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0" @click="moveSeat(row.id, -1)">↑</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm py-0" @click="moveSeat(row.id, 1)">↓</button>
-          </span>
-          <button
-            v-if="canManageAi && row.isAi"
-            type="button"
-            class="btn btn-sm btn-outline-danger py-0 ml-1"
-            @click="removeAi(row.id)"
-          >×</button>
-        </li>
-        <li v-if="!teamBRows.length" class="list-group-item small text-muted text-center py-2">—</li>
+         <li
+           v-for="row in teamBRows"
+           :key="row.id"
+           class="list-group-item py-2 px-2 d-flex align-items-center"
+           :class="{ 'bg-light': row.id === self?.id }"
+         >
+           <span class="badge badge-danger badge-pill mr-1">{{ row.seatNo }}</span>
+           <span class="flex-fill text-truncate small">
+             {{ row.username }}
+             <span
+               v-if="row.id === self?.id"
+               class="badge badge-info"
+             >{{ $t('ui.lobby.you') }}</span>
+             <span v-if="row.isAi" class="badge badge-dark">AI</span>
+             <span v-if="row.manager" class="badge badge-danger">{{ $t('ui.lobby.manager') }}</span>
+           </span>
+           <span v-if="canManageAi && !row.isAi" class="btn-group btn-group-sm">
+             <button
+               type="button"
+               class="btn btn-outline-secondary btn-sm py-0"
+               @click="moveSeat(row.id, -1)"
+             >↑</button>
+             <button
+               type="button"
+               class="btn btn-outline-secondary btn-sm py-0"
+               @click="moveSeat(row.id, 1)"
+             >↓</button>
+           </span>
+           <button
+             v-if="canManageAi && row.isAi"
+             type="button"
+             class="btn btn-sm btn-outline-danger py-0 ml-1"
+             @click="removeAi(row.id)"
+           >×</button>
+         </li>
+         <li
+           v-if="!teamBRows.length"
+           class="list-group-item small text-muted text-center py-2"
+         >—</li>
       </ul>
     </div>
   </div>
@@ -83,7 +111,10 @@
         class="list-group-item py-1 px-2 small"
       >
         {{ p.username }}
-        <span v-if="p.id === self?.id" class="badge badge-info">{{ $t('ui.lobby.you') }}</span>
+             <span
+               v-if="p.id === self?.id"
+               class="badge badge-info"
+             >{{ $t('ui.lobby.you') }}</span>
       </li>
     </ul>
   </div>
@@ -130,7 +161,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
-import { GameProgress, PlayerRole, TeamId } from 'citadels-common';
+import { GameProgress, PlayerRole } from 'citadels-common';
 import { store } from '../../../store';
 
 export default defineComponent({

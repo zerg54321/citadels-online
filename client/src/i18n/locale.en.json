@@ -103,12 +103,20 @@
             "add_ai_hint": "Practice: start with 1 human + AIs. Games with AI are unranked.",
             "become_player": "Sit as player",
             "become_spectator": "Switch to spectate",
-            "team_preview_hint": "Odd/even seats = Team A / B",
+            "team_preview_hint": "Click an empty slot to join or switch teams",
             "start_game": "Start Game",
             "wait_message": "Waiting for the manager to start the game.",
             "not_enough_players": "There must be at least 2 players to start the game.",
             "need_six_players": "3v3 needs exactly 6 players (now {n}). Add AI to fill seats.",
             "too_many_players": "Too many players (6 max for 3v3).",
+            "need_3v3": "Need exactly 3 per team to start (Team A {a} / Team B {b}).",
+            "join_team_a": "Join Team A",
+            "join_team_b": "Join Team B",
+            "move_to_team_a": "Move to Team A",
+            "move_to_team_b": "Move to Team B",
+            "team_full": "Team full (max 4)",
+            "chat_title": "Chat",
+            "chat_placeholder": "Type a message...",
             "settings": {
                 "complete_city_size": "Number of districts to complete city",
                 "action_timeout": "Action time limit",
@@ -116,9 +124,12 @@
                 "ai_practice_hint": "6p with AI is 3v3 practice (unranked).",
                 "game_mode": "Mode",
                 "mode_team6": "3v3 Competitive",
-                "mode_team6_only": "6-player 3v3 only: odd/even seats = teams A/B, city size 8. Switch play/spectate and reorder seats in the room.",
-                "mode_team6_hint": "6 players play 3v3 (odd/even seats). City size 8."
+                "mode_team6_only": "6-player 3v3 only: up to 4 slots per team, city size 8. Switch play/spectate and change teams in the room.",
+                "mode_team6_hint": "6 players play 3v3. City size 8."
             }
+        },
+        "chat": {
+            "title": "Chat"
         },
         "team": {
             "a": "Team A",

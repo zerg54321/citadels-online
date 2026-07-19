@@ -67,4 +67,8 @@ socket.on('update game state', (data) => {
   store.commit('setGameState', newGameState);
 });
 
+socket.on('chat message', (msg) => {
+  store.commit('addChatMessage', msg);
+});
+
 export default socket;

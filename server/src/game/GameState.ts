@@ -109,12 +109,45 @@ export default class GameState implements Subject {
     return names[ch] || `角色${ch + 1}`;
   }
 
+  private static readonly DISTRICT_NAMES_ZH: Record<string, string> = {
+    manor: '庄园',
+    castle: '城堡',
+    palace: '宫殿',
+    temple: '神庙',
+    church: '教堂',
+    monastery: '修道院',
+    cathedral: '大教堂',
+    tavern: '酒馆',
+    market: '市场',
+    trading_post: '商栈',
+    docks: '码头',
+    harbor: '港口',
+    town_hall: '市政厅',
+    watchtower: '瞭望塔',
+    prison: '监狱',
+    barracks: '兵营',
+    fortress: '要塞',
+    dragon_gate: '龙门',
+    university: '大学',
+    map_room: '地图室',
+    imperial_treasury: '帝国宝库',
+    haunted_quarter: '闹鬼城区',
+    school_of_magic: '魔法学校',
+    keep: '要塞堡垒',
+    great_wall: '长城',
+    graveyard: '墓地',
+    observatory: '天文台',
+    library: '图书馆',
+    laboratory: '实验室',
+    smithy: '铁匠铺',
+  };
+
   private districtLabelZh(cardId: string): string {
+    const name = GameState.DISTRICT_NAMES_ZH[cardId] || cardId;
     const card = ALL_DISTRICTS.get(cardId)?.card;
     const cost = card?.cost ?? '?';
     const color = ['?', '黄', '蓝', '绿', '红', '紫'][card?.type ?? 0] || '?';
-    // prefer id as fallback name key
-    return `${cardId}（${color}${cost}）`;
+    return `${name}（${color}${cost}）`;
   }
 
   containsPlayer(playerId: PlayerId | undefined) {

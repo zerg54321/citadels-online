@@ -61,7 +61,7 @@
             "title": "当前房间",
             "refresh": "刷新",
             "hint": "大厅可加入；对局中可观战。列表约每 4 秒自动刷新。",
-            "empty": "暂无进行中的房间。可创建房间，或邀请好友加入。",
+            "empty": "暂无进行中的房间。可创建房间，或运行 sim-6p 后再刷新。",
             "room_id": "房间",
             "phase": "状态",
             "mode": "模式",
@@ -103,20 +103,12 @@
             "add_ai_hint": "娱乐练习：可 1 人+AI 开局；含 AI 不进竞技排名。",
             "become_player": "入座对战",
             "become_spectator": "改为观战",
-            "team_preview_hint": "点击空位即可加入或换队",
+            "team_preview_hint": "奇偶座位 = 队 A / 队 B",
             "start_game": "开始游戏",
             "wait_message": "等待房主开始游戏。",
             "not_enough_players": "至少需要 2 名玩家才能开始。",
             "need_six_players": "3v3 需要正好 6 人（当前 {n}）。可添加 AI 补位。",
             "too_many_players": "玩家过多（3v3 最多 6 人）。",
-            "need_3v3": "需要两边各 3 人才能开始（当前 队A {a} / 队B {b}）。",
-            "join_team_a": "加入队 A",
-            "join_team_b": "加入队 B",
-            "move_to_team_a": "移入队 A",
-            "move_to_team_b": "移入队 B",
-            "team_full": "队伍已满（最多 4 人）",
-            "chat_title": "聊天",
-            "chat_placeholder": "输入消息...",
             "settings": {
                 "complete_city_size": "建成城市所需城区数量",
                 "action_timeout": "行动时限",
@@ -124,12 +116,9 @@
                 "ai_practice_hint": "含 AI 的 6 人局为 3v3 练习（不进竞技排名）。",
                 "game_mode": "模式",
                 "mode_team6": "3v3 竞技",
-                "mode_team6_only": "本产品仅支持 6 人 3v3：每边最多 4 个栏位，建成城 8。不足 6 人请添加 AI。房内可切换参与/观战并调整队伍。",
-                "mode_team6_hint": "6 名玩家将进行 3v3：两边各 3 人，建成城固定 8。"
+                "mode_team6_only": "本产品仅支持 6 人 3v3：奇偶座位分队 A/B，建成城 8。不足 6 人请添加 AI。房内可切换参与/观战并调整座位。",
+                "mode_team6_hint": "6 名玩家将进行 3v3：奇偶座位分队，建成城固定 8。"
             }
-        },
-        "chat": {
-            "title": "聊天"
         },
         "team": {
             "a": "队 A",

@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 import Debug from 'debug';
 import {
   GameProgress,
-  Move, MoveType, PlayerId, PlayerRole, RoomId, TeamId,
+  Move, MoveType, PlayerId, PlayerRole, RoomId,
 } from 'citadels-common';
 import InMemoryGameStore from '../gameManager/InMemoryGameStore';
 import Player from '../game/Player';
@@ -187,9 +187,6 @@ export function initSocket(io: Server) {
             online: player.online,
             role: player.role,
             userId: player.userId,
-            team: player.team,
-            isAi: player.isAi,
-            isAutoplay: player.isAutoplay,
           });
         } else {
           // join as player — login required
@@ -208,18 +205,15 @@ export function initSocket(io: Server) {
             PlayerRole.PLAYER,
             socket.userId,
           );
-           socket.to(roomId).emit('add player', {
-             id: player.id,
-             username: player.username,
-             manager: player.manager,
-             online: player.online,
-             role: player.role,
-             userId: player.userId,
-             team: player.team,
-             isAi: player.isAi,
-             isAutoplay: player.isAutoplay,
-           });
-           debug('added player', player.id);
+          socket.to(roomId).emit('add player', {
+            id: player.id,
+            username: player.username,
+            manager: player.manager,
+            online: player.online,
+            role: player.role,
+            userId: player.userId,
+          });
+          debug('added player', player.id);
         }
       }
 
@@ -388,62 +382,6 @@ export function initSocket(io: Server) {
         return;
       }
       room.update();
-      callback({ status: 'ok' });
-    });
-
-    socket.on('set lobby team', (teamRaw: string, targetPlayerId?: string, callback?: any) => {
-      const room = gameStore.findRoom(socket.roomId);
-      if (!room) {
-        callback?.({ status: 'error', message: 'room id is invalid' });
-        return;
-      }
-      const actor = room.gameState.getPlayer(socket.playerId);
-      if (!actor) {
-        callback?.({ status: 'error', message: 'player id is invalid' });
-        return;
-      }
-      if (room.gameState.progress !== GameProgress.IN_LOBBY) {
-        callback?.({ status: 'error', message: 'game already started' });
-        return;
-      }
-      const team = teamRaw === 'B' ? TeamId.B : TeamId.A;
-      const victimId = targetPlayerId || actor.id;
-      // only allow moving self unless manager
-      if (victimId !== actor.id && !actor.manager) {
-        callback?.({ status: 'error', message: 'only manager can move other players' });
-        return;
-      }
-      if (!room.gameState.setLobbyTeam(victimId, team)) {
-        callback?.({ status: 'error', message: 'cannot change team (team full or invalid)' });
-        return;
-      }
-      room.update();
-      const victim = room.gameState.getPlayer(victimId);
-      callback?.({ status: 'ok', team: victim?.team });
-    });
-
-    socket.on('chat message', (msg: string, callback) => {
-      const room = gameStore.findRoom(socket.roomId);
-      if (!room) {
-        callback({ status: 'error', message: 'room id is invalid' });
-        return;
-      }
-      const player = room.gameState.getPlayer(socket.playerId);
-      if (!player) {
-        callback({ status: 'error', message: 'player id is invalid' });
-        return;
-      }
-      const text = String(msg).trim().slice(0, 200);
-      if (!text) {
-        callback({ status: 'error', message: 'message cannot be empty' });
-        return;
-      }
-      room.io.to(room.roomId).emit('chat message', {
-        playerId: player.id,
-        username: player.username,
-        text,
-        ts: Date.now(),
-      });
       callback({ status: 'ok' });
     });
 

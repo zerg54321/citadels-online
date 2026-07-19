@@ -109,45 +109,12 @@ export default class GameState implements Subject {
     return names[ch] || `角色${ch + 1}`;
   }
 
-  private static readonly DISTRICT_NAMES_ZH: Record<string, string> = {
-    manor: '庄园',
-    castle: '城堡',
-    palace: '宫殿',
-    temple: '神庙',
-    church: '教堂',
-    monastery: '修道院',
-    cathedral: '大教堂',
-    tavern: '酒馆',
-    market: '市场',
-    trading_post: '商栈',
-    docks: '码头',
-    harbor: '港口',
-    town_hall: '市政厅',
-    watchtower: '瞭望塔',
-    prison: '监狱',
-    barracks: '兵营',
-    fortress: '要塞',
-    dragon_gate: '龙门',
-    university: '大学',
-    map_room: '地图室',
-    imperial_treasury: '帝国宝库',
-    haunted_quarter: '闹鬼城区',
-    school_of_magic: '魔法学校',
-    keep: '要塞堡垒',
-    great_wall: '长城',
-    graveyard: '墓地',
-    observatory: '天文台',
-    library: '图书馆',
-    laboratory: '实验室',
-    smithy: '铁匠铺',
-  };
-
   private districtLabelZh(cardId: string): string {
-    const name = GameState.DISTRICT_NAMES_ZH[cardId] || cardId;
     const card = ALL_DISTRICTS.get(cardId)?.card;
     const cost = card?.cost ?? '?';
     const color = ['?', '黄', '蓝', '绿', '红', '紫'][card?.type ?? 0] || '?';
-    return `${name}（${color}${cost}）`;
+    // prefer id as fallback name key
+    return `${cardId}（${color}${cost}）`;
   }
 
   containsPlayer(playerId: PlayerId | undefined) {
@@ -257,32 +224,6 @@ export default class GameState implements Subject {
     return true;
   }
 
-  /** Player (or manager) explicitly sets their team. */
-  setLobbyTeam(playerId: PlayerId, team: TeamId): boolean {
-    if (this.progress !== GameProgress.IN_LOBBY) return false;
-    const player = this.players.get(playerId);
-    if (!player || player.role !== PlayerRole.PLAYER) return false;
-    if (player.team === team) return true;
-
-    let teamACount = 0;
-    let teamBCount = 0;
-    this.lobbyPlayerOrder.forEach((id) => {
-      if (id === playerId) return;
-      const p = this.players.get(id);
-      if (p && p.role === PlayerRole.PLAYER) {
-        if (p.team === TeamId.A) teamACount++;
-        if (p.team === TeamId.B) teamBCount++;
-      }
-    });
-
-    if (team === TeamId.A && teamACount >= 4) return false;
-    if (team === TeamId.B && teamBCount >= 4) return false;
-
-    player.team = team;
-    this.refreshLobbyTeams();
-    return true;
-  }
-
   /** even index → Team A, odd → Team B (preview + start order) */
   refreshLobbyTeams() {
     // drop stale ids
@@ -293,25 +234,9 @@ export default class GameState implements Subject {
     this.players.forEach((p) => {
       if (p.role !== PlayerRole.PLAYER) p.team = TeamId.NONE;
     });
-    // preserve explicit team assignments; auto-assign only unassigned players
-    let teamACount = 0;
-    let teamBCount = 0;
-    this.lobbyPlayerOrder.forEach((id) => {
+    this.lobbyPlayerOrder.forEach((id, index) => {
       const p = this.players.get(id);
-      if (p && p.team === TeamId.A) teamACount++;
-      if (p && p.team === TeamId.B) teamBCount++;
-    });
-    this.lobbyPlayerOrder.forEach((id) => {
-      const p = this.players.get(id);
-      if (p && p.team === TeamId.NONE) {
-        if (teamACount <= teamBCount) {
-          p.team = TeamId.A;
-          teamACount++;
-        } else {
-          p.team = TeamId.B;
-          teamBCount++;
-        }
-      }
+      if (p) p.team = index % 2 === 0 ? TeamId.A : TeamId.B;
     });
   }
 
@@ -367,14 +292,6 @@ export default class GameState implements Subject {
     // product mode: only 6-player 3v3 (humans and/or AI)
     if (gameSetupData.players.length !== 6) return false;
 
-    const teamA = gameSetupData.players.filter(
-      (id) => this.players.get(id)?.team === TeamId.A,
-    ).length;
-    const teamB = gameSetupData.players.filter(
-      (id) => this.players.get(id)?.team === TeamId.B,
-    ).length;
-    if (teamA !== 3 || teamB !== 3) return false;
-
     return true;
   }
 
@@ -416,24 +333,11 @@ export default class GameState implements Subject {
     this.gameMode = this.hasAiPlayers ? GameMode.CASUAL : GameMode.COMPETITIVE_TEAM6;
     this.completeCitySize = 8;
     this.lobbyPlayerOrder = [...players];
-    // preserve explicit team assignments from lobby; only fill gaps
-    let teamACount = 0;
-    let teamBCount = 0;
-    players.forEach((id) => {
-      const p = this.players.get(id);
-      if (p && p.team === TeamId.A) teamACount++;
-      if (p && p.team === TeamId.B) teamBCount++;
-    });
-    players.forEach((id) => {
-      const p = this.players.get(id);
-      if (p && p.team === TeamId.NONE) {
-        if (teamACount <= teamBCount) {
-          p.team = TeamId.A;
-          teamACount++;
-        } else {
-          p.team = TeamId.B;
-          teamBCount++;
-        }
+    players.forEach((playerId, index) => {
+      const player = this.players.get(playerId);
+      if (player) {
+        // seats 0,2,4 => A ; 1,3,5 => B
+        player.team = index % 2 === 0 ? TeamId.A : TeamId.B;
       }
     });
 

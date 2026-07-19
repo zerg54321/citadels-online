@@ -28,7 +28,6 @@ export interface State {
   authUser: AuthUser | null
   authReady: boolean
   currentRoomId: RoomId | null
-  chatMessages: Array<{ playerId: string; username: string; text: string; ts: number }>
 }
 
 /** Set auth payload only — never disconnect here (would leave the game room). */
@@ -50,7 +49,6 @@ export const store = createStore<State>({
     authUser: null,
     authReady: false,
     currentRoomId: null,
-    chatMessages: [],
   },
 
   getters: {
@@ -210,15 +208,6 @@ export const store = createStore<State>({
     },
     setAuthReady(state, ready: boolean) {
       state.authReady = ready;
-    },
-    addChatMessage(state, msg) {
-      state.chatMessages.push(msg);
-      if (state.chatMessages.length > 200) {
-        state.chatMessages.splice(0, state.chatMessages.length - 200);
-      }
-    },
-    clearChatMessages(state) {
-      state.chatMessages = [];
     },
   },
 
@@ -443,30 +432,6 @@ export const store = createStore<State>({
         return state.socket.emit('remove ai player', playerId, (res: any) => {
           if (res?.status === 'ok') return resolve(res);
           return reject(new Error(res?.message || 'remove ai failed'));
-        });
-      });
-    },
-
-    setLobbyTeam({ state }, payload: { team: 'A' | 'B'; playerId?: string }) {
-      return new Promise((resolve, reject) => {
-        if (!state.socket.connected) {
-          return reject(new Error('You must be connected'));
-        }
-        return state.socket.emit('set lobby team', payload.team, payload.playerId, (res: any) => {
-          if (res?.status === 'ok') return resolve(res);
-          return reject(new Error(res?.message || 'set lobby team failed'));
-        });
-      });
-    },
-
-    sendChat({ state }, text: string) {
-      return new Promise((resolve, reject) => {
-        if (!state.socket.connected) {
-          return reject(new Error('You must be connected'));
-        }
-        return state.socket.emit('chat message', text, (res: any) => {
-          if (res?.status === 'ok') return resolve(res);
-          return reject(new Error(res?.message || 'chat failed'));
         });
       });
     },

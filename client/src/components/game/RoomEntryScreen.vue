@@ -1,23 +1,27 @@
 <template>
 <div class="container-fluid d-flex justify-content-center align-items-center">
   <transition name="fade" mode="out-in">
-    <div v-if="loading">
+    <div v-if="loading" class="text-center">
       <LoadingSpinner />
     </div>
-    <div v-else-if="error">
+    <div v-else-if="error" class="text-center text-gold">
       {{ $t(errorMessage, { msg: errorReason }) }}
     </div>
-    <div v-else-if="needLogin" class="card p-4 text-center" style="min-width: 20rem;">
-      <p class="mb-3">{{ $t('ui.room.login_required') }}</p>
-      <p class="text-muted small mb-3">{{ $t('ui.room.login_required_hint') }}</p>
-      <button type="button" class="btn btn-primary mb-2" @click="openLogin">
+    <div
+      v-else-if="needLogin"
+      class="card p-4 text-center room-entry-card"
+      style="min-width: 20rem;"
+    >
+      <p class="mb-3 text-gold">{{ $t('ui.room.login_required') }}</p>
+      <p class="text-muted-gold small mb-3">{{ $t('ui.room.login_required_hint') }}</p>
+      <button type="button" class="btn btn-gold mb-2" @click="openLogin">
         {{ $t('ui.auth.login') }}
       </button>
-      <button type="button" class="btn btn-outline-secondary" @click="joinAsSpectator">
+      <button type="button" class="btn btn-outline-gold" @click="joinAsSpectator">
         {{ $t('ui.room.spectate') }}
       </button>
     </div>
-    <div v-else class="text-muted small">
+    <div v-else class="text-muted-gold small text-center">
       {{ $t('ui.room.connecting') }}
     </div>
   </transition>
@@ -191,3 +195,11 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.room-entry-card {
+  background: var(--bg-panel);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(212, 175, 55, 0.12);
+}
+</style>

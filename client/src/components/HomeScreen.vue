@@ -14,19 +14,19 @@
             <li>{{ $t('ui.homepage.bullet_rank') }}</li>
           </ul>
           <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-            <button
-              type="button"
-              class="btn btn-lg btn-warning home-hero__cta"
-              :disabled="creatingRoom || !isLoggedIn"
-              @click="createRoom"
-            >
-              {{ creatingRoom ? $t('ui.loading') : $t('ui.homepage.create_room') }}
-            </button>
-            <router-link class="btn btn-lg btn-outline-light" :to="{ name: 'stats' }">
+             <button
+               type="button"
+               class="btn btn-lg btn-gold home-hero__cta"
+               :disabled="creatingRoom || !isLoggedIn"
+               @click="createRoom"
+             >
+               {{ creatingRoom ? $t('ui.loading') : $t('ui.homepage.create_room') }}
+             </button>
+             <router-link class="btn btn-lg btn-outline-gold" :to="{ name: 'stats' }">
               {{ $t('ui.stats.title') }}
             </router-link>
           </div>
-          <p v-if="!isLoggedIn" class="text-warning small mt-2 mb-0">
+          <p v-if="!isLoggedIn" class="text-gold small mt-2 mb-0">
             {{ $t('ui.homepage.login_to_play') }}
           </p>
           <p v-if="createError" class="text-danger small mt-2 mb-0">{{ createError }}</p>
@@ -50,9 +50,9 @@
     <div class="row">
       <div class="col-lg-8 mb-4">
         <div class="card home-rooms shadow-sm">
-          <div class="card-header d-flex justify-content-between align-items-center bg-white">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <div>
-              <strong>{{ $t('ui.rooms.title') }}</strong>
+              <strong class="text-gold">{{ $t('ui.rooms.title') }}</strong>
               <span class="badge badge-secondary ml-2">{{ rooms.length }}</span>
             </div>
             <button
@@ -73,18 +73,18 @@
             <div v-else-if="rooms.length === 0" class="home-rooms__empty text-center py-4">
               <div class="display-4 mb-2 opacity-50">🏛</div>
               <p class="text-muted mb-3">{{ $t('ui.rooms.empty') }}</p>
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="creatingRoom || !isLoggedIn"
-                @click="createRoom"
-              >
+                <button
+                  type="button"
+                  class="btn btn-gold"
+                  :disabled="creatingRoom || !isLoggedIn"
+                  @click="createRoom"
+                >
                 {{ $t('ui.homepage.create_room') }}
               </button>
             </div>
             <div v-else class="table-responsive">
               <table class="table table-hover mb-0 align-middle">
-                <thead class="thead-light">
+                <thead class="home-rooms__head">
                   <tr>
                     <th>{{ $t('ui.rooms.room_id') }}</th>
                     <th>{{ $t('ui.rooms.phase') }}</th>
@@ -102,7 +102,7 @@
                       </div>
                     </td>
                     <td>
-                      <span class="badge" :class="phaseBadge(room.phase)">
+                      <span class="badge home-rooms__badge-lobby" :class="phaseBadge(room.phase)">
                         {{ phaseLabel(room.phase) }}
                       </span>
                       <span v-if="room.spectatorCount" class="badge badge-light ml-1">
@@ -274,38 +274,54 @@ export default defineComponent({
 <style lang="scss" scoped>
 .home {
   min-height: 100%;
-  background: #f4efe6;
+  background: transparent;
 }
 
 .home-hero {
   position: relative;
   overflow: hidden;
-  color: #f5e6c8;
+  color: var(--parchment);
   background:
-    radial-gradient(ellipse at 20% 0%, rgba(212, 175, 55, 0.25), transparent 50%),
-    radial-gradient(ellipse at 90% 40%, rgba(59, 130, 246, 0.18), transparent 45%),
-    linear-gradient(145deg, #1a1410 0%, #2c2118 50%, #1a1410 100%);
+    radial-gradient(ellipse at 20% 0%, rgba(212, 175, 55, 0.22), transparent 50%),
+    radial-gradient(ellipse at 90% 40%, rgba(212, 175, 55, 0.14), transparent 45%),
+    linear-gradient(145deg, #0d0b08 0%, #1a1410 50%, #0d0b08 100%);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 50%, transparent 100%);
+    opacity: 0.6;
+  }
 
   &__glow {
     position: absolute;
     inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     pointer-events: none;
   }
 
   &__eyebrow {
+    font-family: var(--font-display);
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    font-size: 0.75rem;
-    color: #d4af37;
-    margin-bottom: 0.5rem;
+    letter-spacing: 0.18em;
+    font-size: 0.7rem;
+    color: var(--gold-bright);
+    margin-bottom: 0.6rem;
+    opacity: 0.9;
   }
 
   &__title {
-    font-weight: 900;
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    margin-bottom: 0.75rem;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+    margin-bottom: 0.7rem;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55), 0 0 24px rgba(212, 175, 55, 0.18);
   }
 
   &__lead {
@@ -313,6 +329,7 @@ export default defineComponent({
     opacity: 0.9;
     max-width: 34rem;
     margin-bottom: 1rem;
+    color: var(--parchment);
   }
 
   &__bullets {
@@ -321,29 +338,35 @@ export default defineComponent({
     li {
       margin-bottom: 0.35rem;
       opacity: 0.88;
+      color: var(--parchment);
     }
   }
 
   &__cta {
-    font-weight: 800;
+    font-family: var(--font-display);
+    font-weight: 700;
     min-width: 10rem;
-    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    box-shadow: 0 6px 24px rgba(212, 175, 55, 0.35);
   }
 
   &__card {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    border-radius: 14px;
+    background: rgba(13, 11, 8, 0.55);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 12px;
     padding: 1.25rem 1.4rem;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.35), 0 8px 32px rgba(0,0,0,0.45);
   }
 
   &__card-title {
-    color: #d4af37;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    color: var(--gold-bright);
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     margin-bottom: 0.75rem;
   }
 
@@ -351,7 +374,8 @@ export default defineComponent({
     padding-left: 1.15rem;
     li {
       margin-bottom: 0.45rem;
-      line-height: 1.4;
+      line-height: 1.5;
+      color: var(--parchment);
     }
   }
 }
@@ -360,26 +384,78 @@ export default defineComponent({
   margin-top: -1.5rem;
   position: relative;
   z-index: 1;
+  background: transparent;
 }
 
 .home-rooms {
-  border: none;
+  border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 12px;
   overflow: hidden;
+  background: var(--bg-panel);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+
+  &__head {
+    background: rgba(13, 11, 8, 0.6) !important;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+    th {
+      color: var(--gold);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  }
 
   &__id {
     font-size: 0.85rem;
+    color: var(--gold-bright);
+    font-family: var(--font-body);
   }
 
   &__empty {
-    background: #faf7f2;
+    background: rgba(13, 11, 8, 0.35);
     border-radius: 8px;
+    border: 1px dashed rgba(212, 175, 55, 0.35);
+  }
+
+  .badge {
+    border: 1px solid rgba(212, 175, 55, 0.25);
+  }
+  .badge-success {
+    background: rgba(212, 175, 55, 0.18);
+    color: var(--gold-bright);
+  }
+  .badge-primary {
+    background: rgba(212, 175, 55, 0.18);
+    color: var(--gold-bright);
+  }
+  .badge-secondary {
+    background: rgba(184, 168, 136, 0.12);
+    color: var(--text-muted);
+  }
+  .badge-light {
+    background: rgba(232, 220, 192, 0.08);
+    color: var(--parchment);
+  }
+
+  td, th {
+    border-color: rgba(212, 175, 55, 0.12);
+  }
+
+  tbody tr:hover {
+    background: rgba(212, 175, 55, 0.04);
   }
 }
 
 .home-side {
-  border: none;
+  border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 12px;
+  background: var(--bg-panel);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+
+  .card-body {
+    color: var(--parchment);
+  }
 }
 
 .home-feature {
@@ -387,7 +463,7 @@ export default defineComponent({
   gap: 0.75rem;
   align-items: flex-start;
   padding: 0.55rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
 
   &:last-child {
     border-bottom: none;
@@ -399,6 +475,7 @@ export default defineComponent({
     line-height: 1;
     width: 2rem;
     text-align: center;
+    filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.35));
   }
 }
 

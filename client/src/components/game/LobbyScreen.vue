@@ -7,42 +7,49 @@
   aria-hidden="true"
 >
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="setupConfirmationModalLabel">
+    <div class="modal-content lobby-modal">
+      <div class="modal-header border-0 pb-2">
+         <h5 class="modal-title text-gold lobby-modal-title" id="setupConfirmationModalLabel">
           {{ $t('ui.lobby.start_game') }}
         </h5>
-        <button type="button" class="close" data-dismiss="modal" :aria-label="$t('ui.cancel')">
+         <button
+           type="button"
+           class="close text-gold"
+           data-dismiss="modal"
+           :aria-label="$t('ui.cancel')"
+         >
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <table class="table">
+        <table class="table lobby-table">
           <tbody>
             <tr v-if="isSixPlayers">
-              <td>{{ $t('ui.lobby.settings.game_mode') }}</td>
-              <td>{{ $t('ui.lobby.settings.mode_team6') }}</td>
+              <td class="text-muted-gold">{{ $t('ui.lobby.settings.game_mode') }}</td>
+              <td class="text-gold">{{ $t('ui.lobby.settings.mode_team6') }}</td>
             </tr>
             <tr>
-              <td>{{ $t('ui.lobby.settings.complete_city_size') }}</td>
-              <td>{{ isSixPlayers ? 8 : gameSetupData.completeCitySize }}</td>
+              <td class="text-muted-gold">{{ $t('ui.lobby.settings.complete_city_size') }}</td>
+              <td class="text-gold">{{ isSixPlayers ? 8 : gameSetupData.completeCitySize }}</td>
             </tr>
             <tr>
-              <td>{{ $t('ui.lobby.settings.action_timeout') }}</td>
-              <td>{{ gameSetupData.actionTimeoutSeconds }}s</td>
+              <td class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout') }}</td>
+              <td class="text-gold">{{ gameSetupData.actionTimeoutSeconds }}s</td>
             </tr>
           </tbody>
         </table>
-        <div class="card">
-          <div class="card-header">{{ $t('ui.lobby.players') }}</div>
+        <div class="card lobby-modal-card">
+          <div class="card-header text-gold lobby-modal-card-header">
+            {{ $t('ui.lobby.players') }}
+          </div>
           <ul class="list-group list-group-flush">
             <li
               class="list-group-item d-flex justify-content-between align-items-center"
-              :class="{'text-muted': !getPlayerFromId(playerId).online}"
+              :class="{'text-muted-gold': !getPlayerFromId(playerId).online}"
               v-for="playerId in gameSetupData.players"
               :key="playerId"
             >
-              <span>{{ getPlayerFromId(playerId).username }}</span>
+              <span class="text-parchment">{{ getPlayerFromId(playerId).username }}</span>
               <span
                 v-if="playerId === gameState.self"
                 class="badge badge-info"
@@ -59,13 +66,13 @@
           </ul>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-gold" data-dismiss="modal">
           {{ $t('ui.cancel') }}
         </button>
         <button
           type="button"
-          class="btn btn-primary"
+          class="btn btn-gold"
           @click="startGame"
           :disabled="startingGame"
         >{{ $t('ui.confirm') }}</button>
@@ -73,18 +80,22 @@
     </div>
   </div>
 </div>
-<div class="card h-100">
-  <div class="card-header">{{ $t('ui.lobby.title') }}</div>
+ <div class="card h-100 medieval-panel">
+  <div class="card-header border-0 pt-3 pb-2">
+    <h5 class="mb-0 text-gold lobby-title">
+      {{ $t('ui.lobby.title') }}
+    </h5>
+  </div>
   <div class="row no-gutters h-100 overflow-auto">
-    <div v-if="isManager" class="col p-3">
-      <div class="alert alert-info py-2">
+    <div v-if="isManager" class="col p-3 lobby-settings-col">
+      <div class="lobby-alert-info mb-2">
         {{ $t('ui.lobby.settings.mode_team6_only') }}
       </div>
-      <div v-if="hasAiPlayers" class="alert alert-warning py-2">
+      <div v-if="hasAiPlayers" class="lobby-alert-warn mb-2">
         {{ $t('ui.lobby.settings.ai_practice_hint') }}
       </div>
       <div class="form-group">
-        <label for="actionTimeoutSeconds">
+        <label for="actionTimeoutSeconds" class="text-gold lobby-label">
           {{ $t('ui.lobby.settings.action_timeout') }}
         </label>
         <select
@@ -98,19 +109,17 @@
           <option :value="120">120s</option>
           <option :value="180">180s</option>
         </select>
-        <small class="form-text text-muted">
-          {{ $t('ui.lobby.settings.action_timeout_hint') }}
-        </small>
+        <small class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout_hint') }}</small>
       </div>
     </div>
-    <div class="col p-3 bg-light">
+    <div class="col p-3 lobby-players-col">
       <PlayersList />
     </div>
   </div>
-  <div class="card-footer">
+  <div class="card-footer border-0">
     <input
       type="button"
-      class="btn btn-primary btn-lg btn-block"
+      class="btn btn-gold btn-lg btn-block"
       @click="showConfirmationModal"
       :disabled="validation.disabled"
       :value="validation.message"
@@ -217,3 +226,97 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.lobby-settings-col {
+  background: rgba(13, 11, 8, 0.35);
+  border-right: 1px solid rgba(212, 175, 55, 0.2);
+}
+.lobby-players-col {
+  background: rgba(13, 11, 8, 0.15);
+}
+.lobby-alert-info {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold-bright);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+.lobby-alert-warn {
+  background: rgba(180, 120, 40, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+.lobby-modal {
+  background: var(--bg-panel);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.15);
+}
+.lobby-table td {
+  border-color: rgba(212, 175, 55, 0.18);
+  padding: 0.45rem 0.5rem;
+}
+.lobby-modal-card {
+  background: rgba(13, 11, 8, 0.45);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+.lobby-modal-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lobby-modal-card-header {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lobby-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.lobby-label {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+:deep(.list-group-item) {
+  background: transparent;
+  border-color: rgba(212, 175, 55, 0.12);
+  color: var(--parchment);
+}
+:deep(.badge-info) {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold-bright);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+:deep(.badge-success) {
+  background: rgba(76, 140, 76, 0.25);
+  color: #a3d9a3;
+  border: 1px solid rgba(76, 140, 76, 0.45);
+}
+:deep(.badge-secondary) {
+  background: rgba(120, 110, 95, 0.2);
+  color: var(--text-muted);
+  border: 1px solid rgba(120, 110, 95, 0.35);
+}
+
+.form-control {
+  background: rgba(13, 11, 8, 0.5);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--parchment);
+}
+.form-control:focus {
+  background: rgba(13, 11, 8, 0.7);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  box-shadow: 0 0 0 0.15rem rgba(212, 175, 55, 0.15);
+}
+</style>

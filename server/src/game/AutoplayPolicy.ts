@@ -133,6 +133,28 @@ function ownerIdOfCharacter(gs: GameState, character: CharacterType): string | n
   return gs.board.playerOrder[seat] ?? null;
 }
 
+/**
+ * 角色是否已对全场"公开"——即人类玩家也能看到归属的状态。
+ * 包括：当前正在行动的字符、已被刺杀/被偷、或面亮出放置的旁观牌。
+ * 选角阶段其他玩家暗选的字符在此为 false，AI 不得据此获知归属（与人类一致）。
+ */
+function isRolePubliclyKnown(gs: GameState, character: CharacterType): boolean {
+  const cm = gs.board?.characterManager;
+  if (!cm) return false;
+  if (cm.killedCharacter === character) return true;
+  if (cm.robbedCharacter === character) return true;
+  if (cm.getCurrentCharacter() === character) return true;
+  const faceUpAside = cm.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_UP) || [];
+  if (faceUpAside.includes(character)) return true;
+  return false;
+}
+
+/** 仅当角色已公开时才返回真实归属；否则返回 null，迫使 AI 走预测。 */
+function knownOwnerIfPublic(gs: GameState, character: CharacterType): string | null {
+  if (!isRolePubliclyKnown(gs, character)) return null;
+  return ownerIdOfCharacter(gs, character);
+}
+
 function countColorIn(list: string[], districtType: DistrictType | undefined): number {
   if (districtType === undefined) return 0;
   return list.filter((id) => typeOf(id) === districtType).length;
@@ -437,7 +459,7 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
 
   for (let ch = CharacterType.THIEF; ch <= CharacterType.WARLORD; ch += 1) {
     if (ch === cm.killedCharacter) continue;
-    const ownerId = ownerIdOfCharacter(gs, ch);
+    const ownerId = knownOwnerIfPublic(gs, ch);
     let score = 0;
 
     if (ownerId && isAlly(gs, actorId, ownerId)) {
@@ -496,7 +518,7 @@ function thiefTargets(gs: GameState, actorId: string): number[] {
 
   for (let ch = CharacterType.MAGICIAN; ch <= CharacterType.WARLORD; ch += 1) {
     if (ch === cm.killedCharacter || ch === cm.robbedCharacter) continue;
-    const ownerId = ownerIdOfCharacter(gs, ch);
+    const ownerId = knownOwnerIfPublic(gs, ch);
     let score = 0;
 
     if (ownerId && isAlly(gs, actorId, ownerId)) {

@@ -157,15 +157,11 @@ export default defineComponent({
     background-size: cover;
 
     &--back {
-      background:
-        repeating-linear-gradient(
-          45deg,
-          #1e1a28 0,
-          #1e1a28 8px,
-          #2a2438 8px,
-          #2a2438 16px
-        );
-      border-color: rgba(180, 140, 255, 0.28);
+      background-image: url('../../../assets/characters/background.jpg');
+      background-size: cover;
+      background-position: center;
+      border-color: rgba(180, 140, 255, 0.35);
+      box-shadow: inset 0 0 24px rgba(0,0,0,0.6);
     }
 
     /* fallback gradients when art missing */

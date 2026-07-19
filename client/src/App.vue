@@ -33,41 +33,26 @@
   </div>
 </div>
 <div class="d-flex flex-column h-100">
-<header v-if="!inGame">
+<header>
   <div class="container-fluid">
     <div class="d-flex flex-wrap align-items-center justify-content-end">
       <div class="flex-grow-1 text-center pb-1">
         <h1><a href="/" class="text-reset">{{ $t('ui.title') }}</a></h1>
-        <h6>{{ $t('ui.subtitle2') }}</h6>
+        <h6 :class="{ 'header-subtitle--hidden': inGame }">{{ $t('ui.subtitle2') }}</h6>
       </div>
-      <div class="text-right">
+      <div class="text-right header-actions">
         <AuthPanel class="mb-1" />
-        <div class="mb-1">
+        <div class="mb-1 header-extra" :class="{ 'header-extra--hidden': inGame }">
           <router-link class="text-reset text-decoration-none mr-2" :to="{ name: 'stats' }">
             {{ $t('ui.stats.title') }}
           </router-link>
+          <a
+            class="text-reset text-decoration-none"
+            href="#"
+            data-toggle="modal"
+            data-target="#aboutModal"
+          >{{ $t('ui.about.title') }}</a>
         </div>
-        <LocaleSelector class="opacity-4" />
-        <a
-          class="text-reset text-decoration-none"
-          href="#"
-          data-toggle="modal"
-          data-target="#aboutModal"
-        >{{ $t('ui.about.title') }}</a>
-      </div>
-    </div>
-  </div>
-</header>
-<header v-else class="header-in-game">
-  <div class="container-fluid">
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 py-0">
-      <div class="flex-grow-1 text-center">
-        <h2 class="mt-0 mb-0 h5"><a href="/" class="text-reset">{{ $t('ui.title') }}</a></h2>
-      </div>
-      <div>
-        <AuthPanel class="mb-0" />
-      </div>
-      <div>
         <LocaleSelector class="opacity-4" />
       </div>
     </div>
@@ -108,19 +93,55 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 header {
-  background: brown;
-  color: wheat;
+  background: linear-gradient(180deg, rgba(13,11,8,0.97) 0%, rgba(26,20,16,0.95) 100%);
+  color: var(--parchment);
   margin: 0;
-  padding: 0.5em;
+  padding: 0.6em 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 2px 18px rgba(0,0,0,0.55);
+  transition: padding 0.25s ease;
 
   h1, h2, h6 {
     padding: 0;
     margin: 0;
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+  }
+
+  h1 a, h2 a {
+    color: var(--gold);
+    text-decoration: none;
+    text-shadow: 0 1px 6px rgba(212,175,55,0.25);
+  }
+
+  h6 {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    transition: all 0.25s ease;
+  }
+
+  .header-subtitle--hidden {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+  }
+
+  .header-extra {
+    transition: all 0.25s ease;
+  }
+
+  .header-extra--hidden {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    display: none;
   }
 }
 
 .body {
-  background: wheat;
+  background: var(--bg-void);
   min-height: 0;
 }
 
@@ -131,9 +152,28 @@ header {
   flex-direction: column;
 }
 
-.header-in-game {
-  padding: 0.25rem 0.5rem !important;
-  background: #1a1410 !important;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+:deep(.auth-panel) {
+  .badge-success {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--gold-bright);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+  }
+  .btn-outline-light {
+    color: var(--gold);
+    border-color: rgba(212, 175, 55, 0.55);
+  }
+  .btn-outline-light:hover {
+    background: rgba(212, 175, 55, 0.08);
+    color: var(--gold-bright);
+  }
+  .btn-outline-secondary {
+    color: var(--text-muted);
+    border-color: rgba(184, 168, 136, 0.4);
+  }
+  .btn-outline-secondary:hover {
+    color: var(--parchment);
+    border-color: var(--parchment);
+    background: rgba(232, 220, 192, 0.06);
+  }
 }
 </style>

@@ -106,14 +106,32 @@
     <div v-if="!isSpectator" class="board-table__slot board-table__slot--self">
       <div class="board-table__self-wrap">
         <div class="board-table__self-panel">
-          <div class="board-table__self-head">
-            <span>
-              {{ selfLabel }}
-              <span class="badge badge-primary ml-1">{{ $t('ui.lobby.you') }}</span>
+          <div class="board-table__self-banner">
+            <span class="board-table__self-pick">{{ selfPickOrder }}</span>
+            <span class="text-truncate flex-fill">{{ selfName }}</span>
+            <span class="board-table__self-vp">
+              ⭐ {{ selfBoard.score?.total ?? 0 }}
             </span>
-            <span class="d-flex align-items-center gap-2">
-              G {{ selfBoard.stash }} · VP {{ selfBoard.score?.total ?? 0 }}
-              <span v-if="selfBoard.crown"> 👑</span>
+            <span
+              v-if="selfBoard.crown"
+              class="seat-panel__crown"
+              :title="$t('ui.game.crown_holder')"
+            >👑</span>
+            <span class="seat-panel__tag">{{ $t('ui.lobby.you') }}</span>
+          </div>
+          <div class="board-table__self-body">
+            <div class="board-table__self-city">
+              <DistrictCard
+                v-for="(id, i) in selfBoard.city"
+                :key="'city-' + i"
+                :district-id="id"
+                small
+              />
+              <div v-if="!(selfBoard.city || []).length" class="seat-panel__city-empty">
+                {{ $t('ui.game.no_buildings') }}
+              </div>
+            </div>
+            <div class="board-table__self-role">
               <CharacterCard
                 v-if="gameProgress === 'IN_GAME' && selfRoleCard.show"
                 :character-id="selfRoleCard.id"
@@ -122,20 +140,9 @@
                 :robbed="selfRoleCard.robbed"
                 size="medium"
               />
-            </span>
+            </div>
           </div>
           <div class="board-table__self-hand">
-            <div
-              v-if="(selfBoard.city || []).length"
-              class="board-table__self-city"
-            >
-              <DistrictCard
-                v-for="(id, i) in selfBoard.city"
-                :key="'city-' + i"
-                :district-id="id"
-                small
-              />
-            </div>
             <PlayerHand
               :board="selfBoard"
               :build-mode="buildMode"
@@ -472,9 +479,13 @@ export default defineComponent({
         crown: this.gameState.board.playerOrder[0] === this.self,
       };
     },
-    selfLabel() {
-      const name = this.getPlayerFromId(this.self)?.username || 'You';
-      return `${name} (${this.$t('ui.lobby.you')})`;
+    selfName() {
+      return this.getPlayerFromId(this.self)?.username || 'You';
+    },
+    selfPickOrder() {
+      const order = this.gameState?.board?.playerOrder || [];
+      const idx = order.indexOf(this.self);
+      return idx >= 0 ? idx + 1 : 0;
     },
     displayActionFeed() {
       return this.gameState?.actionFeed || this.actionLog || [];

@@ -43,9 +43,11 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { Move, MoveType, DistrictId } from 'citadels-common';
+import { Move, MoveType, DistrictId, PlayerBoard } from 'citadels-common';
 import { store } from '../../../store';
 import DistrictCard from './DistrictCard.vue';
+
+type BoardWithCrown = PlayerBoard & { crown: boolean };
 
 export default defineComponent({
   name: 'PlayerHand',
@@ -54,6 +56,7 @@ export default defineComponent({
   },
   props: {
     board: {
+      type: Object as () => BoardWithCrown,
       required: true,
     },
     buildMode: {
@@ -122,12 +125,12 @@ export default defineComponent({
       deep: true,
     },
     selectedCards: {
-      handler(val) {
+      handler(val: boolean[]) {
         const cards: DistrictId[] = [];
-        val.forEach((isSelected, index) => {
+        val.forEach((isSelected: boolean, index: number) => {
           if (isSelected) {
             const card = this.board.hand[index];
-            if (card !== undefined) cards.push(card);
+            if (card !== undefined && card !== null) cards.push(card);
           }
         });
 

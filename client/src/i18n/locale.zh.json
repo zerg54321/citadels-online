@@ -109,6 +109,8 @@
             "not_enough_players": "至少需要 2 名玩家才能开始。",
             "need_six_players": "3v3 需要正好 6 人（当前 {n}）。可添加 AI 补位。",
             "too_many_players": "玩家过多（3v3 最多 6 人）。",
+            "chat_title": "聊天",
+            "chat_placeholder": "输入消息...",
             "settings": {
                 "complete_city_size": "建成城市所需城区数量",
                 "action_timeout": "行动时限",
@@ -263,6 +265,8 @@
             "back_home": "返回大厅",
             "keep_browsing": "继续查看牌局",
             "leave_room": "退出房间",
+            "leave_room_confirm_title": "确认退出房间",
+            "leave_room_confirm_body": "你当前正在房间内，离开后其他玩家将无法看到你。确定要离开吗？",
             "show_result": "查看结算"
         }
     },

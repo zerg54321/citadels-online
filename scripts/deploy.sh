@@ -10,8 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR")"
 
 SERVICE_NAME="citadels"
-DB_PATH="${REPO_DIR}/data/citadels.sqlite"
-BACKUP_DIR="${REPO_DIR}/backups"
+DB_PATH="/opt/citadels/data/citadels.sqlite"
+BACKUP_DIR="/opt/citadels/backups"
 HEALTH_URL="http://127.0.0.1:8081"
 HEALTH_TIMEOUT=30
 

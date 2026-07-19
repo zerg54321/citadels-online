@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import db from './database';
+import { nowIso } from '../utils/dateUtils';
 
 export type UserRecord = {
   id: string;
@@ -19,10 +20,6 @@ export type PublicUser = {
 
 const BCRYPT_ROUNDS = 10;
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,32}$/;
-
-function nowIso() {
-  return new Date().toISOString();
-}
 
 function genUserId() {
   return randomBytes(16).toString('hex');

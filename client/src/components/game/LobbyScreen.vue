@@ -80,52 +80,65 @@
     </div>
   </div>
 </div>
- <div class="card h-100 medieval-panel">
-  <div class="card-header border-0 pt-3 pb-2">
-    <h5 class="mb-0 text-gold lobby-title">
-      {{ $t('ui.lobby.title') }}
-    </h5>
-  </div>
-  <div class="row no-gutters h-100 overflow-auto">
-    <div v-if="isManager" class="col p-3 lobby-settings-col">
-      <div class="lobby-alert-info mb-2">
-        {{ $t('ui.lobby.settings.mode_team6_only') }}
+  <div class="card h-100 medieval-panel">
+    <div class="card-header border-0 pt-3 pb-2">
+      <h5 class="mb-0 text-gold lobby-title">
+        {{ $t('ui.lobby.title') }}
+      </h5>
+    </div>
+    <div class="card-body lobby-body p-0">
+      <div class="row no-gutters lobby-players-area">
+        <div v-if="isManager" class="col-auto p-3 lobby-settings-col">
+          <div class="lobby-alert-info mb-2">
+            {{ $t('ui.lobby.settings.mode_team6_only') }}
+          </div>
+          <div v-if="hasAiPlayers" class="lobby-alert-warn mb-2">
+            {{ $t('ui.lobby.settings.ai_practice_hint') }}
+          </div>
+          <div class="form-group">
+            <label for="actionTimeoutSeconds" class="text-gold lobby-label">
+              {{ $t('ui.lobby.settings.action_timeout') }}
+            </label>
+            <select
+              class="form-control"
+              id="actionTimeoutSeconds"
+              v-model.number="actionTimeoutSeconds"
+            >
+              <option :value="10">10s（测试）</option>
+              <option :value="60">60s</option>
+              <option :value="90">90s</option>
+              <option :value="120">120s</option>
+              <option :value="180">180s</option>
+            </select>
+            <small class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout_hint') }}</small>
+          </div>
+        </div>
+        <div class="col p-3 lobby-players-col">
+          <PlayersList />
+        </div>
       </div>
-      <div v-if="hasAiPlayers" class="lobby-alert-warn mb-2">
-        {{ $t('ui.lobby.settings.ai_practice_hint') }}
+      <div class="lobby-chat-area px-3 pb-2">
+        <RoomChat />
       </div>
-      <div class="form-group">
-        <label for="actionTimeoutSeconds" class="text-gold lobby-label">
-          {{ $t('ui.lobby.settings.action_timeout') }}
-        </label>
-        <select
-          class="form-control"
-          id="actionTimeoutSeconds"
-          v-model.number="actionTimeoutSeconds"
+    </div>
+    <div class="card-footer border-0">
+      <div class="d-flex gap-2">
+        <input
+          type="button"
+          class="btn btn-outline-gold btn-lg"
+          @click="leaveRoom"
+          :value="$t('ui.score.leave_room')"
         >
-          <option :value="10">10s（测试）</option>
-          <option :value="60">60s</option>
-          <option :value="90">90s</option>
-          <option :value="120">120s</option>
-          <option :value="180">180s</option>
-        </select>
-        <small class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout_hint') }}</small>
+        <input
+          type="button"
+          class="btn btn-gold btn-lg flex-fill"
+          @click="showConfirmationModal"
+          :disabled="validation.disabled"
+          :value="validation.message"
+        >
       </div>
     </div>
-    <div class="col p-3 lobby-players-col">
-      <PlayersList />
-    </div>
   </div>
-  <div class="card-footer border-0">
-    <input
-      type="button"
-      class="btn btn-gold btn-lg btn-block"
-      @click="showConfirmationModal"
-      :disabled="validation.disabled"
-      :value="validation.message"
-    >
-  </div>
-</div>
 </template>
 
 <script lang="ts">
@@ -134,10 +147,11 @@ import $ from 'jquery';
 import { mapGetters } from 'vuex';
 import { PlayerRole } from 'citadels-common';
 import PlayersList from './elements/PlayersList.vue';
+import RoomChat from './RoomChat.vue';
 import { store } from '../../store';
 
 export default defineComponent({
-  components: { PlayersList },
+  components: { PlayersList, RoomChat },
   name: 'LobbyScreen',
   data() {
     return {
@@ -215,9 +229,17 @@ export default defineComponent({
       } catch (error) {
         console.error('error when starting game', error);
         this.startingGame = false;
-        // surface error so host is not stuck on a silent modal
-        // eslint-disable-next-line no-alert
         window.alert(error instanceof Error ? error.message : String(error));
+      }
+    },
+    async leaveRoom() {
+      try {
+        await store.dispatch('leaveRoom');
+        this.$router.push('/').catch(() => {
+          window.location.href = '/';
+        });
+      } catch (e) {
+        console.error('leave room failed', e);
       }
     },
   },
@@ -285,6 +307,22 @@ export default defineComponent({
   font-size: 0.8rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.lobby-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.lobby-players-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.lobby-chat-area {
+  flex: 0 0 auto;
+  max-height: 35vh;
+  min-height: 3rem;
 }
 
 :deep(.list-group-item) {

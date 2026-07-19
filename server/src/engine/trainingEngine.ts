@@ -10,7 +10,9 @@ import {
 import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
 import { CharacterType, TurnState } from '../game/CharacterManager';
-import { EngineAction, EngineActionType, EngineObservation, EnginePhase, EngineResult } from './types';
+import {
+  EngineAction, EngineActionType, EngineObservation, EnginePhase, EngineResult,
+} from './types';
 
 const CHARACTER_NAMES = [
   '刺客', '盗贼', '魔术师', '国王', '主教', '商人', '建筑师', '军阀',
@@ -80,7 +82,7 @@ export class TrainingEngine {
 
   /** snapshot without re-running legal-action auto-advance */
   captureObservation(legalActions: EngineAction[] = []): EngineObservation {
-    const board = this.gameState.board;
+    const { board } = this.gameState;
     const cm = board?.characterManager;
     const order = board?.playerOrder || this.playerOrder;
     const crownId = order[0] || null;
@@ -172,7 +174,7 @@ export class TrainingEngine {
       return [];
     }
 
-    const board = this.gameState.board;
+    const { board } = this.gameState;
     const cm2 = board.characterManager;
     const actorId = this.getCurrentActorId();
     if (!actorId) {

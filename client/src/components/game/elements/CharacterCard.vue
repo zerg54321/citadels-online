@@ -16,10 +16,6 @@
     @click="onClick"
   >
     <div v-if="isBack" class="char-card__inner char-card__inner--back">
-      <div class="char-card__back-pattern">
-        <span class="char-card__back-icon">🎭</span>
-        <span class="char-card__back-label">{{ $t('ui.game.character_card_back') }}</span>
-      </div>
     </div>
     <div
       v-else

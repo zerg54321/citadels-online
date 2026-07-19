@@ -56,8 +56,8 @@ export enum CharacterChoosingStateType {
 }
 
 export enum CharacterType {
-  NONE = 0,
-  ASSASSIN,
+  NONE = -1,
+  ASSASSIN = 0,
   THIEF,
   MAGICIAN,
   KING,
@@ -65,6 +65,7 @@ export enum CharacterType {
   MERCHANT,
   ARCHITECT,
   WARLORD,
+  CHARACTER_COUNT,
 }
 
 export enum PlayerPosition {

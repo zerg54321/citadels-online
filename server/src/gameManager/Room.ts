@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import Debug from 'debug';
 import {
   GameMode, GameProgress, PlayerRole, RoomId,
 } from 'citadels-common';
@@ -7,6 +8,8 @@ import ExtendedSocket from '../socket/ExtendedSocket';
 import { Observer } from '../utils/observerPattern';
 import { saveFinishedMatch } from '../db/matches';
 import { getTurnTimer } from './TurnTimer';
+
+const debug = Debug('citadels-server');
 
 export type RoomListItem = {
   roomId: RoomId;
@@ -88,7 +91,7 @@ export default class Room implements Observer {
       const id = saveFinishedMatch(this.roomId, this.gameState);
       if (id) {
         this.gameState.matchPersisted = true;
-        console.log(`[matches] saved ${id} room=${this.roomId}`);
+        debug(`[matches] saved ${id} room=${this.roomId}`);
       }
     } catch (err) {
       console.error('[matches] persist error', err);

@@ -29,7 +29,7 @@ export default defineComponent({
   },
   computed: {
     cards(): DistrictId[] {
-      return Object.keys(districts);
+      return Object.keys(districts) as DistrictId[];
     },
   },
 });

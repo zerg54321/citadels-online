@@ -2,7 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { districts } from 'citadels-common';
 import { TrainingEngine } from '../trainingEngine';
-import { EngineAction, EngineActionType, EngineObservation, EnginePhase } from '../types';
+import {
+  EngineAction, EngineActionType, EngineObservation, EnginePhase,
+} from '../types';
 import {
   ReplayEvent,
   ReplayEventTarget,

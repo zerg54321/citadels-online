@@ -323,7 +323,8 @@ function scoreCharacterPick(
 }
 
 function pickBestCharacterIndex(gs: GameState, actorId: string): number {
-  const remaining = gs.board!.characterManager.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+  if (!gs.board) return 0;
+  const remaining = gs.board.characterManager.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
   if (!remaining.length) return 0;
 
   let bestIdx = 0;
@@ -449,7 +450,8 @@ function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
 }
 
 function assassinTargets(gs: GameState, actorId: string): number[] {
-  const cm = gs.board!.characterManager;
+  if (!gs.board) return [];
+  const cm = gs.board.characterManager;
   const tempo = detectTempo(gs, actorId);
   const limit = completeSize(gs);
   const allyNearWin = maxAllyCity(gs, actorId) >= limit - 2;
@@ -474,7 +476,7 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
     } else {
       // hidden: predictive scan over enemies
       let pred = 1;
-      gs.board!.playerOrder.forEach((pid) => {
+      gs.board.playerOrder.forEach((pid) => {
         if (!isEnemy(gs, actorId, pid)) return;
         const roles = predictLikelyRoles(gs, pid);
         const idx = roles.indexOf(ch);
@@ -509,11 +511,12 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
 }
 
 function thiefTargets(gs: GameState, actorId: string): number[] {
-  const cm = gs.board!.characterManager;
+  if (!gs.board) return [];
+  const cm = gs.board.characterManager;
   const scored: { clientId: number; score: number }[] = [];
 
   // find richest enemies and their predicted roles
-  const enemies = (gs.board?.playerOrder || []).filter((pid) => isEnemy(gs, actorId, pid));
+  const enemies = (gs.board.playerOrder || []).filter((pid) => isEnemy(gs, actorId, pid));
   enemies.sort((a, b) => stashOf(gs, b) - stashOf(gs, a));
 
   for (let ch = CharacterType.MAGICIAN; ch <= CharacterType.WARLORD; ch += 1) {
@@ -547,11 +550,12 @@ function thiefTargets(gs: GameState, actorId: string): number[] {
 }
 
 function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
+  if (!gs.board) return [];
   const myHand = handCount(gs, actorId);
   const myGe = goldEquivalent(stashOf(gs, actorId), myHand);
   const scored: { seat: number; score: number }[] = [];
 
-  gs.board!.playerOrder.forEach((pid, seat) => {
+  gs.board.playerOrder.forEach((pid, seat) => {
     if (!isEnemy(gs, actorId, pid)) return;
     const their = handCount(gs, pid);
     const deltaCards = their - myHand;
@@ -567,7 +571,8 @@ function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
 type DestroyCandidate = { seat: number; card: DistrictId; score: number };
 
 function warlordDestroyCandidates(gs: GameState, actorId: string): DestroyCandidate[] {
-  const board = gs.board!;
+  const { board } = gs;
+  if (!board) return [];
   const cm = board.characterManager;
   const me = board.players.get(actorId);
   if (!me) return [];
@@ -627,7 +632,7 @@ function preferDrawOverGold(gs: GameState, actorId: string): boolean {
 
 export function pickAndApplyAutoplayMove(gameState: GameState): Move | null {
   if (!gameState.board) return null;
-  const board = gameState.board;
+  const { board } = gameState;
   const cm = board.characterManager;
   const actorId = board.getCurrentPlayerId();
   if (!actorId) return null;

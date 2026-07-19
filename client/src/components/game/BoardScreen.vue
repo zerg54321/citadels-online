@@ -1,304 +1,155 @@
 <template>
-<div class="board-table">
-  <div class="board-table__bg" />
+  <div class="board-table">
+    <div class="board-table__bg" />
 
-  <!-- Top: team scores + turn order -->
-  <div class="board-table__top">
-    <div v-if="showTeamScores" class="board-table__score-bar">
-      <span class="board-table__team-a">
-        {{ isSpectator ? $t('ui.team.a') : $t('ui.team.mine') }}
-        {{ liveTeamScores.A }}
-      </span>
-      <span class="opacity-50">VS</span>
-      <span class="board-table__team-b">
-        {{ isSpectator ? $t('ui.team.b') : $t('ui.team.enemy') }}
-        {{ liveTeamScores.B }}
-      </span>
+    <!-- Top: team scores + turn order -->
+    <div class="board-table__top">
+      <div v-if="showTeamScores" class="board-table__score-bar">
+        <span class="board-table__team-a">
+          {{ isSpectator ? $t('ui.team.a') : $t('ui.team.mine') }}
+          {{ liveTeamScores.A }}
+        </span>
+        <span class="opacity-50">VS</span>
+        <span class="board-table__team-b">
+          {{ isSpectator ? $t('ui.team.b') : $t('ui.team.enemy') }}
+          {{ liveTeamScores.B }}
+        </span>
+      </div>
+      <TurnOrderBar
+        :turn-order-chips="turnOrderChips"
+        :game-progress="gameProgress"
+      />
+      <button type="button" class="board-table__leave-btn" @click="leaveRoom">
+        {{ $t('ui.score.leave_room') }}
+      </button>
     </div>
-    <div v-if="gameProgress === 'IN_GAME'" class="board-table__turn-order">
-      <span class="board-table__turn-label">{{ $t('ui.game.turn_order') }}</span>
-      <span
-        v-for="ch in turnOrderChips"
-        :key="ch.id + '-' + ch.idx"
-        class="board-table__char-chip"
-        :class="[
-          `board-table__char-chip--c${ch.id || 0}`,
-          {
-            'board-table__char-chip--current': ch.current,
-            'board-table__char-chip--killed': ch.killed,
-            'board-table__char-chip--face-up': ch.faceUp,
-          },
-        ]"
-        v-tooltip="ch.tip"
-      >{{ ch.id || '?' }}</span>
-    </div>
-  </div>
 
-  <div class="board-table__stage" :class="{ 'board-table__stage--spectate': isSpectator }">
-    <!-- Seats: player = 5 opponents + self bottom; spectator = 6 seats L3+R3 -->
-    <div
-      v-for="slot in tableSlots"
-      :key="slot.playerId"
-      class="board-table__slot"
-      :class="`board-table__slot--${slot.pos}`"
-    >
-      <SeatPanel
-        :player-id="slot.playerId"
-        :board="slot.board"
-        :pick-order="slot.pickOrder"
-        :destroy-mode="destroyMode"
-        :exchange-hand-mode="exchangeHandMode"
-        :stash="selfBoard.stash"
-        :relation="slot.relation"
+    <div class="board-table__stage" :class="{ 'board-table__stage--spectate': isSpectator }">
+      <!-- Seats: player = 5 opponents + self bottom; spectator = 6 seats L3+R3 -->
+      <div
+        v-for="slot in tableSlots"
+        :key="slot.playerId"
+        class="board-table__slot"
+        :class="`board-table__slot--${slot.pos}`"
+      >
+        <SeatPanel
+          :player-id="slot.playerId"
+          :board="slot.board"
+          :pick-order="slot.pickOrder"
+          :destroy-mode="destroyMode"
+          :exchange-hand-mode="exchangeHandMode"
+          :stash="selfBoard.stash"
+          :relation="slot.relation"
+        />
+      </div>
+
+      <!-- Center: character selection / status / draft -->
+      <CenterPanel
+        :game-progress="gameProgress"
+        :characters-list="charactersList"
+        :board="gameState.board"
+        :kill-mode="killMode"
+        :rob-mode="robMode"
+        :choose-character-mode="chooseCharacterMode"
+        :event-banner="eventBanner"
+        @select-character="onCenterCharacterClick"
+      />
+
+      <!-- Self strip: only when seated player (not spectator) -->
+      <div v-if="!isSpectator" class="board-table__slot board-table__slot--self">
+        <div class="board-table__self-wrap">
+          <div class="board-table__self-panel">
+            <div class="board-table__self-banner">
+              <span class="board-table__self-pick">{{ selfPickOrder }}</span>
+              <span class="text-truncate flex-fill">{{ selfName }}</span>
+              <span class="board-table__self-vp">
+                ⭐ {{ selfBoard.score?.total ?? 0 }}
+              </span>
+              <span
+                v-if="selfBoard.crown"
+                class="seat-panel__crown"
+                :title="$t('ui.game.crown_holder')"
+              >👑</span>
+              <span class="seat-panel__tag">{{ $t('ui.lobby.you') }}</span>
+            </div>
+            <div class="board-table__self-body">
+              <div class="board-table__self-city">
+                <DistrictCard
+                  v-for="(id, i) in selfBoard.city"
+                  :key="'city-' + i"
+                  :district-id="id"
+                  small
+                />
+                <div v-if="!(selfBoard.city || []).length" class="seat-panel__city-empty">
+                  {{ $t('ui.game.no_buildings') }}
+                </div>
+              </div>
+              <div class="board-table__self-role">
+                <CharacterCard
+                  v-if="gameProgress === 'IN_GAME' && selfRoleCard.show"
+                  :character-id="selfRoleCard.id"
+                  :face-down="selfRoleCard.faceDown"
+                  :killed="selfRoleCard.killed"
+                  :robbed="selfRoleCard.robbed"
+                  size="medium"
+                />
+              </div>
+            </div>
+            <div class="board-table__self-hand">
+              <PlayerHand
+                :board="selfBoard"
+                :build-mode="buildMode"
+                :discard-cards-mode="discardCardsMode"
+                :laboratory-mode="laboratoryMode"
+              />
+            </div>
+          </div>
+        </div>
+
+        <ActionPanel
+          :actions="statusBar.actions"
+          :game-progress="gameProgress"
+          :countdown-text="countdownText"
+          :countdown-urgent="countdownUrgent"
+          :is-autoplay="selfIsAutoplay"
+          :autoplay-busy="autoplayBusy"
+          @action="sendMove"
+          @toggle-autoplay="toggleAutoplay"
+        />
+      </div>
+
+      <!-- Far right: action log (server feed) -->
+      <ActionLog
+        :display-action-feed="displayActionFeed"
+        @show-event="showEvent"
       />
     </div>
 
-    <!-- Center: character selection / status / draft -->
-    <div class="board-table__slot board-table__slot--center">
-      <div class="board-table__center-panel">
-        <h3 class="board-table__center-title">
-          {{ centerTitle }}
-        </h3>
-        <div class="board-table__center-msg" ref="statusBarMessage">
-          {{ $t(statusBar.message, statusBar.args) }}
-        </div>
+    <!-- End game: dismissible result; stay on board until leave -->
+    <EndGameModal
+      :show="gameProgress === 'FINISHED' && showEndModal"
+      :game-state="gameState"
+      :self-id="self"
+      :is-spectator="isSpectator"
+      :show-team-scores="showTeamScores"
+      :get-player-from-id="getPlayerFromId"
+      @close="dismissEndModal"
+      @leave="backToLobby"
+    />
 
-        <div v-if="eventBanner" class="board-table__banner board-table__banner--warn">
-          {{ eventBanner }}
-        </div>
-
-        <div
-          v-if="gameProgress === 'IN_GAME' && showCenterCharacterGrid"
-          class="board-table__draft-grid"
-        >
-          <CharacterCard
-            v-for="(ch, i) in centerCharacters"
-            :key="i"
-            :character-id="ch.id || 0"
-            :face-down="false"
-            :selectable="ch.selectable"
-            :disabled="!ch.selectable && (killMode || robMode || chooseCharacterMode)"
-            :killed="ch.killed"
-            :robbed="ch.robbed"
-            :face-up-mark="ch.faceUp"
-            :current="ch.current"
-            size="large"
-            @select="onCenterCharacterClick(ch, i)"
-          />
-        </div>
-
-        <div v-if="asideChips.length" class="board-table__aside-row">
-          <span>{{ $t('ui.game.aside') }}:</span>
-          <span v-for="(a, i) in asideChips" :key="i" class="badge badge-secondary">
-            {{ a.id ? $t(`characters.${a.id}.name`) : '?' }}
-            <template v-if="a.faceUp"> ({{ $t('ui.game.character_face_up_short') }})</template>
-          </span>
-        </div>
-
-        <div v-if="showGraveyard" class="d-flex flex-column align-items-center mt-1">
-          <span class="small opacity-75">{{ $t('districts.graveyard.name') }}</span>
-          <DistrictCard :district-id="gameState.board.graveyard" small />
-        </div>
-      </div>
-    </div>
-
-    <!-- Self strip: only when seated player (not spectator) -->
-    <div v-if="!isSpectator" class="board-table__slot board-table__slot--self">
-      <div class="board-table__self-wrap">
-        <div class="board-table__self-panel">
-          <div class="board-table__self-banner">
-            <span class="board-table__self-pick">{{ selfPickOrder }}</span>
-            <span class="text-truncate flex-fill">{{ selfName }}</span>
-            <span class="board-table__self-vp">
-              ⭐ {{ selfBoard.score?.total ?? 0 }}
-            </span>
-            <span
-              v-if="selfBoard.crown"
-              class="seat-panel__crown"
-              :title="$t('ui.game.crown_holder')"
-            >👑</span>
-            <span class="seat-panel__tag">{{ $t('ui.lobby.you') }}</span>
-          </div>
-          <div class="board-table__self-body">
-            <div class="board-table__self-city">
-              <DistrictCard
-                v-for="(id, i) in selfBoard.city"
-                :key="'city-' + i"
-                :district-id="id"
-                small
-              />
-              <div v-if="!(selfBoard.city || []).length" class="seat-panel__city-empty">
-                {{ $t('ui.game.no_buildings') }}
-              </div>
-            </div>
-            <div class="board-table__self-role">
-              <CharacterCard
-                v-if="gameProgress === 'IN_GAME' && selfRoleCard.show"
-                :character-id="selfRoleCard.id"
-                :face-down="selfRoleCard.faceDown"
-                :killed="selfRoleCard.killed"
-                :robbed="selfRoleCard.robbed"
-                size="medium"
-              />
-            </div>
-          </div>
-          <div class="board-table__self-hand">
-            <PlayerHand
-              :board="selfBoard"
-              :build-mode="buildMode"
-              :discard-cards-mode="discardCardsMode"
-              :laboratory-mode="laboratoryMode"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="board-table__self-actions">
-        <div class="board-table__actions-title">{{ $t('ui.game.action_panel') }}</div>
-        <div
-          v-if="gameProgress === 'IN_GAME'"
-          class="board-table__timer"
-          :class="{ 'board-table__timer--urgent': countdownUrgent }"
-        >
-          {{ countdownText }}
-        </div>
-        <button
-          v-for="(action, i) in statusBar.actions"
-          :key="i"
-          type="button"
-          class="board-table__action-btn"
-          :class="{
-            'board-table__action-btn--primary': isPrimaryAction(action.title),
-            'board-table__action-btn--danger':
-              action.title === 'finish_turn' || action.title === 'cancel',
-          }"
-          @click="sendMove(action.move, $event.target)"
-        >
-          {{ $t(`ui.game.actions.${action.title}`, action.args) }}
-        </button>
-        <button
-          v-if="gameProgress === 'IN_GAME'"
-          type="button"
-          class="board-table__action-btn"
-          :disabled="autoplayBusy"
-          @click="toggleAutoplay"
-        >
-          {{ selfIsAutoplay ? $t('ui.game.autoplay_cancel') : $t('ui.game.autoplay_enable') }}
-        </button>
-        <div class="board-table__meta">
-          <div v-if="selfIsAutoplay">{{ $t('ui.game.autoplay_on') }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Far right: action log (server feed) -->
-    <div class="board-table__slot board-table__slot--log">
-      <div class="board-table__log">
-        <div class="board-table__log-title">{{ $t('ui.game.action_log') }}</div>
-        <div class="board-table__log-list" ref="actionLogList">
-          <div
-            v-for="(line, i) in displayActionFeed"
-            :key="i"
-            class="board-table__log-item"
-            :class="{
-              'board-table__log-item--warn': line.kind === 'rob' || line.kind === 'warn',
-              'board-table__log-item--kill': line.kind === 'kill',
-            }"
-          >
-            {{ line.text }}
-          </div>
-          <div v-if="!displayActionFeed.length" class="board-table__log-item opacity-50">
-            {{ $t('ui.game.action_log_empty') }}
-          </div>
-        </div>
-      </div>
+    <!-- floating reopen + leave when modal dismissed -->
+    <div
+      v-if="gameProgress === 'FINISHED' && !showEndModal"
+      class="board-table__end-bar"
+    >
+      <button type="button" class="btn btn-sm btn-warning mr-2" @click="showEndModal = true">
+        {{ $t('ui.score.show_result') }}
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-light" @click="backToLobby">
+        {{ $t('ui.score.leave_room') }}
+      </button>
     </div>
   </div>
-
-  <!-- End game: dismissible result; stay on board until leave -->
-  <div
-    v-if="gameProgress === 'FINISHED' && showEndModal"
-    class="modal fade show d-block"
-    style="background:rgba(0,0,0,0.65); z-index: 1050;"
-  >
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header" :class="endHeaderClass">
-          <h4 class="modal-title mb-0">{{ endTitle }}</h4>
-          <button
-            type="button"
-            class="close text-white"
-            @click="dismissEndModal"
-            aria-label="close"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="text-center mb-3">
-            <div class="h5">{{ endSubtitle }}</div>
-            <div v-if="showTeamScores" class="mt-2">
-              <span class="badge badge-primary badge-pill px-3 py-2 mr-2">
-                {{ isSpectator ? $t('ui.team.a') : $t('ui.team.mine') }} {{ liveTeamScores.A }}
-              </span>
-              <span class="badge badge-danger badge-pill px-3 py-2">
-                {{ isSpectator ? $t('ui.team.b') : $t('ui.team.enemy') }} {{ liveTeamScores.B }}
-              </span>
-            </div>
-          </div>
-          <table class="table table-sm table-striped mb-0">
-            <thead>
-              <tr>
-                <th>{{ $t('ui.lobby.players') }}</th>
-                <th v-if="showTeamScores">{{ $t('ui.stats.team') }}</th>
-                <th class="text-right">{{ $t('ui.score.total') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in endScoreRows" :key="row.id">
-                <td>
-                  {{ row.name }}
-                   <span
-                     v-if="row.isSelf"
-                     class="badge badge-info ml-1"
-                   >{{ $t('ui.lobby.you') }}</span>
-                  <span v-if="row.isAi" class="badge badge-dark ml-1">AI</span>
-                </td>
-                <td v-if="showTeamScores">
-                  <span class="badge" :class="row.team === 'A' ? 'badge-primary' : 'badge-danger'">
-                    {{ row.team }}
-                  </span>
-                </td>
-                <td class="text-right font-weight-bold">{{ row.total }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" @click="dismissEndModal">
-            {{ $t('ui.score.keep_browsing') }}
-          </button>
-          <button type="button" class="btn btn-primary" @click="backToLobby">
-            {{ $t('ui.score.leave_room') }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- floating reopen + leave when modal dismissed -->
-  <div
-    v-if="gameProgress === 'FINISHED' && !showEndModal"
-    class="board-table__end-bar"
-  >
-    <button type="button" class="btn btn-sm btn-warning mr-2" @click="showEndModal = true">
-      {{ $t('ui.score.show_result') }}
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-light" @click="backToLobby">
-      {{ $t('ui.score.leave_room') }}
-    </button>
-  </div>
-</div>
 </template>
 
 <script lang="ts">
@@ -321,6 +172,11 @@ import PlayerHand from './elements/PlayerHand.vue';
 import DistrictCard from './elements/DistrictCard.vue';
 import CharacterCard from './elements/CharacterCard.vue';
 import { getStatusBarData } from '../../data/statusBarData';
+import TurnOrderBar from './TurnOrderBar.vue';
+import ActionLog from './ActionLog.vue';
+import ActionPanel from './ActionPanel.vue';
+import CenterPanel from './CenterPanel.vue';
+import EndGameModal from './EndGameModal.vue';
 
 export default defineComponent({
   components: {
@@ -328,6 +184,11 @@ export default defineComponent({
     PlayerHand,
     DistrictCard,
     CharacterCard,
+    TurnOrderBar,
+    ActionLog,
+    ActionPanel,
+    CenterPanel,
+    EndGameModal,
   },
   name: 'BoardScreen',
   data() {
@@ -389,14 +250,12 @@ export default defineComponent({
       if (this.isSpectator) return null;
       return this.getPlayerFromId(this.self)?.team ?? null;
     },
-    /** relation for LoL-style colors: self=ally blue, enemy=red */
     relationOf() {
       return (playerId: string) => {
-        if (!this.isSpectator && playerId === this.self) return 'self';
+        if (this.isSpectator || playerId === this.self) return 'self';
         const t = this.getPlayerFromId(playerId)?.team;
         const mine = this.myTeam;
         if (mine == null || t == null || t === TeamId.NONE || mine === TeamId.NONE) {
-          // spectator or no teams: alternate by seat index for contrast
           if (this.isSpectator) {
             const idx = (this.gameState.board.playerOrder || []).indexOf(playerId);
             return idx % 2 === 0 ? 'ally' : 'enemy';
@@ -406,7 +265,6 @@ export default defineComponent({
         return t === mine ? 'ally' : 'enemy';
       };
     },
-    /** seats rotated so self is bottom when playing */
     seatOrder() {
       const order = [...(this.gameState.board.playerOrder || [])];
       if (this.isSpectator || !order.length) return order;
@@ -415,7 +273,6 @@ export default defineComponent({
       return [...order.slice(idx), ...order.slice(0, idx)];
     },
     tableSlots() {
-      // pick order: crown holder drafts first (playerOrder[0] = 1)
       const order = this.gameState.board.playerOrder || [];
       const pickOf = (playerId: string) => {
         const idx = order.indexOf(playerId);
@@ -438,14 +295,12 @@ export default defineComponent({
       };
 
       if (this.isSpectator) {
-        // 6 seats: left 1,2,3 top→bottom; right 4,5,6 top→bottom
         return order.map((pid: string, i: number) => {
           const pos = i < 3 ? `l${i + 1}` : `r${i - 2}`;
           return mk(pid, pos);
         });
       }
 
-      // player view: self bottom; left top→bottom = 4,3,2; right = 5,6
       const rotated = this.seatOrder;
       const others = rotated.slice(1);
       const leftThree = others.slice(0, 3);
@@ -586,7 +441,6 @@ export default defineComponent({
           if (meta?.team === TeamId.B) B += total;
         });
       }
-      // LoL-style: show "my team" as left blue, enemy as right red when seated
       const mine = this.myTeam;
       if (!this.isSpectator && mine === TeamId.B) {
         return {
@@ -612,112 +466,9 @@ export default defineComponent({
             : this.$t('ui.game.character_unknown'),
         }));
       }
-      // fallback 1-8
       return [1, 2, 3, 4, 5, 6, 7, 8].map((id, idx) => ({
         idx, id, current: id === current, killed: false, faceUp: false, tip: '',
       }));
-    },
-    showCenterCharacterGrid() {
-      return this.chooseCharacterMode || this.killMode || this.robMode
-        || (this.gameProgress === 'IN_GAME' && (this.charactersList?.callable || []).length > 0);
-    },
-    centerCharacters() {
-      const list = this.charactersList?.callable || [];
-      const current = this.charactersList?.current || 0;
-      return list.map((c: any) => {
-        const killed = Boolean(c.killed);
-        const faceUp = Boolean(c.faceUp || c.discardedFaceUp);
-        let selectable = false;
-        if (this.killMode) {
-          selectable = c.id > 1 && c.id !== 0 && !c.faceDown;
-        } else if (this.robMode) {
-          selectable = c.id > 2 && !killed && c.id !== 0 && !c.faceDown && !faceUp;
-        } else if (this.chooseCharacterMode) {
-          selectable = Boolean(c.selectable);
-        }
-        return {
-          ...c,
-          killed,
-          faceUp,
-          selectable,
-          current: c.id === current && current !== 0,
-        };
-      });
-    },
-    asideChips() {
-      return this.charactersList?.aside || [];
-    },
-    centerTitle() {
-      if (this.gameProgress !== 'IN_GAME') return this.$t('ui.game.messages.end');
-      if (this.chooseCharacterMode) {
-        return this.$t('ui.game.character_select_title');
-      }
-      if (this.killMode) return this.$t('ui.game.messages.actions.assassin_kill');
-      if (this.robMode) return this.$t('ui.game.messages.actions.thief_rob');
-      return this.$t('ui.game.characters');
-    },
-    isWin() {
-      const result = this.gameState?.matchResult;
-      const team = this.getPlayerFromId(this.self)?.team;
-      return (result === MatchResult.TEAM_A_WIN && team === TeamId.A)
-        || (result === MatchResult.TEAM_B_WIN && team === TeamId.B);
-    },
-    isLose() {
-      const result = this.gameState?.matchResult;
-      const team = this.getPlayerFromId(this.self)?.team;
-      return (result === MatchResult.TEAM_A_WIN && team === TeamId.B)
-        || (result === MatchResult.TEAM_B_WIN && team === TeamId.A);
-    },
-    endTitle() {
-      if (this.isSpectator) return this.$t('ui.score.game_over');
-      if (this.isWin) return this.$t('ui.score.you_win');
-      if (this.isLose) return this.$t('ui.score.you_lose');
-      if (this.gameState?.matchResult === MatchResult.DRAW) return this.$t('ui.score.draw');
-      return this.$t('ui.score.game_over');
-    },
-    endSubtitle() {
-      if (this.matchSummary?.detail) return this.matchSummary.detail;
-      if (this.matchSummary?.title) return this.matchSummary.title;
-      return '';
-    },
-    endHeaderClass() {
-      if (this.isWin) return 'bg-success text-white';
-      if (this.isLose) return 'bg-danger text-white';
-      return 'bg-secondary text-white';
-    },
-    endScoreRows() {
-      const order = this.gameState?.board?.playerOrder || [];
-      return order.map((pid: string) => {
-        const meta = this.getPlayerFromId(pid);
-        const board = this.gameState?.board?.players?.get(pid);
-        let team = '';
-        if (meta?.team === TeamId.A) team = 'A';
-        if (meta?.team === TeamId.B) team = 'B';
-        return {
-          id: pid,
-          name: meta?.username || pid,
-          isSelf: pid === this.self,
-          isAi: Boolean(meta?.isAi),
-          team,
-          total: board?.score?.total ?? 0,
-        };
-      }).sort((a: any, b: any) => b.total - a.total);
-    },
-    matchSummary() {
-      if (!this.showTeamScores) return null;
-      const { A, B } = this.liveTeamScores;
-      const result = this.gameState?.matchResult;
-      let title = this.$t('ui.score.draw');
-      if (result === MatchResult.TEAM_A_WIN) title = this.$t('ui.score.team_a_win');
-      if (result === MatchResult.TEAM_B_WIN) title = this.$t('ui.score.team_b_win');
-      if (result === MatchResult.CASUAL_END) title = this.$t('ui.score.game_over');
-      return {
-        title,
-        detail: this.$t('ui.score.team_totals', { a: A, b: B }),
-      };
-    },
-    showGraveyard() {
-      return this.gameState.board.graveyard !== undefined;
     },
   },
   methods: {
@@ -778,10 +529,25 @@ export default defineComponent({
     dismissEndModal() {
       this.showEndModal = false;
     },
-    backToLobby() {
+    async backToLobby() {
+      try {
+        await store.dispatch('leaveRoom');
+      } catch (e) {
+        console.error('leave room failed', e);
+      }
       this.$router.push('/').catch(() => {
         window.location.href = '/';
       });
+    },
+    async leaveRoom() {
+      try {
+        await store.dispatch('leaveRoom');
+        this.$router.push('/').catch(() => {
+          window.location.href = '/';
+        });
+      } catch (e) {
+        console.error('leave room failed', e);
+      }
     },
     showEvent(text: string) {
       this.eventBanner = text;
@@ -836,5 +602,24 @@ export default defineComponent({
   background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(212, 175, 55, 0.4);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.board-table__leave-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: var(--gold);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.board-table__leave-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
 }
 </style>

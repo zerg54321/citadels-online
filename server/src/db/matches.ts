@@ -7,6 +7,7 @@ import {
 } from 'citadels-common';
 import db from './database';
 import GameState from '../game/GameState';
+import { nowIso } from '../utils/dateUtils';
 
 export type MatchRow = {
   id: string;
@@ -42,10 +43,6 @@ function genMatchId() {
   return randomBytes(12).toString('hex');
 }
 
-function nowIso() {
-  return new Date().toISOString();
-}
-
 /** Persist finished game. Returns match id or null on skip/error. */
 export function saveFinishedMatch(roomId: string, gameState: GameState): string | null {
   if (gameState.progress !== 3 /* FINISHED */) {
@@ -54,6 +51,7 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
   if (!gameState.board) {
     return null;
   }
+  const { board } = gameState;
 
   const ranked = gameState.gameMode === GameMode.COMPETITIVE_TEAM6
     && !gameState.hasAiPlayers;
@@ -91,13 +89,13 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
       endedAt,
     );
 
-    gameState.board!.playerOrder.forEach((playerId, seat) => {
+    board.playerOrder.forEach((playerId, seat) => {
       const meta = gameState.players.get(playerId);
-      const board = gameState.board!.players.get(playerId);
-      if (!meta || meta.role !== PlayerRole.PLAYER) return;
+      const playerBoard = board.players.get(playerId);
+      if (!meta || meta.role !== PlayerRole.PLAYER || !playerBoard) return;
 
       const team = meta.team ?? TeamId.NONE;
-      const personalScore = board?.score?.total ?? 0;
+      const personalScore = playerBoard.score.total ?? 0;
       const isAi = Boolean(meta.isAi);
       const hadAi = Boolean(meta.hadEffectiveAiControl);
       // P4.3: ranked win only if ranked match AND no effective AI control for this player
@@ -117,7 +115,7 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
         team,
         meta.username,
         personalScore,
-        board?.score ? JSON.stringify(board.score) : null,
+        playerBoard.score ? JSON.stringify(playerBoard.score) : null,
         isAi ? 1 : 0,
         hadAi ? 1 : 0,
         eligible,

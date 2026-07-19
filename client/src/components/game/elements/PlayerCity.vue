@@ -74,12 +74,14 @@
 import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
 import {
-  Move, MoveType, DistrictId, TeamId,
+  Move, MoveType, DistrictId, TeamId, PlayerBoard,
 } from 'citadels-common';
 import { store } from '../../../store';
 import CharactersList from './CharactersList.vue';
 import DistrictCard from './DistrictCard.vue';
 import PlayerScore from './PlayerScore.vue';
+
+type BoardWithCrown = PlayerBoard & { crown: boolean };
 
 export default defineComponent({
   name: 'PlayerCity',
@@ -94,6 +96,7 @@ export default defineComponent({
       required: true,
     },
     board: {
+      type: Object as () => BoardWithCrown,
       required: true,
     },
     destroyMode: {

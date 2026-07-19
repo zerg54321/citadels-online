@@ -46,8 +46,6 @@ export class CharacterChoosingState {
     if (this.getState().type !== CCST.DONE
       && this.stateNumber < this.states.length - 1) {
       this.stateNumber += 1;
-    } else {
-      throw new Error('cannot step further');
     }
   }
 

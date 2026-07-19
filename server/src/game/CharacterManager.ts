@@ -1,18 +1,48 @@
-import { ClientTurnState, CharacterChoosingStateType as CCST, PlayerPosition } from 'citadels-common';
+import {
+  ClientTurnState, CharacterChoosingStateType as CCST, CharacterType, PlayerPosition,
+} from 'citadels-common';
 import { CharacterChoosingState } from './ChoosingState';
 
-export enum CharacterType {
-  NONE = -1,
-  ASSASSIN,
-  THIEF,
-  MAGICIAN,
-  KING,
-  BISHOP,
-  MERCHANT,
-  ARCHITECT,
-  WARLORD,
-  CHARACTER_COUNT,
-}
+export { CharacterType };
+
+const DEFAULT_DISTRICTS_TO_BUILD: Record<CharacterType, number> = {
+  [CharacterType.ASSASSIN]: 1,
+  [CharacterType.THIEF]: 1,
+  [CharacterType.MAGICIAN]: 1,
+  [CharacterType.KING]: 1,
+  [CharacterType.BISHOP]: 1,
+  [CharacterType.MERCHANT]: 1,
+  [CharacterType.ARCHITECT]: 3,
+  [CharacterType.WARLORD]: 1,
+  [CharacterType.NONE]: 0,
+  [CharacterType.CHARACTER_COUNT]: 0,
+};
+
+const CAN_TAKE_EARNINGS: Record<CharacterType, boolean> = {
+  [CharacterType.ASSASSIN]: false,
+  [CharacterType.THIEF]: false,
+  [CharacterType.MAGICIAN]: false,
+  [CharacterType.KING]: true,
+  [CharacterType.BISHOP]: true,
+  [CharacterType.MERCHANT]: true,
+  [CharacterType.ARCHITECT]: false,
+  [CharacterType.WARLORD]: true,
+  [CharacterType.NONE]: false,
+  [CharacterType.CHARACTER_COUNT]: false,
+};
+
+const CAN_DO_SPECIAL_ACTION: Record<CharacterType, boolean> = {
+  [CharacterType.ASSASSIN]: true,
+  [CharacterType.THIEF]: true,
+  [CharacterType.MAGICIAN]: true,
+  [CharacterType.KING]: false,
+  [CharacterType.BISHOP]: false,
+  [CharacterType.MERCHANT]: false,
+  [CharacterType.ARCHITECT]: false,
+  [CharacterType.WARLORD]: true,
+  [CharacterType.NONE]: false,
+  [CharacterType.CHARACTER_COUNT]: false,
+};
 
 export enum TurnState {
   INITIAL = 0,
@@ -116,10 +146,19 @@ export default class CharacterManager {
     this.robbedCharacter = CharacterType.NONE;
     this.hasTakenResources = false;
     this.goldFromResourcesThisTurn = 0;
-    this.districtsToBuild = [1, 1, 1, 1, 1, 1, 3, 1];
-    this.canTakeEarnings = [false, false, false, true, true, true, false, true];
+    this.districtsToBuild = Array.from(
+      { length: CharacterType.CHARACTER_COUNT },
+      (_, i) => DEFAULT_DISTRICTS_TO_BUILD[i as CharacterType],
+    );
+    this.canTakeEarnings = Array.from(
+      { length: CharacterType.CHARACTER_COUNT },
+      (_, i) => CAN_TAKE_EARNINGS[i as CharacterType],
+    );
     // merchant/architect passives are auto-applied at turn start (not optional actions)
-    this.canDoSpecialAction = [true, true, true, false, false, false, false, true];
+    this.canDoSpecialAction = Array.from(
+      { length: CharacterType.CHARACTER_COUNT },
+      (_, i) => CAN_DO_SPECIAL_ACTION[i as CharacterType],
+    );
     this.isUsingLaboratory = false;
     this.hasUsedLaboratory = false;
     this.hasUsedSmithy = false;
@@ -558,7 +597,7 @@ export default class CharacterManager {
   }
 
   chooseCharacter(index: number): boolean {
-    let characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+    const characters = this.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 
     if (index < 0 || index >= characters.length) {
       return false;

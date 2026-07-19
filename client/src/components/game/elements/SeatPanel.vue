@@ -93,11 +93,13 @@
 import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
 import {
-  DistrictId, Move, MoveType,
+  DistrictId, Move, MoveType, PlayerBoard,
 } from 'citadels-common';
 import { store } from '../../../store';
 import DistrictCard from './DistrictCard.vue';
 import CharacterCard from './CharacterCard.vue';
+
+type BoardWithCrown = PlayerBoard & { crown: boolean };
 
 export default defineComponent({
   name: 'SeatPanel',
@@ -107,7 +109,7 @@ export default defineComponent({
   },
   props: {
     playerId: { type: String, required: true },
-    board: { required: true },
+    board: { type: Object as () => BoardWithCrown, required: true },
     /** 1-based pick order this round (crown starts at 1) */
     pickOrder: { type: Number, default: 1 },
     destroyMode: { type: Boolean, default: false },

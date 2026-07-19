@@ -8,7 +8,9 @@
     "build": "npm run build --prefix ../common && npx tsc",
     "start": "npm run build && node dist/index.js",
     "start:prod": "node dist/index.js",
-    "start:debug": "npm run build && DEBUG=citadels-server node --inspect dist/index.js"
+    "start:debug": "npm run build && DEBUG=citadels-server node --inspect dist/index.js",
+    "lint": "npx eslint --ext .ts --ignore-path .gitignore . --fix",
+    "typecheck": "npx tsc --noEmit"
   },
   "repository": "https://github.com/antbrl/citadels-online",
   "author": "Antoine Brûlé",

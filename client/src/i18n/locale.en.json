@@ -109,6 +109,8 @@
             "not_enough_players": "There must be at least 2 players to start the game.",
             "need_six_players": "3v3 needs exactly 6 players (now {n}). Add AI to fill seats.",
             "too_many_players": "Too many players (6 max for 3v3).",
+            "chat_title": "Chat",
+            "chat_placeholder": "Type a message...",
             "settings": {
                 "complete_city_size": "Number of districts to complete city",
                 "action_timeout": "Action time limit",
@@ -263,6 +265,8 @@
             "back_home": "Back to lobby",
             "keep_browsing": "Keep browsing board",
             "leave_room": "Leave room",
+            "leave_room_confirm_title": "Confirm leave room",
+            "leave_room_confirm_body": "You are currently in a room. Leaving will remove you from the room for other players. Are you sure you want to leave?",
             "show_result": "Show results"
         }
     },

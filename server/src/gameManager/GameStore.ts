@@ -1,4 +1,4 @@
-import { RoomId } from 'citadels-common';
+import { PlayerId, RoomId } from 'citadels-common';
 import Room from './Room';
 
 export default abstract class GameStore {
@@ -11,4 +11,8 @@ export default abstract class GameStore {
   abstract findAllRooms(): Room[];
 
   abstract removeRoom(roomId: RoomId): void;
+
+  abstract findRoomByPlayerId(playerId: PlayerId): Room | undefined;
+
+  abstract removePlayerFromRoom(playerId: PlayerId): void;
 }

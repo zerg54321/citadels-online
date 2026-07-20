@@ -12,9 +12,7 @@ import type GameState from './GameState';
 import { CharacterPosition, TurnState, CharacterType } from './CharacterManager';
 import { logCharacterCall, buildRoundSummary } from './ActionLogger';
 import { refreshLiveScores } from './ScoreCalculator';
-import {
-  schedulePhase, DELAY_SHORT, DELAY_LONG, MAX_CHARACTER_SKIP_ATTEMPTS,
-} from '../utils/schedule';
+import { MAX_CHARACTER_SKIP_ATTEMPTS } from '../utils/schedule';
 
 const debug = Debug('citadels-server');
 
@@ -39,13 +37,13 @@ export default class GameFlowController {
         switch (this.state.board?.gamePhase) {
           case GamePhase.INITIAL:
             if (move.type === MoveType.AUTO) {
-              schedulePhase(() => {
+              this.state.schedulePhase(() => {
                 if (this.state.board) {
                   this.state.board.gamePhase = GamePhase.CHOOSE_CHARACTERS;
                   this.step();
                   this.state.notify();
                 }
-              }, DELAY_SHORT);
+              }, 3000);
               return true;
             }
             return false;
@@ -57,10 +55,10 @@ export default class GameFlowController {
               switch (ccs.getState().type) {
                 case CCST.INITIAL:
                   if (move.type === MoveType.AUTO) {
-                    schedulePhase(() => {
+                    this.state.schedulePhase(() => {
                       ccs.step();
                       this.state.notify();
-                    }, DELAY_SHORT);
+                    }, 3000);
                     return true;
                   }
                   return false;
@@ -77,7 +75,7 @@ export default class GameFlowController {
 
                 case CCST.DONE:
                   if (move.type === MoveType.AUTO) {
-                    schedulePhase(() => {
+                    this.state.schedulePhase(() => {
                       if (this.state.board) {
                         this.state.board.gamePhase = GamePhase.DO_ACTIONS;
                         const cm2 = this.state.board.characterManager;
@@ -105,7 +103,7 @@ export default class GameFlowController {
                         this.step();
                         this.state.notify();
                       }
-                    }, DELAY_SHORT);
+                    }, 3000);
                     return true;
                   }
                   return false;
@@ -124,9 +122,9 @@ export default class GameFlowController {
               case MoveType.AUTO:
                 if (cm.turnState === TurnState.DONE) {
                   const endDelay = this.state.hasAiPlayers
-                    ? Math.max(DELAY_LONG, 3500)
-                    : Math.max(DELAY_LONG, 2500);
-                  schedulePhase(() => {
+                    ? Math.max(5000, 3500)
+                    : Math.max(5000, 2500);
+                  this.state.schedulePhase(() => {
                     this.finishTurnPhase();
                     this.step();
                     this.state.notify();
@@ -141,9 +139,9 @@ export default class GameFlowController {
                     this.state.actionFeed,
                   );
                   const skipDelay = this.state.hasAiPlayers
-                    ? Math.max(DELAY_SHORT, 2200)
-                    : Math.max(DELAY_SHORT, 1500);
-                  schedulePhase(() => {
+                    ? Math.max(3000, 2200)
+                    : Math.max(3000, 1500);
+                  this.state.schedulePhase(() => {
                     cm.jumpToNextCharacter();
                     this.onCharacterTurnStart();
                     this.step();

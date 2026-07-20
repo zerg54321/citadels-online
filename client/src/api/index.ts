@@ -8,11 +8,11 @@ function parseGameState(data: any): ClientGameState {
   return {
     progress: data.progress,
     gameMode: data.gameMode,
-    players: new Map(data.players),
+    players: data.players,
     self: data.self,
     board: {
       ...data.board,
-      players: new Map(data.board?.players),
+      players: data.board?.players,
     },
     settings: data.settings,
     teamScores: data.teamScores,

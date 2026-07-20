@@ -184,7 +184,7 @@ export default defineComponent({
       'gameState',
     ]),
     self() {
-      return this.gameState.players.get(this.gameState.self);
+      return this.gameState.players[this.gameState.self];
     },
     inLobby() {
       return this.gameState?.progress === GameProgress.IN_LOBBY;
@@ -193,11 +193,11 @@ export default defineComponent({
       const order = this.gameState?.lobbyPlayerOrder;
       if (Array.isArray(order) && order.length) {
         return order
-          .map((id: string) => this.gameState.players.get(id))
+          .map((id: string) => this.gameState.players[id])
           .filter(Boolean);
       }
       // fallback: all PLAYER roles
-      return Array.from(this.gameState.players.values())
+      return Object.values(this.gameState.players)
         .filter((p: any) => p.role === PlayerRole.PLAYER);
     },
     teamARows() {
@@ -217,11 +217,11 @@ export default defineComponent({
         }));
     },
     spectators() {
-      return Array.from(this.gameState.players.values())
+      return Object.values(this.gameState.players)
         .filter((p: any) => p.role === PlayerRole.SPECTATOR);
     },
     counts() {
-      const all = Array.from(this.gameState.players.values()) as any[];
+      const all = Object.values(this.gameState.players) as any[];
       return {
         players: all.filter((p) => p.role === PlayerRole.PLAYER).length,
         spectators: all.filter((p) => p.role === PlayerRole.SPECTATOR).length,

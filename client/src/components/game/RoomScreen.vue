@@ -6,16 +6,14 @@
     </transition>
 
     <div
-      class="modal fade"
-      id="leaveRoomModal"
-      tabindex="-1"
-      aria-labelledby="leaveRoomModalLabel"
-      aria-hidden="true"
+      v-if="showLeaveModal"
+      class="modal fade show d-block"
+      style="background:rgba(0,0,0,0.65); z-index: 1050;"
     >
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content lobby-modal">
           <div class="modal-header border-0 pb-2">
-            <h5 class="modal-title text-gold lobby-modal-title" id="leaveRoomModalLabel">
+            <h5 class="modal-title text-gold lobby-modal-title">
               {{ $t('ui.lobby.leave_room_confirm_title') }}
             </h5>
           </div>
@@ -28,7 +26,6 @@
             <button
               type="button"
               class="btn btn-outline-gold"
-              data-dismiss="modal"
               @click="cancelLeave"
             >
               {{ $t('ui.cancel') }}
@@ -62,6 +59,7 @@ export default defineComponent({
     return {
       leaving: false,
       pendingTarget: null as string | null,
+      showLeaveModal: false,
     };
   },
   computed: {
@@ -76,9 +74,7 @@ export default defineComponent({
     }
     next(false);
     this.pendingTarget = to.fullPath || '/';
-    this.$nextTick(() => {
-      $('#leaveRoomModal').modal('show');
-    });
+    this.showLeaveModal = true;
   },
   unmounted() {
     window.removeEventListener('beforeunload', this.onBeforeUnload);
@@ -94,7 +90,7 @@ export default defineComponent({
     },
     cancelLeave() {
       this.pendingTarget = null;
-      $('#leaveRoomModal').modal('hide');
+      this.showLeaveModal = false;
     },
     async confirmLeave() {
       this.leaving = true;
@@ -105,7 +101,7 @@ export default defineComponent({
       }
       const target = this.pendingTarget;
       this.pendingTarget = null;
-      $('#leaveRoomModal').modal('hide');
+      this.showLeaveModal = false;
       this.leaving = false;
       store.commit('resetGameState');
       if (target) {

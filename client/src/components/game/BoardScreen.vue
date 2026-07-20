@@ -154,7 +154,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import $ from 'jquery';
 import { mapGetters } from 'vuex';
 import {
   CharacterChoosingStateType as CCST,
@@ -206,6 +205,7 @@ export default defineComponent({
       actionLog: [] as { text: string; kind?: string }[],
       /** end-game result dialog; can dismiss without leaving room */
       showEndModal: true,
+      showSetupConfirm: false,
     };
   },
   computed: {
@@ -279,7 +279,7 @@ export default defineComponent({
         return idx >= 0 ? idx + 1 : 0;
       };
       const mk = (playerId: string, pos: string) => {
-        const board = this.gameState.board.players.get(playerId) || {
+        const board = this.gameState.board.players[playerId] || {
           stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [],
         };
         return {
@@ -322,7 +322,7 @@ export default defineComponent({
           stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [], crown: false,
         };
       }
-      const board = this.gameState.board.players.get(this.self);
+      const board = this.gameState.board.players[this.self];
       return {
         stash: 0,
         hand: [],
@@ -422,7 +422,7 @@ export default defineComponent({
     },
     showTeamScores() {
       if (!this.gameState?.board?.playerOrder) return false;
-      return Array.from(this.gameState.players.values()).some(
+      return Object.values(this.gameState.players).some(
         (p: any) => p.team === TeamId.A || p.team === TeamId.B,
       );
     },
@@ -495,7 +495,7 @@ export default defineComponent({
     },
     showConfirmationModal() {
       store.commit('prepareGameSetupConfirmation');
-      $('#setupConfirmationModal').modal();
+      this.showSetupConfirm = true;
     },
     async startGame() {
       this.startingGame = true;
@@ -565,7 +565,7 @@ export default defineComponent({
   beforeUnmount() {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     if (this.eventBannerTimer) clearTimeout(this.eventBannerTimer);
-    $('#setupConfirmationModal').modal('hide');
+    this.showSetupConfirm = false;
   },
   watch: {
     gameProgress(val: string) {

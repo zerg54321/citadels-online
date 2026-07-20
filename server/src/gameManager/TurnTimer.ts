@@ -18,23 +18,17 @@ export class TurnTimer {
   private room: Room;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private workTimer: ReturnType<typeof setTimeout> | null = null;
-  private heartbeat: ReturnType<typeof setInterval> | null = null;
   private disposed = false;
   private suppressArm = false;
   private running = false;
 
   constructor(room: Room) {
     this.room = room;
-    this.heartbeat = setInterval(() => this.tick(), 400);
   }
 
   dispose() {
     this.disposed = true;
     this.clearTimers();
-    if (this.heartbeat) {
-      clearInterval(this.heartbeat);
-      this.heartbeat = null;
-    }
   }
 
   private clearTimers() {
@@ -55,19 +49,6 @@ export class TurnTimer {
 
   resetDeadlineAfterHumanMove() {
     this.onStateChanged(true);
-  }
-
-  /** periodic safety net */
-  private tick() {
-    if (this.disposed || this.running || this.suppressArm) return;
-    const gs = this.room.gameState;
-    if (gs.progress !== GameProgress.IN_GAME) return;
-    // only re-arm if nothing scheduled (do not stomp intentional AI pacing delay)
-    if (this.shouldDriveNow() && !this.workTimer) {
-      this.arm(false);
-    } else if (gs.needsActionTimer() && !this.timer) {
-      this.arm(false);
-    }
   }
 
   private shouldDriveNow(): boolean {

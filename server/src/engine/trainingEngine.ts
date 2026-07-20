@@ -32,11 +32,7 @@ export class TrainingEngine {
       throw new Error('TrainingEngine currently supports exactly 6 players for 3v3 mode.');
     }
 
-    // offline engine: advance phase timers inline
-    process.env.CITADELS_SYNC = '1';
-    process.env.CITADELS_FAST = '1';
-
-    this.gameState = new GameState(8);
+    this.gameState = new GameState({ completeCitySize: 8, fastMode: true, syncMode: true });
     this.playerOrder = playerNames.map((_, index) => `p${index + 1}`);
     this.teamMap = new Map(this.playerOrder.map((id, index) => [id, index % 2 === 0 ? 'A' : 'B']));
 

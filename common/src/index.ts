@@ -1,10 +1,11 @@
 import districtsJson from './districts.json';
+import type { DistrictId } from './districts';
 
 export const districts = districtsJson;
 
 export type PlayerId = string;
 export type RoomId = string;
-export type DistrictId = keyof typeof districts;
+export { DistrictId };
 
 export enum GameProgress {
   IN_LOBBY = 1,
@@ -134,7 +135,7 @@ export type TeamScores = {
 export type ClientGameState = {
   progress: GameProgress
   gameMode: GameMode
-  players: Map<PlayerId, {
+  players: Record<PlayerId, {
     id: PlayerId
     username: string
     manager: boolean
@@ -149,7 +150,7 @@ export type ClientGameState = {
   }>
   self: PlayerId
   board: {
-    players: Map<PlayerId, PlayerBoard>
+    players: Record<PlayerId, PlayerBoard>
     gamePhase: GamePhase
     turnState: ClientTurnState
     playerOrder: PlayerId[],

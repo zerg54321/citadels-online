@@ -44,7 +44,7 @@ export const gameGetters = {
     return state.gameSetupData;
   },
   getPlayerFromId(state: GameState) {
-    return (playerId: PlayerId) => state.gameState?.players.get(playerId);
+    return (playerId: PlayerId) => state.gameState?.players[playerId];
   },
   getDistrictFromId() {
     return (districtId: DistrictId) => districts[districtId as keyof typeof districts];
@@ -66,7 +66,7 @@ export const gameGetters = {
       if (districtId === 'keep') return -1;
 
       if (state.gameState === undefined) return -1;
-      const player = state.gameState.board.players.get(playerId);
+      const player = state.gameState.board.players[playerId];
       if (player === undefined) return -1;
 
       if (player.city.length >= state.gameState.settings.completeCitySize) return -1;
@@ -105,17 +105,17 @@ export const gameMutations = {
   },
   addPlayer(state: GameState, player: any) {
     if (state.gameState !== undefined) {
-      state.gameState.players.set(player.id, player);
+      state.gameState.players[player.id] = player;
     }
   },
   removePlayer(state: GameState, playerId: PlayerId) {
     if (state.gameState !== undefined) {
-      state.gameState.players.delete(playerId);
+      delete state.gameState.players[playerId];
     }
   },
   setPlayerOnline(state: GameState, { playerId, online }: { playerId: PlayerId; online: boolean }) {
     if (state.gameState !== undefined) {
-      const player = state.gameState.players.get(playerId);
+      const player = state.gameState.players[playerId];
       if (player) {
         player.online = online;
       }
@@ -125,11 +125,11 @@ export const gameMutations = {
     const order = state.gameState?.lobbyPlayerOrder;
     if (Array.isArray(order) && order.length) {
       state.gameSetupData.players = order.filter((id) => {
-        const p = state.gameState?.players.get(id);
+        const p = state.gameState?.players[id];
         return p && p.role === PlayerRole.PLAYER;
       });
     } else {
-      state.gameSetupData.players = Array.from(state.gameState?.players.values() || [])
+      state.gameSetupData.players = Object.values(state.gameState?.players || {})
         .filter((player) => player.role === PlayerRole.PLAYER)
         .map((player) => player.id);
     }
@@ -182,12 +182,12 @@ export const gameActions = {
   async rejoinCurrentRoom({ state, dispatch }: { state: GameState; dispatch: any }) {
     if (!state.currentRoomId || !state.gameState) return;
     const playerId = state.gameState.self;
-    const self = state.gameState.players.get(playerId);
+    const self = state.gameState.players[playerId];
     const asSpectator = self?.role === PlayerRole.SPECTATOR;
     await dispatch('joinRoom', {
       roomId: state.currentRoomId,
       playerId,
-      username: state.gameState?.players.get(playerId)?.username || '',
+      username: state.gameState?.players[playerId]?.username || '',
       asSpectator,
     });
   },

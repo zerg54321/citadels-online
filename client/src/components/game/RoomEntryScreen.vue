@@ -32,7 +32,6 @@
 import { defineComponent } from 'vue';
 import { mapGetters } from 'vuex';
 import { RoomId } from 'citadels-common';
-import $ from 'jquery';
 import { store } from '../../store';
 import LoadingSpinner from './elements/LoadingSpinner.vue';
 
@@ -43,6 +42,7 @@ import LoadingSpinner from './elements/LoadingSpinner.vue';
 export default defineComponent({
   components: { LoadingSpinner },
   name: 'RoomEntryScreen',
+  emits: ['open-auth'],
   data() {
     return {
       loading: true,
@@ -80,7 +80,7 @@ export default defineComponent({
   },
   methods: {
     openLogin() {
-      $('#authModal').modal('show');
+      window.dispatchEvent(new CustomEvent('open-auth'));
     },
     async getRoomInfo(roomId: RoomId) {
       if (!this.authReady) return;

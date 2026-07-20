@@ -1,6 +1,4 @@
 import { createApp } from 'vue';
-import $ from 'jquery';
-import { Boundary } from 'popper.js';
 import twemoji from 'twemoji';
 import router from './router';
 import { store } from './store';
@@ -12,7 +10,6 @@ import './scss/main.scss';
 
 const app = createApp(App);
 
-// Input focus directive
 app.directive('focus', {
   mounted(el) {
     el.focus();
@@ -49,23 +46,6 @@ app.component('emoji', {
     },
   },
   template: '<span v-html="html"></span>',
-});
-
-// Bootstrap tooltip directive
-const tooltipOptions = { boundary: 'window' as Boundary };
-app.directive('tooltip', {
-  mounted(el, binding) {
-    const title = binding.value ?? '';
-    $(el).tooltip({ ...tooltipOptions, title });
-  },
-  updated(el, binding) {
-    $(el).tooltip('dispose');
-    const title = binding.value ?? '';
-    $(el).tooltip({ ...tooltipOptions, title });
-  },
-  unmounted(el) {
-    $(el).tooltip('dispose');
-  },
 });
 
 app.use(store);

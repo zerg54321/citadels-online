@@ -1,85 +1,83 @@
 <template>
-<div
-  class="modal fade"
-  id="setupConfirmationModal"
-  tabindex="-1"
-  aria-labelledby="setupConfirmationModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content lobby-modal">
-      <div class="modal-header border-0 pb-2">
-         <h5 class="modal-title text-gold lobby-modal-title" id="setupConfirmationModalLabel">
-          {{ $t('ui.lobby.start_game') }}
-        </h5>
-         <button
-           type="button"
-           class="close text-gold"
-           data-dismiss="modal"
-           :aria-label="$t('ui.cancel')"
-         >
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <table class="table lobby-table">
-          <tbody>
-            <tr v-if="isSixPlayers">
-              <td class="text-muted-gold">{{ $t('ui.lobby.settings.game_mode') }}</td>
-              <td class="text-gold">{{ $t('ui.lobby.settings.mode_team6') }}</td>
-            </tr>
-            <tr>
-              <td class="text-muted-gold">{{ $t('ui.lobby.settings.complete_city_size') }}</td>
-              <td class="text-gold">{{ isSixPlayers ? 8 : gameSetupData.completeCitySize }}</td>
-            </tr>
-            <tr>
-              <td class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout') }}</td>
-              <td class="text-gold">{{ gameSetupData.actionTimeoutSeconds }}s</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="card lobby-modal-card">
-          <div class="card-header text-gold lobby-modal-card-header">
-            {{ $t('ui.lobby.players') }}
-          </div>
-          <ul class="list-group list-group-flush">
-            <li
-              class="list-group-item d-flex justify-content-between align-items-center"
-              :class="{'text-muted-gold': !getPlayerFromId(playerId).online}"
-              v-for="playerId in gameSetupData.players"
-              :key="playerId"
-            >
-              <span class="text-parchment">{{ getPlayerFromId(playerId).username }}</span>
-              <span
-                v-if="playerId === gameState.self"
-                class="badge badge-info"
-              >{{ $t('ui.lobby.you') }}</span>
-              <span
-                v-else-if="!getPlayerFromId(playerId).online"
-                class="badge badge-secondary"
-              >{{ $t('ui.lobby.offline') }}</span>
-              <span
-                v-else
-                class="badge badge-success"
-              >{{ $t('ui.lobby.online') }}</span>
-            </li>
-          </ul>
+  <div
+    v-if="showSetupConfirm"
+    class="modal fade show d-block"
+    style="background:rgba(0,0,0,0.65); z-index: 1050;"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content lobby-modal">
+        <div class="modal-header border-0 pb-2">
+           <h5 class="modal-title text-gold lobby-modal-title">
+            {{ $t('ui.lobby.start_game') }}
+          </h5>
+           <button
+              type="button"
+              class="close text-gold"
+              :aria-label="$t('ui.cancel')"
+              @click="showSetupConfirm = false"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
         </div>
-      </div>
-      <div class="modal-footer border-0">
-        <button type="button" class="btn btn-outline-gold" data-dismiss="modal">
-          {{ $t('ui.cancel') }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-gold"
-          @click="startGame"
-          :disabled="startingGame"
-        >{{ $t('ui.confirm') }}</button>
+        <div class="modal-body">
+          <table class="table lobby-table">
+            <tbody>
+              <tr v-if="isSixPlayers">
+                <td class="text-muted-gold">{{ $t('ui.lobby.settings.game_mode') }}</td>
+                <td class="text-gold">{{ $t('ui.lobby.settings.mode_team6') }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted-gold">{{ $t('ui.lobby.settings.complete_city_size') }}</td>
+                <td class="text-gold">{{ isSixPlayers ? 8 : gameSetupData.completeCitySize }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted-gold">{{ $t('ui.lobby.settings.action_timeout') }}</td>
+                <td class="text-gold">{{ gameSetupData.actionTimeoutSeconds }}s</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="card lobby-modal-card">
+            <div class="card-header text-gold lobby-modal-card-header">
+              {{ $t('ui.lobby.players') }}
+            </div>
+            <ul class="list-group list-group-flush">
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center"
+                :class="{'text-muted-gold': !getPlayerFromId(playerId).online}"
+                v-for="playerId in gameSetupData.players"
+                :key="playerId"
+              >
+                <span class="text-parchment">{{ getPlayerFromId(playerId).username }}</span>
+                <span
+                  v-if="playerId === gameState.self"
+                  class="badge badge-info"
+                >{{ $t('ui.lobby.you') }}</span>
+                <span
+                  v-else-if="!getPlayerFromId(playerId).online"
+                  class="badge badge-secondary"
+                >{{ $t('ui.lobby.offline') }}</span>
+                <span
+                  v-else
+                  class="badge badge-success"
+                >{{ $t('ui.lobby.online') }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-gold" @click="showSetupConfirm = false">
+            {{ $t('ui.cancel') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-gold"
+            @click="startGame"
+            :disabled="startingGame"
+          >{{ $t('ui.confirm') }}</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
   <div class="card h-100 medieval-panel">
     <div class="card-header border-0 pt-3 pb-2">
       <h5 class="mb-0 text-gold lobby-title">
@@ -143,7 +141,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import $ from 'jquery';
 import { mapGetters } from 'vuex';
 import { PlayerRole } from 'citadels-common';
 import PlayersList from './elements/PlayersList.vue';
@@ -158,6 +155,7 @@ export default defineComponent({
       startingGame: false,
       completeCitySize: 8,
       actionTimeoutSeconds: 120,
+      showSetupConfirm: false,
     };
   },
   computed: {
@@ -170,16 +168,15 @@ export default defineComponent({
       return this.getPlayerFromId(this.gameState.self)?.manager || false;
     },
     isSixPlayers() {
-      return Array.from(this.gameState?.players.values() || [])
+      return Object.values(this.gameState?.players || {})
         .filter((player: any) => player.role === PlayerRole.PLAYER).length === 6;
     },
     hasAiPlayers() {
-      return Array.from(this.gameState?.players.values() || [])
+      return Object.values(this.gameState?.players || {})
         .some((player: any) => player.isAi && player.role === PlayerRole.PLAYER);
     },
     validation() {
-      // get players
-      const playersCount = Array.from(this.gameState?.players.values() || [])
+      const playersCount = Object.values(this.gameState?.players || {})
         .filter((player) => player.role === PlayerRole.PLAYER).length;
 
       // 3v3 only: exactly 6 seats
@@ -218,14 +215,14 @@ export default defineComponent({
         actionTimeoutSeconds: this.actionTimeoutSeconds,
       };
       store.commit('prepareGameSetupConfirmation', settings);
-      $('#setupConfirmationModal').modal();
+      this.showSetupConfirm = true;
     },
     async startGame() {
       try {
         this.startingGame = true;
         await store.dispatch('startGame');
         this.startingGame = false;
-        $('#setupConfirmationModal').modal('hide');
+        this.showSetupConfirm = false;
       } catch (error) {
         console.error('error when starting game', error);
         this.startingGame = false;
@@ -244,7 +241,7 @@ export default defineComponent({
     },
   },
   beforeUnmount() {
-    $('#setupConfirmationModal').modal('hide');
+    this.showSetupConfirm = false;
   },
 });
 </script>

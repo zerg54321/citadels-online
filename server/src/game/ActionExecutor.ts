@@ -9,7 +9,10 @@ import {
 } from 'citadels-common';
 import type GameState from './GameState';
 import { CharacterPosition, TurnState } from './CharacterManager';
-import { roleNameZh, districtLabelZh, playerName } from './ActionLogger';
+import {
+  templateEarn, templateBuild, templateEarnManual, templateKill, templateRob,
+  templateRobMove, templateRobMoveEmpty, templateDestroy,
+} from './actionLogTemplates';
 
 const debug = Debug('citadels-server');
 
@@ -179,7 +182,7 @@ export default class ActionExecutor {
       const actorId = this.state.board?.getCurrentPlayerId();
       if (actorId) {
         this.state.pushAction(
-          `${playerName(this.state.players, actorId)} 自动收租 +${amount} 金`,
+          templateEarn(this.state.players, actorId, amount),
           'earn',
         );
       }
@@ -229,7 +232,7 @@ export default class ActionExecutor {
     {
       const actorId = this.state.board.getCurrentPlayerId();
       this.state.pushAction(
-        `${playerName(this.state.players, actorId)} 建造了 ${districtLabelZh(String(move.data))}`,
+        templateBuild(this.state.players, actorId, String(move.data)),
         'build',
       );
     }
@@ -306,7 +309,7 @@ export default class ActionExecutor {
           player.stash += amount;
           if (amount > 0) {
             this.state.pushAction(
-              `${playerName(this.state.players, this.state.board.getCurrentPlayerId())} 收租 +${amount} 金`,
+              templateEarnManual(this.state.players, this.state.board.getCurrentPlayerId(), amount),
               'earn',
             );
           }
@@ -345,7 +348,7 @@ export default class ActionExecutor {
         if (cm.robbedCharacter === character) {
           cm.robbedCharacter = CharacterType.NONE;
         }
-        this.state.pushAction(`刺杀标记：${roleNameZh(character)}（持有者到其顺位再揭示）`, 'kill');
+        this.state.pushAction(templateKill(character), 'kill');
         cm.canDoSpecialAction[CharacterType.ASSASSIN] = false;
         cm.jumpToActionsState();
         return true;
@@ -376,7 +379,7 @@ export default class ActionExecutor {
       case CharacterType.ARCHITECT:
       case CharacterType.WARLORD:
         cm.robbedCharacter = character;
-        this.state.pushAction(`偷窃标记：${roleNameZh(character)}（行动时夺金）`, 'rob');
+        this.state.pushAction(templateRob(character), 'rob');
         cm.canDoSpecialAction[CharacterType.THIEF] = false;
         cm.jumpToActionsState();
         return true;
@@ -415,12 +418,12 @@ export default class ActionExecutor {
         thiefPlayer.stash += amount;
         robbedPlayer.stash = 0;
         this.state.pushAction(
-          `${playerName(this.state.players, robbedPlayerId)} 的${roleNameZh(robbedRole)}被偷窃，${amount} 金币转移到 ${playerName(this.state.players, thiefId)}`,
+          templateRobMove(this.state.players, robbedPlayerId, robbedRole, amount, thiefId),
           'rob',
         );
       } else {
         this.state.pushAction(
-          `${playerName(this.state.players, robbedPlayerId)} 的${roleNameZh(robbedRole)}被偷窃，但没有金币`,
+          templateRobMoveEmpty(this.state.players, robbedPlayerId, robbedRole),
           'rob',
         );
       }
@@ -559,7 +562,7 @@ export default class ActionExecutor {
       const actorId = this.state.board.getCurrentPlayerId();
       const victimId = this.state.board.playerOrder[data.player];
       this.state.pushAction(
-        `${playerName(this.state.players, actorId)} 拆毁了 ${playerName(this.state.players, victimId)} 的 ${districtLabelZh(data.card)}`,
+        templateDestroy(this.state.players, actorId, victimId, data.card),
         'destroy',
       );
     }

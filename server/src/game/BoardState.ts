@@ -43,16 +43,18 @@ export default class BoardState {
     const seesAll = destPlayerPos === PlayerPosition.SPECTATOR;
 
     return {
-      players: Array.from(this.players).map((elem) => {
-        const playerId = elem[0];
-        const board = elem[1];
-        const canSeeHand = seesAll || playerId === destPlayerId;
-        const otherPlayerPos = this.playerOrder.indexOf(playerId) as PlayerPosition;
-        return [playerId, {
-          ...board.exportForPlayer(canSeeHand),
-          characters: this.characterManager.exportPlayerCharacters(otherPlayerPos, destPlayerPos),
-        }];
-      }),
+      players: Object.fromEntries(
+        Array.from(this.players).map((elem) => {
+          const playerId = elem[0];
+          const board = elem[1];
+          const canSeeHand = seesAll || playerId === destPlayerId;
+          const otherPlayerPos = this.playerOrder.indexOf(playerId) as PlayerPosition;
+          return [playerId, {
+            ...board.exportForPlayer(canSeeHand),
+            characters: this.characterManager.exportPlayerCharacters(otherPlayerPos, destPlayerPos),
+          }];
+        }),
+      ),
       gamePhase: this.gamePhase,
       turnState: this.characterManager.getClientTurnState(),
       playerOrder: this.playerOrder,

@@ -20,7 +20,7 @@ import Player from './Player';
 import { refreshLiveScores } from './ScoreCalculator';
 import GameFlowController from './GameFlowController';
 import ActionExecutor from './ActionExecutor';
-import { setForceSyncPhases } from '../utils/schedule';
+import { MAX_CHARACTER_SKIP_ATTEMPTS } from '../utils/schedule';
 
 const ACTION_FEED_MAX_LENGTH = 60;
 const ACTION_FEED_EXPORT_LIMIT = 40;
@@ -55,8 +55,11 @@ export default class GameState implements Subject {
   emptySince: number | null;
   private flow: GameFlowController;
   private executor: ActionExecutor;
+  fastMode = false;
+  syncMode = false;
 
-  constructor(completeCitySize = 7) {
+  constructor(options?: { completeCitySize?: number; fastMode?: boolean; syncMode?: boolean }) {
+    const completeCitySize = options?.completeCitySize ?? 7;
     this.progress = GameProgress.IN_LOBBY;
     this.gameMode = GameMode.CASUAL;
     this.players = new Map();
@@ -76,8 +79,19 @@ export default class GameState implements Subject {
     this.lobbyPlayerOrder = [];
     this.actionFeed = [];
     this.emptySince = null;
+    this.fastMode = options?.fastMode ?? false;
+    this.syncMode = options?.syncMode ?? false;
     this.flow = new GameFlowController(this);
     this.executor = new ActionExecutor(this);
+  }
+
+  schedulePhase(fn: () => void, ms: number) {
+    if (this.syncMode) {
+      fn();
+      return;
+    }
+    const delay = this.fastMode ? Math.round(ms / 100) : ms;
+    setTimeout(fn, delay);
   }
 
   pushAction(text: string, kind = '') {
@@ -261,18 +275,20 @@ export default class GameState implements Subject {
     return {
       progress: this.progress,
       gameMode: this.gameMode,
-      players: Array.from(this.players).map(([id, player]) => [id, {
-        id: player.id,
-        username: player.username,
-        manager: player.manager,
-        online: player.online,
-        role: player.role,
-        userId: player.userId,
-        team: player.team,
-        isAi: player.isAi,
-        isAutoplay: player.isAutoplay,
-        hadEffectiveAiControl: player.hadEffectiveAiControl,
-      }]),
+      players: Object.fromEntries(
+        Array.from(this.players).map(([id, player]) => [id, {
+          id: player.id,
+          username: player.username,
+          manager: player.manager,
+          online: player.online,
+          role: player.role,
+          userId: player.userId,
+          team: player.team,
+          isAi: player.isAi,
+          isAutoplay: player.isAutoplay,
+          hadEffectiveAiControl: player.hadEffectiveAiControl,
+        }]),
+      ),
       self: playerId,
       board: this.board?.exportForPlayer(playerId),
       settings: {
@@ -333,8 +349,7 @@ export default class GameState implements Subject {
     });
 
     this.hasAiPlayers = players.some((id) => this.players.get(id)?.isAi);
-    // AI tables: sync phase advances so TurnTimer never waits on orphaned setTimeouts
-    setForceSyncPhases(this.hasAiPlayers);
+    this.syncMode = this.hasAiPlayers;
 
     // only 6p 3v3: ranked if no AI, practice (unranked) if any AI
     this.gameMode = this.hasAiPlayers ? GameMode.CASUAL : GameMode.COMPETITIVE_TEAM6;

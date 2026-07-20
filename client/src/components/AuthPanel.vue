@@ -10,7 +10,7 @@
         <span class="badge badge-success">{{ $t('ui.auth.logged_in') }}</span>
       </span>
       <div class="btn-group btn-group-sm mt-1">
-        <button type="button" class="btn btn-outline-light btn-sm" @click="showProfile = true">
+        <button type="button" class="btn btn-outline-light btn-sm" @click="showProfileModal = true">
           {{ $t('ui.auth.profile') }}
         </button>
         <button type="button" class="btn btn-outline-light btn-sm" @click="logout">
@@ -30,10 +30,9 @@
   </template>
 
   <div
-    class="modal fade"
-    id="authModal"
-    tabindex="-1"
-    aria-hidden="true"
+    v-if="showAuthModal"
+    class="modal fade show d-block"
+    style="background:rgba(0,0,0,0.65); z-index: 1050;"
   >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-dark text-left">
@@ -41,7 +40,7 @@
           <h5 class="modal-title">
             {{ mode === 'login' ? $t('ui.auth.login') : $t('ui.auth.register') }}
           </h5>
-          <button type="button" class="close" data-dismiss="modal" :aria-label="$t('ui.close')">
+          <button type="button" class="close" :aria-label="$t('ui.close')" @click="showAuthModal = false">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
@@ -88,16 +87,15 @@
   </div>
 
   <div
-    class="modal fade"
-    id="profileModal"
-    tabindex="-1"
-    aria-hidden="true"
+    v-if="showProfileModal"
+    class="modal fade show d-block"
+    style="background:rgba(0,0,0,0.65); z-index: 1050;"
   >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-dark text-left">
         <div class="modal-header">
           <h5 class="modal-title">{{ $t('ui.auth.profile') }}</h5>
-          <button type="button" class="close" data-dismiss="modal" :aria-label="$t('ui.close')">
+          <button type="button" class="close" :aria-label="$t('ui.close')" @click="showProfileModal = false">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
@@ -114,7 +112,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          <button type="button" class="btn btn-secondary" @click="showProfileModal = false">
             {{ $t('ui.close') }}
           </button>
           <button type="button" class="btn btn-primary" :disabled="busy" @click="saveProfile">
@@ -129,7 +127,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import $ from 'jquery';
 import { mapGetters } from 'vuex';
 import { store } from '../store';
 
@@ -146,29 +143,37 @@ export default defineComponent({
       profileError: '',
       profileOk: false,
       busy: false,
-      showProfile: false,
+      showAuthModal: false,
+      showProfileModal: false,
     };
   },
   computed: {
     ...mapGetters(['isLoggedIn', 'authUser', 'authReady']),
   },
   watch: {
-    showProfile(val) {
+    showProfileModal(val) {
       if (val) {
         this.profileDisplayName = this.authUser?.displayName || '';
         this.profileError = '';
         this.profileOk = false;
-        this.$nextTick(() => $('#profileModal').modal('show'));
-        this.showProfile = false;
       }
     },
   },
+  mounted() {
+    window.addEventListener('open-auth', this.onOpenAuth);
+  },
+  unmounted() {
+    window.removeEventListener('open-auth', this.onOpenAuth);
+  },
   methods: {
+    onOpenAuth() {
+      this.showAuthModal = true;
+    },
     openAuth(mode: 'login' | 'register') {
       this.mode = mode;
       this.error = '';
       this.password = '';
-      $('#authModal').modal('show');
+      this.showAuthModal = true;
     },
     async submitAuth() {
       this.busy = true;
@@ -186,7 +191,7 @@ export default defineComponent({
             displayName: this.displayName.trim() || undefined,
           });
         }
-        $('#authModal').modal('hide');
+        this.showAuthModal = false;
         this.password = '';
       } catch (e: any) {
         this.error = e?.message || String(e);

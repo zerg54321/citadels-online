@@ -31,7 +31,7 @@
               'badge-primary cursor-pointer': exchangeHandMode,
             }"
             @click="exchangeHand()"
-            v-tooltip="exchangeHandMode ? $t('ui.game.actions.choose_hand') : ''"
+             :title="exchangeHandMode ? $t('ui.game.actions.choose_hand') : ''"
           >{{ board.hand.length }} <emoji emoji="🃏"></emoji></span>
           <span class="badge badge-pill badge-warning p-2 ml-2" title="实时总分">
             {{ board.score?.total ?? 0 }} 分

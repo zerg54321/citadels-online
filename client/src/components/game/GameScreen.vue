@@ -1,17 +1,15 @@
 <template>
-<div class="container-fluid p-0 h-100 game-screen">
-  <transition name="fade" mode="out-in">
-    <div class="container-lg h-100 py-4" v-if="showLobby">
+  <div class="container-fluid p-0 h-100 game-screen">
+    <div v-if="showLobby" class="container-lg h-100 py-4">
       <LobbyScreen />
     </div>
-    <div class="h-100 d-flex" v-else-if="showBoard">
+    <div v-else-if="showBoard" class="h-100 d-flex">
       <BoardScreen />
     </div>
-    <div class="h-100" v-else>
+    <div v-else class="h-100">
       Invalid game state: {{ gameProgress }}
     </div>
-  </transition>
-</div>
+  </div>
 </template>
 
 <script lang="ts">

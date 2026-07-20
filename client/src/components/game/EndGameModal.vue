@@ -143,7 +143,7 @@ export default defineComponent({
       } else {
         (this.gameState?.board?.playerOrder || []).forEach((pid: string) => {
           const meta = this.getPlayerFromId(pid);
-          const total = this.gameState?.board?.players?.get(pid)?.score?.total ?? 0;
+          const total = this.gameState?.board?.players?.[pid]?.score?.total ?? 0;
           if (meta?.team === TeamId.A) A += total;
           if (meta?.team === TeamId.B) B += total;
         });
@@ -171,7 +171,7 @@ export default defineComponent({
       const order = this.gameState?.board?.playerOrder || [];
       return order.map((pid: string) => {
         const meta = this.getPlayerFromId(pid);
-        const board = this.gameState?.board?.players?.get(pid);
+         const board = this.gameState?.board?.players?.[pid];
         let team = '';
         if (meta?.team === TeamId.A) team = 'A';
         if (meta?.team === TeamId.B) team = 'B';

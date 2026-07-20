@@ -13,7 +13,7 @@
       <div class="seat-panel__banner">
         <span
           class="seat-panel__pick-no"
-          v-tooltip="$t('ui.game.pick_order_tip')"
+          :title="$t('ui.game.pick_order_tip')"
         >{{ pickOrder }}</span>
         <span class="text-truncate flex-fill seat-panel__name">{{ username }}</span>
         <span

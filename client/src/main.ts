@@ -16,18 +16,6 @@ app.directive('focus', {
   },
 });
 
-app.directive('tooltip', {
-  mounted(el, binding) {
-    el.setAttribute('title', binding.value ?? '');
-  },
-  updated(el, binding) {
-    el.setAttribute('title', binding.value ?? '');
-  },
-  unmounted(el) {
-    el.removeAttribute('title');
-  },
-});
-
 app.component('emoji', {
   data() {
     return {

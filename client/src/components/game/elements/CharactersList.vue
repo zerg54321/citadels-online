@@ -8,7 +8,7 @@
       v-for="(character, i) in processedCharacters" :key="i"
       class="list-group-item p-1 d-flex justify-content-between align-items-center"
       :class="rowClass(character)"
-      v-tooltip="tooltipText(character)"
+      :title="tooltipText(character)"
       data-placement="left"
       @click="selectCharacter(i, character.id)"
     >

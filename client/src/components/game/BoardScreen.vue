@@ -436,7 +436,7 @@ export default defineComponent({
       } else {
         (this.gameState?.board?.playerOrder || []).forEach((pid: string) => {
           const meta = this.getPlayerFromId(pid);
-          const total = this.gameState?.board?.players?.get(pid)?.score?.total ?? 0;
+          const total = this.gameState?.board?.players?.[pid]?.score?.total ?? 0;
           if (meta?.team === TeamId.A) A += total;
           if (meta?.team === TeamId.B) B += total;
         });

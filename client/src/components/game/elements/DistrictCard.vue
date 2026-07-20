@@ -12,7 +12,7 @@
   <div
     v-if="data"
     class="card h-100 bg-black text-light shadow-sm overflow-hidden d-flex flex-column p-1"
-    v-tooltip="$te(description) ? $t(description) : ''"
+    :title="$te(description) ? $t(description) : ''"
     :data-placement="small ? 'right' : 'top'"
   >
 

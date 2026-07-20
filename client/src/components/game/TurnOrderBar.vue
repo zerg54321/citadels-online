@@ -13,7 +13,7 @@
           'board-table__char-chip--face-up': ch.faceUp,
         },
       ]"
-      v-tooltip="ch.tip"
+      :title="ch.tip"
     >{{ ch.id || '?' }}</span>
   </div>
 </template>

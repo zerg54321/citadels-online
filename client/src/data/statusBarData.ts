@@ -165,7 +165,7 @@ export function getStatusBarData(state: ClientGameState): StatusBarData {
     {
       const currentPlayer = state.board.playerOrder[state.board.currentPlayer];
       const isCurrentPlayerSelf = currentPlayer === state.self;
-      const currentPlayerName = state.players.get(currentPlayer)?.username ?? '';
+      const currentPlayerName = state.players[currentPlayer]?.username ?? '';
 
       switch (state.board.gamePhase) {
         case GamePhase.INITIAL:
@@ -210,7 +210,7 @@ export function getStatusBarData(state: ClientGameState): StatusBarData {
             state.board.turnState as keyof typeof MESSAGES_DO_ACTIONS
           ];
           if (message !== undefined) {
-            const player = state.board.players.get(currentPlayer);
+            const player = state.board.players[currentPlayer];
             return {
               type: isCurrentPlayerSelf ? 'HIGHLIGHTED' : 'NORMAL',
               message: `ui.game.messages.actions.${message}`,

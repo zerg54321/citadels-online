@@ -88,7 +88,14 @@ export default function CenterPanel({
     });
   }, [charactersList, killMode, robMode, chooseCharacterMode]);
 
-  const asideChips = charactersList?.aside || [];
+  // Aside chips: only render cards with a known id (id !== 0). Face-down
+  // aside cards (天绝/暗弃 in 6P) always have id=0 from the server's
+  // getAsideCards() and never get revealed there, so showing "? ?" for the
+  // whole game conveys no information — it just restates the 6P rule that
+  // two cards are burned face-down. Filter them out; if none remain (6P),
+  // the whole aside row is hidden. Face-up aside cards (4P/5P) keep their
+  // real id and are still shown.
+  const asideChips = (charactersList?.aside || []).filter((a) => a.id);
   const showCenterCharacterGrid = chooseCharacterMode || killMode || robMode
     || (gameProgress === 'IN_GAME' && (charactersList?.callable || []).length > 0);
   const showGraveyard = gameState?.board?.graveyard !== undefined;
@@ -131,7 +138,7 @@ export default function CenterPanel({
             <span>{t('ui.game.aside')}:</span>
             {asideChips.map((a, i) => (
               <span key={i} className="badge badge-secondary">
-                {a.id ? t(`characters.${a.id}.name`) : '?'}
+                {t(`characters.${a.id}.name`)}
                 {a.faceUp && ` (${t('ui.game.character_face_up_short')})`}
               </span>
             ))}

@@ -48,6 +48,10 @@ socket.on('update game state', (data: unknown) => {
   useAppStore.getState().setGameState(parseClientGameState(data));
 });
 
+socket.on('chat message', (msg: { playerId: string; username: string; text: string; ts: number }) => {
+  useAppStore.getState().addChatMessage(msg);
+});
+
 if (import.meta.env.DEV) {
   socket.onAny((event: string, ...args: unknown[]) => {
     console.log('[socket]', event, args);

@@ -5,6 +5,7 @@ import {
 import socket from '../socket';
 import api from '../api';
 import type { AuthSlice } from './authSlice';
+import type { ChatSlice } from './chatSlice';
 
 export interface GameSlice {
   gameState: ClientGameState | undefined;
@@ -38,7 +39,7 @@ export interface GameSlice {
   removeAiPlayer: (playerId: PlayerId) => Promise<any>;
 }
 
-export const createGameSlice: StateCreator<GameSlice & AuthSlice, [], [], GameSlice> = (set, get) => ({
+export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, [], [], GameSlice> = (set, get) => ({
   gameState: undefined,
   gameSetupData: {
     players: [],
@@ -54,6 +55,9 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice, [], [], GameSl
     const { currentRoomId } = get();
     if (currentRoomId) localStorage.removeItem(currentRoomId);
     set({ gameState: undefined, currentRoomId: null });
+    // Clear chat too — both slices share the merged store, so clearChatMessages
+    // is reachable via get() even though it's defined in chatSlice.
+    get().clearChatMessages();
   },
   addPlayer: (player) => set((state) => {
     if (state.gameState === undefined) return {};

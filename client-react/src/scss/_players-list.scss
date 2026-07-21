@@ -1,0 +1,85 @@
+// PlayersList styles — extracted from Vue scoped <style>. Scoped to .players-list
+// parent to avoid leaking badge overrides into the rest of the app.
+
+.players-list .card {
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+.players-list .card-header {
+  background: rgba(13, 11, 8, 0.45);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.players-list .list-group-item {
+  background: transparent;
+  border-color: rgba(212, 175, 55, 0.12);
+  color: var(--parchment);
+}
+.players-list .team-a-header {
+  background: rgba(70, 90, 110, 0.35);
+  border-bottom: 1px solid rgba(70, 90, 110, 0.45);
+}
+.players-list .team-b-header {
+  background: rgba(110, 60, 60, 0.35);
+  border-bottom: 1px solid rgba(110, 60, 60, 0.45);
+}
+.players-list .team-a-badge {
+  background: rgba(70, 90, 110, 0.25);
+  color: #b8c8d8;
+  border: 1px solid rgba(70, 90, 110, 0.45);
+}
+.players-list .team-b-badge {
+  background: rgba(110, 60, 60, 0.25);
+  color: #d8a8a8;
+  border: 1px solid rgba(110, 60, 60, 0.45);
+}
+.players-list .manager-badge {
+  background: rgba(180, 130, 50, 0.25);
+  color: #e8c66a;
+  border: 1px solid rgba(180, 130, 50, 0.5);
+}
+.players-list .self-row {
+  background: rgba(212, 175, 55, 0.08) !important;
+}
+.players-list .badge-info {
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold-bright);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+.players-list .badge-dark {
+  background: rgba(120, 110, 95, 0.25);
+  color: var(--text-muted);
+  border: 1px solid rgba(120, 110, 95, 0.4);
+}
+.players-list .text-muted {
+  color: var(--text-muted) !important;
+}
+.players-list .card-footer {
+  background: rgba(13, 11, 8, 0.35);
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+}
+.players-list .btn-outline-secondary {
+  color: var(--text-muted);
+  border-color: rgba(184, 168, 136, 0.4);
+}
+.players-list .btn-outline-secondary:hover {
+  color: var(--parchment);
+  border-color: var(--parchment);
+  background: rgba(232, 220, 192, 0.06);
+}
+.players-list .btn-outline-danger {
+  color: #d8a8a8;
+  border-color: rgba(110, 60, 60, 0.55);
+}
+.players-list .btn-outline-danger:hover {
+  background: rgba(110, 60, 60, 0.15);
+  color: #f5caca;
+}
+.players-list .border-right {
+  border-right: 1px solid rgba(212, 175, 55, 0.25) !important;
+}

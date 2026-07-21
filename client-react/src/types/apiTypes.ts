@@ -1,7 +1,6 @@
 export interface RoomInfoResponse {
-  exists: boolean;
-  inProgress?: boolean;
-  playerCount?: number;
+  status: 'open' | 'closed' | 'not found' | 'error';
+  message?: string;
 }
 
 export interface StartGameReponse {

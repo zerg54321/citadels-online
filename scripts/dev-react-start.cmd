@@ -6,7 +6,7 @@ set "ROOT=%CD%"
 set "PID_DIR=%ROOT%\.dev-pids"
 set "LOG_DIR=%ROOT%\.dev-logs"
 set "SERVER_PORT=8081"
-set "REACT_PORT=3001"
+set "REACT_PORT=3010"
 
 if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"

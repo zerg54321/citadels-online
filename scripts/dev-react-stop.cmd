@@ -4,7 +4,7 @@ cd /d "%~dp0.."
 
 set "ROOT=%CD%"
 set "PID_DIR=%ROOT%\.dev-pids"
-set "REACT_PORT=3001"
+set "REACT_PORT=3010"
 
 echo [dev-react-stop] root: %ROOT%
 

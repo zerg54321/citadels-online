@@ -6,7 +6,6 @@ import HomeScreen from './components/HomeScreen';
 import RoomScreen from './components/game/RoomScreen';
 import CardsPreview from './components/CardsPreview';
 import StatsScreen from './components/StatsScreen';
-import Preview from './pages/Preview';
 import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
 
@@ -55,7 +54,6 @@ export default function App() {
           <Route path="/room/:roomId" element={<RoomScreen />} />
           <Route path="/cards" element={<CardsPreview />} />
           <Route path="/stats" element={<StatsScreen />} />
-          <Route path="/preview" element={<Preview />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

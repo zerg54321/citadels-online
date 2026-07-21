@@ -47,7 +47,7 @@
     background-size: cover;
 
     &--back {
-      background-image: url('../../assets/characters/background.jpg');
+      background-image: url('../assets/characters/background.jpg');
       background-size: cover;
       background-position: center;
       border-color: rgba(180, 140, 255, 0.35);
@@ -67,35 +67,35 @@
     /* art */
     &--art-assassin {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/assassin.jpg');
+        url('../assets/characters/assassin.jpg');
     }
     &--art-thief {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/thief.jpg');
+        url('../assets/characters/thief.jpg');
     }
     &--art-magician {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/magician.jpg');
+        url('../assets/characters/magician.jpg');
     }
     &--art-king {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/king.jpg');
+        url('../assets/characters/king.jpg');
     }
     &--art-bishop {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/bishop.jpg');
+        url('../assets/characters/bishop.jpg');
     }
     &--art-merchant {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/merchant.jpg');
+        url('../assets/characters/merchant.jpg');
     }
     &--art-architect {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/architect.jpg');
+        url('../assets/characters/architect.jpg');
     }
     &--art-warlord {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../../assets/characters/warlord.jpg');
+        url('../assets/characters/warlord.jpg');
     }
   }
 

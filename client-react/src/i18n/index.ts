@@ -10,7 +10,7 @@ i18n.use(initReactI18next).init({
   },
   lng: 'zh',
   fallbackLng: 'en',
-  interpolation: { escapeValue: false },
+  interpolation: { escapeValue: false, prefix: '{', suffix: '}' },
 });
 
 export default i18n;

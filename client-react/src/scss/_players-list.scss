@@ -1,7 +1,11 @@
-// PlayersList styles — extracted from Vue scoped <style>. Scoped to .players-list
-// parent to avoid leaking badge overrides into the rest of the app.
+// PlayersList styles — extracted from Vue scoped <style>. Scoped to
+// .players-list parent to avoid leaking badge overrides into the rest of the
+// app. NOTE: the root element is <div class="card players-list">, so the card
+// itself uses a compound selector (.players-list.card, no space) — a
+// descendant selector (.players-list .card) would NOT match the same element
+// and Bootstrap's default white .card background would leak through.
 
-.players-list .card {
+.players-list.card {
   background: transparent;
   border: 1px solid rgba(212, 175, 55, 0.35);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);

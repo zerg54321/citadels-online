@@ -8,3 +8,19 @@ export const useAppStore = create<AppStore>()((...a) => ({
   ...createAuthSlice(...a),
   ...createGameSlice(...a),
 }));
+
+// Re-export selectors so components import from a single '@/store' entry.
+export {
+  useIsInRoom,
+  useGameProgress,
+  useGameSetupData,
+  useCurrentPlayerId,
+  useIsCurrentPlayerSelf,
+  useCharactersList,
+  useSelectedCards,
+  useGameState,
+  selectPlayerFromId,
+  getDistrictData,
+  selectDistrictDestroyPrice,
+  selectPlayerPosition,
+} from './selectors';

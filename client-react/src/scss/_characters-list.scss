@@ -1,0 +1,23 @@
+// CharactersList styles — extracted from Vue scoped <style>. .hover-hint and
+// the face-up/killed row treatments are globally unique class names.
+.hover-hint { display: none; }
+.hover-hint-hitbox:hover .hover-hint { display: block; }
+
+/* 明弃：左侧亮边 + 斜纹感，仍可点击 */
+.char-face-up {
+  background: repeating-linear-gradient(
+    -45deg,
+    #1e3a5f,
+    #1e3a5f 6px,
+    #243b55 6px,
+    #243b55 12px
+  ) !important;
+  color: #e0f2fe !important;
+  border-left: 4px solid #38bdf8 !important;
+}
+
+.char-killed {
+  background: #3f1d1d !important;
+  color: #fecaca !important;
+  text-decoration: line-through;
+}

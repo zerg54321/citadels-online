@@ -35,6 +35,7 @@ interface DistrictCardProps {
   disabled?: boolean;
   selected?: boolean;
   small?: boolean;
+  className?: string;
   onSelect?: (selected: boolean) => void;
 }
 
@@ -47,6 +48,7 @@ export default function DistrictCard({
   disabled = false,
   selected = false,
   small = false,
+  className,
   onSelect,
 }: DistrictCardProps) {
   const { t, i18n } = useTranslation();
@@ -66,7 +68,7 @@ export default function DistrictCard({
 
   return (
     <div
-      className={cn('district-card flex-shrink-0 rounded position-relative z-0', {
+      className={cn('district-card flex-shrink-0 rounded position-relative z-0', className, {
         'district-card--selectable': !disabled && selectable,
         'district-card--selected': selected,
         'district-card--small': small,

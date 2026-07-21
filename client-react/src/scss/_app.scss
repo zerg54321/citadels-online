@@ -1,0 +1,89 @@
+// App shell styles — extracted from Vue App.vue scoped <style lang="scss">.
+// The :deep(.auth-panel) overrides become plain nested rules here since React
+// has no scoping.
+
+header {
+  background: linear-gradient(180deg, rgba(13, 11, 8, 0.97) 0%, rgba(26, 20, 16, 0.95) 100%);
+  color: var(--parchment);
+  margin: 0;
+  padding: 0.6em 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
+  transition: padding 0.25s ease;
+
+  h1, h2, h6 {
+    padding: 0;
+    margin: 0;
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+  }
+
+  h1 a, h2 a {
+    color: var(--gold);
+    text-decoration: none;
+    text-shadow: 0 1px 6px rgba(212, 175, 55, 0.25);
+  }
+
+  h6 {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    transition: all 0.25s ease;
+  }
+
+  .header-subtitle--hidden {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+  }
+
+  .header-extra {
+    transition: all 0.25s ease;
+  }
+
+  .header-extra--hidden {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    display: none;
+  }
+}
+
+.body {
+  background: var(--bg-void);
+  min-height: 0;
+}
+
+.body--game {
+  background: #1a1410;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Vue :deep(.auth-panel) overrides
+.auth-panel {
+  .badge-success {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--gold-bright);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+  }
+  .btn-outline-light {
+    color: var(--gold);
+    border-color: rgba(212, 175, 55, 0.55);
+  }
+  .btn-outline-light:hover {
+    background: rgba(212, 175, 55, 0.08);
+    color: var(--gold-bright);
+  }
+  .btn-outline-secondary {
+    color: var(--text-muted);
+    border-color: rgba(184, 168, 136, 0.4);
+  }
+  .btn-outline-secondary:hover {
+    color: var(--parchment);
+    border-color: var(--parchment);
+    background: rgba(232, 220, 192, 0.06);
+  }
+}

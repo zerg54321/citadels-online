@@ -89,10 +89,112 @@ export default function AuthPanel() {
     }
   };
 
+  // Modals use createPortal to document.body, so they render regardless of
+  // which early-return branch is active. In Vue the single <template> kept the
+  // modals reachable from every v-if state; React's early returns isolate each
+  // branch, so we extract the portals into variables referenced by every
+  // return. (This was the login/register button "no reaction" bug: the auth
+  // modal portal lived only inside the isLoggedIn branch.)
+  const authModal = showAuthModal && createPortal(
+    <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content text-dark text-left">
+          <div className="modal-header">
+            <h5 className="modal-title">
+              {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
+            </h5>
+            <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowAuthModal(false)}>
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div className="modal-body">
+            {error && <div className="alert alert-danger py-2">{error}</div>}
+            <div className="form-group">
+              <label>{t('ui.auth.username')}</label>
+              <input className="form-control" value={username} autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>{t('ui.auth.password')}</label>
+              <input
+                className="form-control"
+                type="password"
+                value={password}
+                autoComplete="current-password"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {mode === 'register' && (
+              <div className="form-group">
+                <label>{t('ui.auth.display_name')}</label>
+                <input
+                  className="form-control"
+                  value={displayName}
+                  placeholder={t('ui.auth.display_name_hint') as string}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button
+              type="button"
+              className="btn btn-link"
+              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            >
+              {mode === 'login' ? t('ui.auth.switch_to_register') : t('ui.auth.switch_to_login')}
+            </button>
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={submitAuth}>
+              {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+
+  const profileModal = showProfileModal && createPortal(
+    <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content text-dark text-left">
+          <div className="modal-header">
+            <h5 className="modal-title">{t('ui.auth.profile')}</h5>
+            <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowProfileModal(false)}>
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div className="modal-body">
+            {profileError && <div className="alert alert-danger py-2">{profileError}</div>}
+            {profileOk && <div className="alert alert-success py-2">{t('ui.auth.saved')}</div>}
+            <p className="mb-2">
+              <strong>{t('ui.auth.username')}:</strong>
+              {authUser?.username}
+            </p>
+            <div className="form-group mb-0">
+              <label>{t('ui.auth.display_name')}</label>
+              <input className="form-control" value={profileDisplayName} onChange={(e) => setProfileDisplayName(e.target.value)} />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-secondary" onClick={() => setShowProfileModal(false)}>
+              {t('ui.close')}
+            </button>
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={saveProfile}>
+              {t('ui.confirm')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+
   if (!authReady) {
     return (
       <div className="auth-panel text-right">
         <small className="text-muted">...</small>
+        {authModal}
+        {profileModal}
       </div>
     );
   }
@@ -114,100 +216,8 @@ export default function AuthPanel() {
             </button>
           </div>
         </div>
-
-        {showAuthModal && createPortal(
-          <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content text-dark text-left">
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
-                  </h5>
-                  <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowAuthModal(false)}>
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  {error && <div className="alert alert-danger py-2">{error}</div>}
-                  <div className="form-group">
-                    <label>{t('ui.auth.username')}</label>
-                    <input className="form-control" value={username} autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>{t('ui.auth.password')}</label>
-                    <input
-                      className="form-control"
-                      type="password"
-                      value={password}
-                      autoComplete="current-password"
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  {mode === 'register' && (
-                    <div className="form-group">
-                      <label>{t('ui.auth.display_name')}</label>
-                      <input
-                        className="form-control"
-                        value={displayName}
-                        placeholder={t('ui.auth.display_name_hint') as string}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-link"
-                    onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                  >
-                    {mode === 'login' ? t('ui.auth.switch_to_register') : t('ui.auth.switch_to_login')}
-                  </button>
-                  <button type="button" className="btn btn-primary" disabled={busy} onClick={submitAuth}>
-                    {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
-
-        {showProfileModal && createPortal(
-          <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content text-dark text-left">
-                <div className="modal-header">
-                  <h5 className="modal-title">{t('ui.auth.profile')}</h5>
-                  <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowProfileModal(false)}>
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  {profileError && <div className="alert alert-danger py-2">{profileError}</div>}
-                  {profileOk && <div className="alert alert-success py-2">{t('ui.auth.saved')}</div>}
-                  <p className="mb-2">
-                    <strong>{t('ui.auth.username')}:</strong>
-                    {authUser?.username}
-                  </p>
-                  <div className="form-group mb-0">
-                    <label>{t('ui.auth.display_name')}</label>
-                    <input className="form-control" value={profileDisplayName} onChange={(e) => setProfileDisplayName(e.target.value)} />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowProfileModal(false)}>
-                    {t('ui.close')}
-                  </button>
-                  <button type="button" className="btn btn-primary" disabled={busy} onClick={saveProfile}>
-                    {t('ui.confirm')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+        {authModal}
+        {profileModal}
       </div>
     );
   }
@@ -221,6 +231,8 @@ export default function AuthPanel() {
       <button type="button" className="btn btn-sm btn-outline-light ml-1" onClick={() => openAuth('register')}>
         {t('ui.auth.register')}
       </button>
+      {authModal}
+      {profileModal}
     </div>
   );
 }

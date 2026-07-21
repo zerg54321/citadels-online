@@ -23,6 +23,15 @@ export {
 } from './view/boardLayout';
 // eslint-disable-next-line import/no-cycle
 export type { Relation, TableSlot } from './view/boardLayout';
+// eslint-disable-next-line import/no-cycle
+export { getStatusBarData } from './view/statusBar';
+// eslint-disable-next-line import/no-cycle
+export type {
+  StatusBarData,
+  StatusBarAction,
+  StatusBarMessageType,
+  GetStatusBarDataOptions,
+} from './view/statusBar';
 
 export type PlayerId = string;
 export type RoomId = string;

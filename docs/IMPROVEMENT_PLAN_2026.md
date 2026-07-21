@@ -12,7 +12,7 @@
 
 本仓库 fork 自 `antbrl/citadels-online`（2021-2022 年手写代码，Vue 3 Options API + Bootstrap 4）。原作者实现 2-7 人单人模式。本维护者在其基础上：
 
-- 改造为 **6 人 3v3 团队竞技模式**（含 +8/+6 建成加分、队伍结算）
+- 改造为 **6 人 3v3 团队竞技模式**（含 +4/+2 建成加分、队伍结算）
 - 新增 **用户战绩系统**（SQLite + JWT）
 - 新增 **AI 托管**（AutoplayPolicy）
 - 重构 UI
@@ -115,7 +115,7 @@
 
 | # | 逻辑 | 当前位置 | 目标位置 | 状态 | 测试数 |
 |---|---|---|---|---|---|
-| 2.1 | `getStatusBarData(gameState)` | `client/src/data/statusBarData.ts:243` | `common/view/statusBar.ts` | ⬜ 待做 | — |
+| 2.1 | `getStatusBarData(gameState)` | `client/src/data/statusBarData.ts:243` | `common/view/statusBar.ts` | ✅ 完成 2026-07-21 | 56 |
 | 2.2 | `liveTeamScores` 计算（含 B 队视角翻转） | `BoardScreen.vue`、`EndGameModal.vue`（重复两处） | `common/view/teamScores.ts` | ✅ 完成 2026-07-21 | 7 |
 | 2.3 | `getDistrictDestroyPrice`（含 `CharacterType.BISHOP + 1` 1-based 偏移） | `client/src/store/modules/game.ts` | `common/view/pricing.ts` | ✅ 完成 2026-07-21 | 12 |
 | 2.4 | `parseGameState` 字段兜底 | `client/src/api/index.ts:7-21` + `client/src/socket/index.ts:51-68`（重复两处） | `common/view/parseGameState.ts`（`parseClientGameState`） | ✅ 完成 2026-07-21 | 13 |
@@ -132,7 +132,7 @@
 | `teamScores.test.ts` | A/B 队视角翻转、权威值 vs 兜底求和、显式零、NONE 队跳过、孤儿 pid | ✅ |
 | `pricing.test.ts` | keep 不可拆、主教保护/被杀、great_wall 折扣、完成城市保护、cost 下限钳位 | ✅ |
 | `parseGameState.test.ts` | 必填字段透传、可选字段默认值、null/string/number 拒绝、board 兜底 | ✅ |
-| `statusBar.test.ts` | 各 turnState 文案 | ⬜ 待 2.1 |
+| `statusBar.test.ts` | 各 turnState 文案 | ✅ |
 | `boardLayout.test.ts` | 旁观者检测、队伍关系、座位旋转、6 人桌布局、crown/pickOrder | ✅ |
 
 **收益**：将来 React 重构后，跑一遍这套测试即可确认逻辑没回归。
@@ -209,6 +209,24 @@
 
 **验收**：common 54 测试 + server 17 测试全绿；根 typecheck 门禁绿；client `vite build` 成功；BoardScreen lint 无新增（仅预存 object-curly-newline/no-underscore-dangle/no-console）。
 
+##### 2.1 `getStatusBarData` → `statusBar.ts`（2026-07-21）
+
+**新增**
+- `common/src/view/statusBar.ts` —— `getStatusBarData(state, options?)` 纯函数 + 4 个类型导出（`StatusBarData`/`StatusBarAction`/`StatusBarMessageType`/`GetStatusBarDataOptions`）
+  - 返回 i18n 消息键（如 `ui.game.messages.actions.assassin_kill`），不硬编码中文
+  - 覆盖 `CHOOSE_CHARACTERS` 7 态 + `DO_ACTIONS` 15 态 + `INITIAL`/`FINISHED`/兜底 `INVALID_STATE`
+  - `getActions` 生成各 turnState 的可用动作列表（take_gold/draw_cards/earnings/laboratory/smithy/各角色技能/build/confirm/cancel/decline）
+  - `options.selectedCards` 注入魔术师弃牌确认动作的 `move.data`（剥离原 `store.getters.selectedCards` 直读）
+  - **循环依赖处理**：枚举映射改用函数内 `switch`（非 top-level `Record<Enum,...>`），避免模块加载时枚举未就绪
+- `common/src/view/__tests__/statusBar.test.ts` —— 56 个单测：progress 兜底 2 / INITIAL 1 / CHOOSE_CHARACTERS 7 态+args+HIGHLIGHTED 9 / 旁观者分支 3 / DO_ACTIONS 15 态+HIGHLIGHTED 16 / TAKE_RESOURCES actions 9 / 角色技能 5 / confirm/cancel 分支 6 / 缺 PlayerBoard 1 / 纯函数无 store 耦合 2
+
+**修改**
+- `common/src/index.ts` —— re-export `getStatusBarData` + 4 类型（`import/no-cycle` 抑制）
+- `client/src/data/statusBarData.ts` —— 243 行 → 22 行薄封装：调 common 纯函数并注入 `store.getters.selectedCards`，保持原 `getStatusBarData(state)` 签名，两个 `.vue` 调用点零改动
+- `client/src/types/gameTypes.ts` —— **删除**（死文件，原 `StatusBarData`/`Action`/`StatusBarMessageType` 已迁入 common，无任何引用）
+
+**验收**：common 110 测试（原 54 + 新 56）+ server 83 测试全绿；根 typecheck 门禁绿；client `vite build` 成功 0 error；改动文件 lint 0 error。
+
 ##### Bug 修复：军阀拆队友建筑取消后失去拆建筑能力（2026-07-21）
 
 **根因**：`SeatPanel.vue` 和 `PlayerCity.vue` 的 `chooseCardDestroy` 使用 `window.confirm` 同步阻塞 JS 主线程。阻塞期间排队的 socket 事件在 confirm 关闭后批量处理，与 game state 产生竞态，导致 `turnState` 可能已不再是 `WARLORD_DESTROY_DISTRICT`，拆建筑模式消失。
@@ -219,11 +237,11 @@
 
 **验收**：client `vite build` 成功；两文件 lint 0 错误（仅预存 no-console 警告）。
 
-**阶段二总体验收**：`npm test --prefix common`（54 测试）+ `npm test --prefix server`（17 测试）全绿；VPS 验证一局 UI 显示无回归（队伍比分、军阀拆毁费用、加入房间后动作日志/倒计时显示正常、拆队友取消后仍可拆对手）。
+**阶段二总体验收**：`npm test --prefix common`（110 测试：原 54 + 2.1 新增 56）+ `npm test --prefix server`（83 测试）全绿；根 typecheck 门禁绿；client `vite build` 成功；VPS 验证一局 UI 显示无回归（队伍比分、军阀拆毁费用、加入房间后动作日志/倒计时显示正常、拆队友取消后仍可拆对手、状态栏文案/动作按钮正常）。阶段二 5/5 项全部完成。
 
 ---
 
-### 阶段三：核心规则测试（2-3 天，强烈建议）⬜ 待启动
+### 阶段三：核心规则测试（2-3 天，强烈建议）✅ 完成
 
 > 目标：不追求覆盖率，只覆盖"最容易出 bug、且维护者改过"的几条路径。
 >
@@ -247,37 +265,60 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 
 **验收**：`npm test --prefix server` 含新测试全绿；故意改错一行计分逻辑，测试能抓到。
 
+**完成情况（2026-07-21）**：
+
+- ✅ 3.1 DB 测试隔离：`server/src/db/database.ts` 加测试守卫，仅在 vitest 下用 `:memory:` SQLite（信号用 `VITEST_WORKER_ID`——vitest 自动设置、运维不会设，避免 `NODE_ENV=test` 误入生产导致静默数据丢失）；生产路径不变（提取 `resolveDbPath()` 避免嵌套三元，通过 lint）；激活时 `console.warn` 留明显痕迹。
+- ✅ 3.1 `ScoreCalculator.test.ts`（15 测试）：3v3 队伍分配、base 计分、team 聚合、建成 +4/+2、5 色 +3、bonus 叠加、`finalize` 的 TEAM_A_WIN/TEAM_B_WIN/DRAW、无 board 早退、重复调用不重复计分。**发现并固化 1 个已知 bug**：`districts.json` 用 `extra_points`（snake_case）但 `DistrictCard.ts` 读 `extraPoints`（camelCase），`dragon_gate`/`university` 的 +2 从不生效（测试 "dragon_gate contributes cost only" 钉死当前行为，注释标注修复后改 8）。
+- ✅ 3.2 `ChoosingState.test.ts`（9 测试）：6P FSM 10 态精确序列、6 个 CHOOSE_CHARACTER 各对 PLAYER_1..6、DONE 边界 step 不越界、reset、6P 仅用 PUT_ASIDE_FACE_DOWN（无 FACE_UP/FACE_DOWN_UP/GET_ASIDE）、非法人数抛错、getState 幂等。
+- ✅ 3.3 `PlayerBoardState.test.ts`（42 测试）：建造（扣费/移牌/去重/余额不足/未知卡/边界 cost==stash/连续建造）、手牌增删查、拆毁 + `computeDestroyCost`（great_wall 取消折扣且不保护自身）、`computeEarningsForCharacter`（KING/BISHOP/MERCHANT/WARLORD 按 type 计数 + school_of_magic 通配，**固化 school 对非赚钱角色也 +1 的当前行为**）、`computeScore`（base/+4/+2/+3 叠加 + haunted_quarter 通配色受 final-round 标志控制 + 幂等）、`exportForPlayer` 手牌可见性。
+
+**验证**：`npx vitest run` 5 文件 83 测试全绿（原 17 + 新增 66）；根 `npm run typecheck` 通过；改动文件 lint 0 error/0 warning。**未改动任何游戏逻辑代码**，仅 `database.ts` 加测试隔离守卫 + 3 个新测试文件。
+
 ---
 
 ### 阶段四：UI 现状审计与美化（待启动，需先定基调）
 
 > 目标：从自娱自乐界面逐步优化到成熟游戏界面。**不破坏可玩性**为铁律。
+>
+> **复盘说明（2026-07-21，基于阶段一/二/三已完成）**：阶段二已把 5 个 view 层纯函数（teamScores/pricing/parseGameState/statusBar/boardLayout）抽入 `common/` 并配 110 个单测——这正是当初"为 React 重构铺路"的目标。由此阶段四的 A/C 抉择成本结构已变，见 4.2。
+
+#### 4.0 前置决策（启动 4.1 前需先拍板）
+
+阶段三测试钉死了 2 项"当前行为怪癖"，二者都影响**结算页 / 得分显示**（阶段四关键页面之一）。美化一个显示错误数字的 UI 是返工，故须先决定"修还是当成房规接受"：
+
+| 怪癖 | 现状 | 影响 | 建议 |
+|---|---|---|---|
+| `dragon_gate`/`university` 的 +2 从不生效 | `districts.json` 用 `extra_points`（snake）但 `DistrictCard.ts` 读 `extraPoints`（camel），键名不匹配 | 含这两张紫区的城市 `base` 分少算 2/张，结算页与战绩持久化都偏低 | **建议修**（一行：`DistrictCard.ts` 读 `data.extra_points`），修后更新 `ScoreCalculator.test.ts` 的 dragon_gate 期望 6→8 |
+| `school_of_magic` 对非赚钱角色也 +1 收入 | `computeEarningsForCharacter` 无条件加 `extraEarnings`，不检查 character 是否为赚钱型 | 刺客/盗贼/魔术师/建筑师轮次若城有魔法学校，UI 会显示可"收取收入"且多 1 金 | 看房规：若按标准规则只有王/主教/商人/军阀收，则**建议修**；若已是本变体房规则则**接受**并补文档 |
+
+> 这两项与阶段四的 UI 工作解耦，可独立先行（修 bug 不算 UI 美化，不违反"不动 Vue"纪律）。
 
 #### 4.1 现状审计（先做）
 
-通读 24 个 `.vue` 组件的 template/style，输出视觉与交互问题清单：
+通读 27 个 `.vue` 组件的 template/style，输出视觉与交互问题清单：
 
 - 布局一致性、配色、间距、字号层级
 - 响应式（iPad 尺寸适配）
 - 加载态、空态、错误反馈
 - 关键页面：首页、大厅、对局桌、结算页
 - 残留技术债：`App.vue:13,52` 的 Bootstrap 4 `data-toggle`/`data-dismiss`（jQuery 未彻底移除）
+- 注：`CenterPanel.vue` / `BoardScreen.vue` 的状态栏逻辑已在阶段二 2.1 抽入 common，逻辑层已干净，审计聚焦其 template/style
 
 #### 4.2 定基调（需维护者决策）
 
 | 方向 | 优点 | 缺点 |
 |---|---|---|
-| **A. 保持 Bootstrap 4 渐进优化** | 风险最低，不破坏可玩 | 视觉天花板低，BS4 已 EOL |
-| **B. BS4 之上引入设计系统（如 Naive UI、Element Plus）混合** | 视觉提升明显 | 混用两套样式系统，维护复杂 |
-| **C. 重构为 Vite+React+shadcn** | 维护者最熟，UI 天花板高，与未来移动端（RN）对齐 | 工作量大（1-2 人周），期间需双跑验证 |
+| **A. 保持 Bootstrap 4 渐进优化** | 风险最低，不破坏可玩 | 视觉天花板低，BS4 已 EOL；与"将来 React 重写"背道而驰，投入可能被丢弃 |
+| **B. BS4 之上引入设计系统（如 Naive UI、Element Plus）混合** | 视觉提升明显 | 混用两套样式系统，维护复杂；仍属 Vue 投入，重写时丢弃 |
+| **C. 重构为 Vite+React+shadcn** | 维护者最熟，UI 天花板高，与未来移动端（RN）对齐；**阶段二已把业务逻辑抽入 common 并配 110 单测作为行为契约，React 侧直接 import 同一套已测函数，逻辑回归风险大幅降低** | 工作量仍约 1-2 人周（Vuex→状态管理、template→JSX、Bootstrap→shadcn），期间需双跑验证 |
 
-> 推荐：若维护者时间充裕且确定要做移动端，直接走 C；否则走 A，待移动端立项再 C。
+> **复盘后的推荐**：阶段二完成前，C 的主要风险是"重写时把业务逻辑改错且无测试兜底"；现在该风险已被 110 个 common 单测消除，C 剩下的主要是机械式转换工作量。若维护者时间充裕**或**已确定要做移动端，直接走 C；若近期只想让现有界面更好看且不确定移动端时间表，走 A，但接受其投入可能在 React 重写时被丢弃。**注意：A 与"不投资 Vue 技术债"的既定纪律有张力——A 的每次 Vue 美化都是该纪律的例外，需自觉控制范围。**
 
 #### 4.3 分批改造（基调确定后）
 
 - 每次只动 1-2 个高频页面（首页 → 大厅 → 对局桌 → 结算页）
 - 改完 VPS 验证可玩再继续
-- 期间穿插阶段二的 common 抽取纪律
+- 新增的任何业务/显示纯逻辑仍须遵循阶段二纪律（入 `common/view/` + 补单测），不在 `.vue` / Vuex 里写死
 
 ---
 
@@ -317,7 +358,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 之后：阶段四 UI 审计 → 定基调 → 分批美化
 ```
 
-阶段一/二/三 串行（每步验证后再下一步）；阶段四待基调确定后启动，可与阶段二/三的 common 抽取穿插。
+阶段一/二/三 串行（每步验证后再下一步）；阶段一/二/三 已全部完成（2026-07-21），阶段四待基调确定后启动。
 
 ---
 
@@ -331,3 +372,6 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 | 2026-07-21 | 阶段一 1.3 完成：修复根 typecheck 命令。决策：根 `typecheck` = common build + server typecheck（绿色门禁，守护正在维护的代码）；client 已装 `vue-tsc@3.3.7` 并加 `typecheck` 脚本，但**不纳入根门禁**——client 有 44 个预存类型错误（非本次引入，属 Vue 代码 `any` 滥用），留待 React 重写时解决。client typecheck 可手动 `npm --prefix client run typecheck` 运行作诊断 |
 | 2026-07-21 | 阶段一 1.4 完成：server `test` 脚本加 common 前置构建。改为 `npm run build --prefix ../common && vitest run`（与 server `build` 脚本同模式）。此前 common 未 build 时 `npm test` 报令人困惑的 "Failed to resolve entry for package citadels-common"，现自动重建 common 并通过。保持测试与生产同走 dist（一致性优先于跳过构建的微优化） |
 | 2026-07-21 | 阶段一 1.5 完成：移除 `socket.onAny` 生产日志。`client/src/socket/index.ts` 的 `onAny(console.debug)` 包 `if (import.meta.env.DEV)`。Vite 生产构建会 tree-shake 掉（实测 prod bundle 不含 `onAny` / `console.debug('socket:')`），开发环境日志保留。此小节无游戏逻辑改动 |
+| 2026-07-21 | 阶段三完成：核心规则测试。3.1 DB 测试隔离（`database.ts` 仅在 `VITEST_WORKER_ID` 存在时用 `:memory:` SQLite，避免 `NODE_ENV=test` 误入生产静默清库；激活时 `console.warn`；生产不变）+ `ScoreCalculator.test.ts`（15 测试，固化 +4/+2 建成加分与队伍结算；发现并钉死 `extra_points`/`extraPoints` 键名不匹配导致 dragon_gate/university +2 失效的已知 bug）；3.2 `ChoosingState.test.ts`（9 测试，6P FSM 10 态序列 + DONE 边界）；3.3 `PlayerBoardState.test.ts`（42 测试，建造/拆毁/税收/计分全路径，固化 school_of_magic 对非赚钱角色也 +1 的当前行为）。共 66 新测试，`npx vitest run` 5 文件 83 测试全绿，根 typecheck 通过，改动文件 lint 0 error。**未改任何游戏逻辑**。代码审查后加固 DB 守卫（改用 vitest 专属信号 + warn）。同时修正本文件背景中"+8/+6 建成加分"的错误描述为 +4/+2 |
+| 2026-07-21 | 阶段二 2.1 完成（阶段二至此 5/5 全部完成）：`getStatusBarData` 抽取到 `common/view/statusBar.ts` 纯函数（56 测试），剥离 Vuex `store.getters.selectedCards` 直读改为 `options.selectedCards` 参数注入；client `statusBarData.ts` 243→22 行薄封装保持原签名，两个 `.vue` 调用点零改动；删除死文件 `client/src/types/gameTypes.ts`（类型迁入 common）。枚举映射用函数内 switch 避免 top-level 循环依赖求值。common 测试 54→110，根 typecheck + client build 通过 |
+| 2026-07-21 | 阶段四复盘（未启动，仅重排计划）：基于阶段一/二/三已完成重新审视。新增 4.0 前置决策——阶段三钉死的 2 项行为怪癖（dragon_gate/university +2 因 `extra_points`/`extraPoints` 键名不匹配而失效；school_of_magic 对非赚钱角色也 +1 收入）都影响结算页/得分显示，美化前须先定"修还是当房规接受"。4.2 重估：阶段二"为 React 重构铺路"目标已达成（5 纯函数 + 110 单测 = 行为契约），C 方案的"逻辑改错无测试兜底"风险被消除，只剩机械转换工作量；并指出 A 与"不投资 Vue 技术债"纪律的张力。4.1 组件数订正 24→27，标注 CenterPanel/BoardScreen 逻辑层已干净。4.3 "穿插阶段二"改为前瞻纪律 |

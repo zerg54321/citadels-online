@@ -1,0 +1,427 @@
+{
+    "flag": "🇬🇧",
+    "name": "English",
+    "ui": {
+        "title": "Citadels",
+        "subtitle1": "Bruno Faidutti's",
+        "subtitle2": "Classic Edition",
+        "loading": "Loading...",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "close": "Close",
+        "unknown_error": "Unknown error.",
+        "about": {
+            "title": "About",
+            "text": "Original board game created by <a target='_blank' href='http://faidutti.com'>Bruno Faidutti</a>.<br> Unofficial online version developped by <a target='_blank' href='https://brule.info'>Antoine Brûlé</a>.<br> This implementation of the game is <a target='_blank' href='https://github.com/antbrl/citadels-online'>open source</a>.<br> Emoji CC-BY 4.0 <a target='_blank' href='https://twemoji.twitter.com/'>Twemoji</a>",
+            "picture_credits": "Picture credits",
+            "by": "by"
+        },
+        "auth": {
+            "login": "Log in",
+            "register": "Register",
+            "logout": "Log out",
+            "profile": "Profile",
+            "username": "Account name",
+            "password": "Password",
+            "display_name": "In-game name",
+            "display_name_hint": "Defaults to account name",
+            "guest": "Guest",
+            "logged_in": "Signed in",
+            "switch_to_register": "No account? Register",
+            "switch_to_login": "Have an account? Log in",
+            "playing_as": "Playing as",
+            "saved": "Saved"
+        },
+        "homepage": {
+            "intro_text": "Create a new room",
+            "create_room": "Create room",
+            "login_to_play": "Log in to create a room or take a seat.",
+            "hero_lead": "Online 3v3 Citadels. Team up with friends or practice with AI.",
+            "bullet_3v3": "Six-player 3v3: odd/even seats, city of 8",
+            "bullet_ai": "One-click AI seats for solo practice",
+            "bullet_rank": "All-human games count toward ranked stats",
+            "how_title": "How to start",
+            "how_1": "Log in and create a room",
+            "how_2": "Invite friends or add AI to fill 6 seats",
+            "how_3": "Switch play/spectate and preview teams in lobby",
+            "how_4": "Host starts — characters act in order",
+            "features_title": "Features",
+            "feat_3v3_t": "Team 3v3",
+            "feat_3v3_d": "Win by combined team score",
+            "feat_ai_t": "AI practice",
+            "feat_ai_d": "L2 heuristics for draft, kill, rent, tempo",
+            "feat_rank_t": "Stats & ranking",
+            "feat_rank_d": "Match history and eligible wins",
+            "feat_spec_t": "Spectate",
+            "feat_spec_d": "Join mid-game and watch all six seats",
+            "tip_title": "Tip",
+            "tip_body": "The crown drafts first. Assassin marks a role number; the owner is revealed only when that role is called."
+        },
+        "rooms": {
+            "title": "Active rooms",
+            "refresh": "Refresh",
+            "hint": "Join open lobbies or spectate games in progress. List refreshes about every 4s.",
+            "empty": "No active rooms. Create one, or run sim-6p then refresh.",
+            "room_id": "Room",
+            "phase": "Status",
+            "mode": "Mode",
+            "players": "Players",
+            "spectators": "{n} spectating",
+            "phase_lobby": "Lobby",
+            "phase_in_game": "In game",
+            "phase_finished": "Finished",
+            "join": "Join",
+            "spectate": "Spectate"
+        },
+        "room": {
+            "username": "Username",
+            "connect": "Connect",
+            "not_open": "This room is not open for new players.",
+            "error_does_not_exist": "This room does not exist.",
+            "error_join": "Error when joining the room: {msg}",
+            "login_required": "You must log in to join as a player.",
+            "login_required_hint": "Log in to play, or spectate without a seat.",
+            "join_as_player": "Join as player",
+            "spectate": "Spectate",
+            "spectating_banner": "Spectating — view only, no actions",
+            "connecting": "Entering room…"
+        },
+        "lobby": {
+            "title": "Game Setup",
+            "players": "Players",
+            "you": "You",
+            "online": "Online",
+            "offline": "Offline",
+            "manager": "Manager",
+            "spectator": "Spectator",
+            "player_count": "Players {n}",
+            "spectator_count": "Spectators {n}",
+            "ai_count": "AI {n}",
+            "ai": "AI",
+            "add_ai": "Add AI",
+            "remove_ai": "Remove",
+            "add_ai_hint": "Practice: start with 1 human + AIs. Games with AI are unranked.",
+            "become_player": "Sit as player",
+            "become_spectator": "Switch to spectate",
+            "team_preview_hint": "Odd/even seats = Team A / B",
+            "start_game": "Start Game",
+            "wait_message": "Waiting for the manager to start the game.",
+            "not_enough_players": "There must be at least 2 players to start the game.",
+            "need_six_players": "3v3 needs exactly 6 players (now {n}). Add AI to fill seats.",
+            "too_many_players": "Too many players (6 max for 3v3).",
+            "chat_title": "Chat",
+            "chat_placeholder": "Type a message...",
+            "settings": {
+                "complete_city_size": "Number of districts to complete city",
+                "action_timeout": "Action time limit",
+                "action_timeout_hint": "On timeout, force autoplay. Default 120s.",
+                "ai_practice_hint": "6p with AI is 3v3 practice (unranked).",
+                "game_mode": "Mode",
+                "mode_team6": "3v3 Competitive",
+                "mode_team6_only": "6-player 3v3 only: odd/even seats = teams A/B, city size 8. Switch play/spectate and reorder seats in the room.",
+                "mode_team6_hint": "6 players play 3v3 (odd/even seats). City size 8."
+            }
+        },
+        "team": {
+            "a": "Team A",
+            "b": "Team B",
+            "mine": "Allies",
+            "enemy": "Enemies",
+            "ally": "Ally",
+            "enemy_short": "Foe"
+        },
+        "stats": {
+            "title": "Stats",
+            "my_matches": "My matches",
+            "ranking": "Competitive ranking",
+            "login_for_history": "Log in to see your match history.",
+            "no_matches": "No matches yet.",
+            "no_ranking": "No ranking data yet (finish a 6p competitive match).",
+            "ranking_hint": "Only 6-player 3v3 competitive matches count. Casual / AI games are excluded.",
+            "ended_at": "Ended",
+            "mode": "Mode",
+            "team": "Team",
+            "personal": "Score",
+            "team_scores": "Team scores",
+            "result": "Result",
+            "ranked": "Ranked",
+            "casual": "Casual",
+            "player": "Player",
+            "wins": "Wins",
+            "games": "Games",
+            "losses": "Losses",
+            "draws": "Draws",
+            "win": "Win",
+            "loss": "Loss",
+            "win_no_rank": "Win (not ranked)",
+            "finished": "Finished"
+        },
+        "game": {
+            "characters": "Characters",
+            "countdown_label": "Timer",
+            "countdown_autoplay": "Autoplay",
+            "autoplay_on": "Autoplay on",
+            "autoplay_enable": "Enable autoplay",
+            "autoplay_cancel": "Cancel autoplay",
+            "character_unknown": "Unknown",
+            "character_face_up": "Discarded face up (public)",
+            "character_face_down": "Discarded face down (hidden)",
+            "character_face_up_short": "OUT",
+            "character_face_down_short": "DN",
+            "character_face_up_hint": "still selectable for bluff kill",
+            "character_killed": "Assassinated (cannot be robbed)",
+            "character_robbed": "Marked for theft",
+            "event_killed": "Assassinated: {name} skips this round",
+            "event_robbed": "Robbed: {name} will lose gold when acting",
+            "event_killed_role": "Kill: #{n} {name} will be skipped (owner revealed when called)",
+            "event_robbed_role": "Rob: #{n} {name} loses gold when acting",
+            "event_skip_killed": "Calling {name}: assassinated, skip",
+            "event_skip_killed_owner": "Calling {name} ({player}): assassinated, skip",
+            "last_round": "Last round",
+            "turn_order": "Turn Order",
+            "action_panel": "Actions",
+            "character_select_title": "Character Selection",
+            "aside": "Aside",
+            "action_log": "Action Log",
+            "action_log_empty": "No events yet",
+            "character_card_back": "Role",
+            "event_role_called": "Calling #{n} {name}",
+            "pick_order_tip": "Draft order this round (1 = crown / first pick)",
+            "crown_holder": "Crown holder · drafts first",
+            "stat_gold": "Gold",
+            "stat_hand": "Cards in hand",
+            "stat_score": "Score",
+            "stat_city": "Districts built",
+            "no_buildings": "No districts yet",
+            "warn_destroy_ally": "Destroy a district owned by ally \"{name}\"? This usually hurts your team.",
+            "destroy_confirm_title": "Destroy Confirmation",
+            "messages": {
+                "welcome": "Welcome to Citadels Classic Edition!",
+                "choose_characters": {
+                    "initial": "The player owning the crown will start choosing characters.",
+                    "put_aside_face_up": "{0} must choose a character to put aside face up.",
+                    "put_aside_face_down": "{0} must choose a character to put aside face down.",
+                    "get_aside_face_down": "Arranging spectator character cards...",
+                    "choose_character": "{0} must choose a character.",
+                    "done": "Characters have been chosen."
+                },
+                "actions": {
+                    "initial": "The call is going to start.",
+                    "choose_card": "Choose the card to keep.",
+                    "choose_action": "Choose an action to carry out.",
+                    "assassin_kill": "Choose a character to kill.",
+                    "thief_rob": "Choose a character to rob.",
+                    "magician_exchange_hand": "Choose a player with whom you will exchange hands.",
+                    "magician_discard_cards": "Choose cards you wish to discard.",
+                    "merchant_take_1_gold": "Take an extra gold coin?",
+                    "architect_draw_2_cards": "Draw 2 extra cards?",
+                    "warlord_destroy_district": "Choose a district to destroy.",
+                    "graveyard_recover_district": "Recover destroyed district from the graveyard for 1 gold?",
+                    "graveyard_recover_district_others": "The player owning the graveyard must choose whether to recover the destroyed district.",
+                    "laboratory_discard_card": "Choose the card to discard to gain 2 gold.",
+                    "build_district": "Choose a district to build.",
+                    "done": "End of turn!"
+                },
+                "end": "End of game.",
+                "errors": {
+                    "invalid_state": "Error: invalid game state."
+                }
+            },
+            "actions": {
+                "accept": "Accept",
+                "decline": "Decline",
+                "confirm": "Confirm",
+                "cancel": "Cancel",
+                "take_gold": "Take 2 coins",
+                "draw_cards": "Draw 2 cards",
+                "draw_cards_3": "Draw 3 cards",
+                "assassin_kill": "Kill character",
+                "thief_rob": "Rob character",
+                "magician_exchange_hand": "Exchange hand",
+                "choose_hand": "Choose this hand",
+                "magician_discard_cards": "Exchange cards",
+                "take_gold_earnings": "Collect earnings ({0})",
+                "warlord_destroy_district": "Destroy district",
+                "graveyard_recover_district": "Recover district",
+                "smithy_draw_cards": "Use smithy",
+                "laboratory_discard_card": "Use laboratory",
+                "build_district": "Build district",
+                "finish_turn": "Finish turn"
+            }
+        },
+        "score": {
+            "title": "Score",
+            "base": "Districts value",
+            "extra_stash": "Imperial Treasury",
+            "extra_hand": "Map Room",
+            "extra_district_types": "All district types",
+            "extra_complete_city": "Complete city",
+            "total": "Total",
+            "team_a_win": "Team A wins",
+            "team_b_win": "Team B wins",
+            "draw": "Draw",
+            "team_totals": "Team A {a} · Team B {b}",
+            "you_win": "Victory!",
+            "you_lose": "Defeat",
+            "game_over": "Game Over",
+            "back_home": "Back to lobby",
+            "keep_browsing": "Keep browsing board",
+            "leave_room": "Leave room",
+            "leave_room_confirm_title": "Confirm leave room",
+            "leave_room_confirm_body": "You are currently in a room. Leaving will remove you from the room for other players. Are you sure you want to leave?",
+            "show_result": "Show results"
+        }
+    },
+    "characters": [
+        {
+            "name": "",
+            "description": "Unknown character",
+            "turn": ""
+        },
+        {
+            "name": "Assassin",
+            "description": "Call a character you wish to kill. The killed character skips their turn.",
+            "turn": "The Assassin is called."
+        },
+        {
+            "name": "Thief",
+            "description": "Call a character you wish to rob. When the robbed character is revealed, you take all his gold.",
+            "turn": "The Thief is called."
+        },
+        {
+            "name": "Magician",
+            "description": "Either exchange hands of cards with another player or discard any number of cards to gain an equal number of cards.",
+            "turn": "The Magician is called."
+        },
+        {
+            "name": "King",
+            "description": "Take the crown. Gain 1 gold for each of your Noble districts.",
+            "turn": "The King is called."
+        },
+        {
+            "name": "Bishop",
+            "description": "The Warlord cannot use its ability on your districts. Gain 1 gold for each of your Religious districts.",
+            "turn": "The Bishop is called."
+        },
+        {
+            "name": "Merchant",
+            "description": "Gain 1 extra gold. Gain 1 gold for each of your Trade districts.",
+            "turn": "The Merchant is called."
+        },
+        {
+            "name": "Architect",
+            "description": "Gain 2 extra cards. You can build up to 3 districts.",
+            "turn": "The Architect is called."
+        },
+        {
+            "name": "Warlord",
+            "description": "Destroy 1 district by paying 1 fewer gold than its cost. Gain 1 gold for each of your Military districts.",
+            "turn": "The Warlord is called."
+        }
+    ],
+    "districts": {
+        "manor": {
+            "name": "Manor"
+        },
+        "castle": {
+            "name": "Castle"
+        },
+        "palace": {
+            "name": "Palace"
+        },
+        "temple": {
+            "name": "Temple"
+        },
+        "church": {
+            "name": "Church"
+        },
+        "monastery": {
+            "name": "Monastery"
+        },
+        "cathedral": {
+            "name": "Cathedral"
+        },
+        "tavern": {
+            "name": "Tavern"
+        },
+        "market": {
+            "name": "Market"
+        },
+        "trading_post": {
+            "name": "Trading Post"
+        },
+        "docks": {
+            "name": "Docks"
+        },
+        "harbor": {
+            "name": "Harbor"
+        },
+        "town_hall": {
+            "name": "Town Hall"
+        },
+        "watchtower": {
+            "name": "Watchtower"
+        },
+        "prison": {
+            "name": "Prison"
+        },
+        "barracks": {
+            "name": "Barracks"
+        },
+        "fortress": {
+            "name": "Fortress"
+        },
+        "dragon_gate": {
+            "name": "Dragon Gate",
+            "description": "At the end of the game, score 2 extra points."
+        },
+        "university": {
+            "name": "University",
+            "description": "At the end of the game, score 2 extra points."
+        },
+        "map_room": {
+            "name": "Map Room",
+            "description": "At the end of the game, score 1 extra point for each card in your hand."
+        },
+        "imperial_treasury": {
+            "name": "Imperial Treasury",
+            "description": "At the end of the game, score 1 extra point for each gold in your stash."
+        },
+        "haunted_quarter": {
+            "name": "Haunted Quarter",
+            "description": "At the end of the game, the Haunted Quarter counts as any 1 district type of your choice."
+        },
+        "school_of_magic": {
+            "name": "School of Magic",
+            "description": "For abilities that gain resources for your districts, the School of Magic counts as the district type of your choice."
+        },
+        "keep": {
+            "name": "Keep",
+            "description": "The Warlord cannot use its ability on the Keep."
+        },
+        "great_wall": {
+            "name": "Great Wall",
+            "description": "The Warlord must pay 1 extra gold to destroy your other districts."
+        },
+        "graveyard": {
+            "name": "Graveyard",
+            "description": "When the Warlord destroys a district, you may pay 1 gold to recover it in your hand. You cannot use this ability if you are Warlord yourself."
+        },
+        "observatory": {
+            "name": "Observatory",
+            "description": "If you choose to draw cards when gathering resources, draw 3 cards instead of 2."
+        },
+        "library": {
+            "name": "Library",
+            "description": "If you choose to draw cards when gathering resources, keep all drawn cards."
+        },
+        "laboratory": {
+            "name": "Laboratory",
+            "description": "Once per turn, discard 1 card from your hand to gain 2 gold."
+        },
+        "smithy": {
+            "name": "Smithy",
+            "description": "Once per turn, pay 2 gold to gain 3 cards."
+        }
+    }
+}

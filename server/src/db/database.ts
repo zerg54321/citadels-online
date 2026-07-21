@@ -2,12 +2,29 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 
+// Test isolation: use in-memory SQLite ONLY under a real vitest run.
+// VITEST_WORKER_ID is set automatically by vitest and never by operators,
+// so a stray NODE_ENV=test in production cannot silently switch the server
+// to :memory: (which would wipe all user/match data on every restart).
+// Production is completely unaffected — same path resolution as before.
+const isTest = process.env.VITEST_WORKER_ID !== undefined;
 const defaultPath = path.resolve(__dirname, '../../../data/citadels.sqlite');
-const dbPath = process.env.DATABASE_PATH
-  ? path.resolve(process.env.DATABASE_PATH)
-  : defaultPath;
 
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+function resolveDbPath(): string {
+  if (isTest) return ':memory:';
+  if (process.env.DATABASE_PATH) return path.resolve(process.env.DATABASE_PATH);
+  return defaultPath;
+}
+
+const dbPath = resolveDbPath();
+
+if (isTest) {
+  // Loud signal so an accidental in-memory start is never silent.
+  // eslint-disable-next-line no-console
+  console.warn('[db] vitest detected — using in-memory SQLite (all data is ephemeral)');
+} else {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+}
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');

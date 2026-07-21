@@ -223,19 +223,23 @@
 
 ---
 
-### 阶段三：核心规则测试（2-3 天，强烈建议）
+### 阶段三：核心规则测试（2-3 天，强烈建议）⬜ 待启动
 
 > 目标：不追求覆盖率，只覆盖"最容易出 bug、且维护者改过"的几条路径。
+>
+> **范围限定**：只覆盖 3v3 竞技模式（`COMPETITIVE_TEAM6`，6 人强制分队），不考虑 2-7 人个人模式（`CASUAL`）。
+>
+> **对游戏本身的影响**：无。阶段三只新增测试文件 + 一处 DB 测试隔离改动（`NODE_ENV==='test'` 守卫，生产环境走原路径不受影响）。不改任何游戏逻辑代码。
 
 | # | 测试文件 | 覆盖内容 | 为什么重要 |
 |---|---|---|---|
-| 3.1 | `server/src/game/__tests__/ScoreCalculator.test.ts` | 终局计分 + 3v3 +8/+6 建成加分 + 队伍结算 + 平局 | **维护者加的 3v3 自有逻辑**，最容易藏 bug |
-| 3.2 | `server/src/game/__tests__/ChoosingState.test.ts` | 2-7P 各人数选角 FSM 分支、DONE 边界 no-op | 选角错乱会直接卡死游戏 |
-| 3.3 | `server/src/game/__tests__/PlayerBoardState.test.ts` | 建造、拆毁、税收计算、5 色齐全加分 | 计分基础，错则全盘错 |
+| 3.1 | `server/src/game/__tests__/ScoreCalculator.test.ts` | 3v3 终局计分 + **建成加分（先到 8 加 +4，后到加 +2）** + 队伍结算 + 平局 | **维护者加的 3v3 自有逻辑**，最容易藏 bug |
+| 3.2 | `server/src/game/__tests__/ChoosingState.test.ts` | 6 人（3v3）选角 FSM 分支、DONE 边界 no-op | 选角错乱会直接卡死游戏 |
+| 3.3 | `server/src/game/__tests__/PlayerBoardState.test.ts` | 建造、拆毁、税收计算、5 色齐全加分（3v3 场景） | 计分基础，错则全盘错 |
 
 #### 3.1 DB 测试隔离
 
-`server/src/db/database.ts:6-8` 加 `NODE_ENV==='test'` 时用 `:memory:`，使将来 DB 测试不污染真实数据：
+`server/src/db/database.ts:6-8` 加 `NODE_ENV==='test'` 时用 `:memory:`，使将来 DB 测试不污染真实数据（**仅测试环境生效，生产无影响**）：
 
 ```ts
 const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATABASE_PATH || '...');

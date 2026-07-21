@@ -200,6 +200,7 @@
                     "initial": "The player owning the crown will start choosing characters.",
                     "put_aside_face_up": "{0} must choose a character to put aside face up.",
                     "put_aside_face_down": "{0} must choose a character to put aside face down.",
+                    "get_aside_face_down": "Arranging spectator character cards...",
                     "choose_character": "{0} must choose a character.",
                     "done": "Characters have been chosen."
                 },

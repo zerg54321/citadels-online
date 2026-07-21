@@ -284,7 +284,7 @@ private someMethod() {
 
 ## 阶段三：架构改进
 
-### 3.1 `DistrictId` 类型安全强化
+### 3.1 `DistrictId` 类型安全强化 ✅ 已完成
 
 **问题**：`common/src/index.ts:7` 中 `DistrictId = keyof typeof districts`，但因 `districts` 来自 JSON 导入，TypeScript 推断为 `{ [key: string]: ... }`，导致 `DistrictId` 退化为 `string`。
 
@@ -308,7 +308,7 @@ export type DistrictId =
 
 ---
 
-### 3.2 `ClientGameState.players` 从 `Map` 改为 `Record`
+### 3.2 `ClientGameState.players` 从 `Map` 改为 `Record` ✅ 已完成
 
 **问题**：`ClientGameState.players` 定义为 `Map`，无法通过 JSON 序列化，导致 `getStateFromPlayer` 中手动转换为数组。
 
@@ -324,7 +324,7 @@ export type DistrictId =
 
 ---
 
-### 3.3 环境变量 `CITADELS_FAST`/`CITADELS_SYNC` 改为配置参数
+### 3.3 环境变量 `CITADELS_FAST`/`CITADELS_SYNC` 改为配置参数 ✅ 已完成
 
 **问题**：`GameState.ts` 使用全局 `process.env.CITADELS_FAST` 和 `CITADELS_SYNC` 控制阶段延迟，影响所有并发游戏。
 
@@ -341,7 +341,7 @@ constructor(options?: { completeCitySize?: number; fastMode?: boolean; syncMode?
 
 ---
 
-### 3.4 `TurnTimer` 400ms 轮询改为事件驱动
+### 3.4 `TurnTimer` 400ms 轮询改为事件驱动 ✅ 已完成
 
 **问题**：`TurnTimer` 使用 `setInterval(() => this.tick(), 400)` 持续轮询，空闲时也在消耗 CPU。
 
@@ -356,7 +356,7 @@ constructor(options?: { completeCitySize?: number; fastMode?: boolean; syncMode?
 
 ---
 
-### 3.5 服务端动作日志国际化
+### 3.5 服务端动作日志国际化 ✅ 已完成
 
 **问题**：`GameState.ts` 中 `roleNameZh()`、`districtLabelZh()`、`DISTRICT_NAMES_ZH` 以及所有 `pushAction()` 调用全部硬编码中文。
 
@@ -388,7 +388,7 @@ export const ACTION_LOG_TEMPLATES = {
 
 ---
 
-### 3.6 移除 Vue 3 中的 jQuery 依赖
+### 3.6 移除 Vue 3 中的 jQuery 依赖 ✅ 已完成
 
 **问题**：`BoardScreen.vue:750` 使用 `$('#setupConfirmationModal').modal()`，与 Vue 3 响应式体系冲突。
 
@@ -401,7 +401,7 @@ export const ACTION_LOG_TEMPLATES = {
 
 ---
 
-### 3.7 移除 `vetur.config.js`，迁移到 Volar
+### 3.7 移除 `vetur.config.js`，迁移到 Volar ✅ 已完成
 
 **问题**：`vetur.config.js` 是 Vetur（Vue 2）的配置，项目使用 Vue 3 + Vite。
 
@@ -414,7 +414,7 @@ export const ACTION_LOG_TEMPLATES = {
 
 ---
 
-### 3.8 `InMemoryGameStore` 添加 `playerId → roomId` 反向索引
+### 3.8 `InMemoryGameStore` 添加 `playerId → roomId` 反向索引 ✅ 已完成
 
 **问题**：`findRoomByPlayerId` 每次 O(n) 遍历所有房间。
 
@@ -532,3 +532,14 @@ npx lint-staged
 | 2.5 统一日志输出方式 | ✅ 已完成 | 2026-07-20 |
 | 2.6 nowIso() 函数去重 | ✅ 已完成 | 2026-07-20 |
 | 2.7 减少 ! 非空断言 | ✅ 已完成 | 2026-07-20 |
+| 3.1 DistrictId 类型安全强化 | ✅ 已完成 | 2026-07-20 |
+| 3.2 ClientGameState.players Map → Record | ✅ 已完成 | 2026-07-20 |
+| 3.3 CITADELS_FAST/SYNC 改为配置参数 | ✅ 已完成 | 2026-07-20 |
+| 3.4 TurnTimer 事件驱动 | ✅ 已完成 | 2026-07-20 |
+| 3.5 服务端动作日志国际化 | ✅ 已完成 | 2026-07-20 |
+| 3.6 移除 jQuery 依赖 | ✅ 已完成 | 2026-07-20 |
+| 3.7 移除 vetur.config.js | ✅ 已完成 | 2026-07-20 |
+| 3.8 InMemoryGameStore 反向索引 | ✅ 已完成 | 2026-07-20 |
+| 4.1 单元测试框架 | ⏳ 待开始 | - |
+| 4.2 lint / typecheck 脚本 | ✅ 已完成 | 2026-07-20 |
+| 4.3 Git pre-commit hook | ⏳ 待开始 | - |

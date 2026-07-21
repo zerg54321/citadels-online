@@ -70,7 +70,7 @@ export default defineComponent({
       type: Object,
       required: true,
     },
-    board: {
+    gameState: {
       type: Object,
       required: true,
     },
@@ -138,17 +138,17 @@ export default defineComponent({
         || (this.gameProgress === 'IN_GAME' && (this.charactersList?.callable || []).length > 0);
     },
     showGraveyard() {
-      return this.board?.graveyard !== undefined;
+      return this.gameState?.board?.graveyard !== undefined;
     },
     graveyardCard() {
-      return this.board?.graveyard;
+      return this.gameState?.board?.graveyard;
     },
   },
   watch: {
-    board: {
+    gameState: {
       immediate: true,
       handler() {
-        this.statusBar = getStatusBarData(this.board);
+        this.statusBar = getStatusBarData(this.gameState);
       },
     },
   },

@@ -33,6 +33,7 @@ const MESSAGES_CHOOSE_CHARACTERS = {
   [CCST.PUT_ASIDE_FACE_DOWN]: 'put_aside_face_down',
   [CCST.PUT_ASIDE_FACE_DOWN_UP]: 'put_aside_face_down',
   [CCST.CHOOSE_CHARACTER]: 'choose_character',
+  [CCST.GET_ASIDE_FACE_DOWN]: 'get_aside_face_down',
   [CCST.DONE]: 'done',
 };
 
@@ -216,7 +217,7 @@ export function getStatusBarData(state: ClientGameState): StatusBarData {
               message: `ui.game.messages.actions.${message}`,
               actions: player !== undefined ? getActions(
                 state.board.turnState,
-                state.board.characters.current,
+                state.board.characters.current - 1,
                 state.board.currentPlayerExtraData,
                 player,
               ) : [],

@@ -47,7 +47,7 @@
       <CenterPanel
         :game-progress="gameProgress"
         :characters-list="charactersList"
-        :board="gameState.board"
+        :game-state="gameState"
         :kill-mode="killMode"
         :rob-mode="robMode"
         :choose-character-mode="chooseCharacterMode"

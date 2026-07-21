@@ -200,6 +200,7 @@
                     "initial": "持有王冠的玩家将开始选择角色。",
                     "put_aside_face_up": "{0} 需要选择一张角色牌正面朝上弃置。",
                     "put_aside_face_down": "{0} 需要选择一张角色牌背面朝上弃置。",
+                    "get_aside_face_down": "正在整理旁观角色牌...",
                     "choose_character": "{0} 需要选择一个角色。",
                     "done": "角色选择完毕。"
                 },

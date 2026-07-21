@@ -327,6 +327,10 @@ function pickBestCharacterIndex(gs: GameState, actorId: string): number {
   const remaining = gs.board.characterManager.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
   if (!remaining.length) return 0;
 
+  // 首发：如果有刺客，必拿刺客
+  const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
+  if (assassinIdx >= 0) return assassinIdx;
+
   let bestIdx = 0;
   let bestScore = -1e9;
   remaining.forEach((ch, idx) => {
@@ -617,12 +621,22 @@ function warlordDestroyCandidates(gs: GameState, actorId: string): DestroyCandid
 function preferDrawOverGold(gs: GameState, actorId: string): boolean {
   const hc = handCount(gs, actorId);
   const stash = stashOf(gs, actorId);
-  // hand < 2 → draw EV (≈2 GE per card opportunity) beats +2 gold
+  const city = cityOf(gs, actorId);
+  const hand = handOf(gs, actorId);
+
+  // 有可建造的牌（手牌不重复且付得起）时，优先拿金币盖房
+  const buildable = hand.filter((c) => costOf(c) <= stash && !city.includes(c));
+  if (buildable.length > 0) return false;
+
+  // 手里有牌但暂时建不起时，仍优先拿金币（降低抽牌优先级）
+  if (hc > 0 && stash >= 2) return false;
+
+  // 手牌极少时才抽牌补充
   if (hc < 2) return true;
-  // rich but no cards
-  if (stash >= 6 && hc <= 2) return true;
-  // sprint with gold but empty hand
+
+  // 冲刺模式且没牌才抽
   if (detectTempo(gs, actorId) === 'sprint' && hc === 0) return true;
+
   return false;
 }
 

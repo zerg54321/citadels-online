@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import HomeScreen from './components/HomeScreen';
-import RoomScreen from './components/game/RoomScreen';
-import CardsPreview from './components/CardsPreview';
-import StatsScreen from './components/StatsScreen';
 import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
 
 // Mirrors Vue App.vue. The About modal (Vue Bootstrap data-toggle) becomes a
 // createPortal + local state. Vue computed inGame ($route.name === 'room') →
-// useLocation pathname check. Header SCSS extracted to _app.scss.
+// useLocation pathname check. This component is the layout route element for
+// the data router in main.tsx; matched child routes render via <Outlet />.
+// Header SCSS extracted to _app.scss.
 export default function App() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -49,13 +47,7 @@ export default function App() {
       </header>
 
       <div className={`body flex-fill${inGame ? ' body--game' : ''}`}>
-        <Routes>
-          <Route path="/" element={<HomeScreen />} />
-          <Route path="/room/:roomId" element={<RoomScreen />} />
-          <Route path="/cards" element={<CardsPreview />} />
-          <Route path="/stats" element={<StatsScreen />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Outlet />
       </div>
 
       {showAbout && createPortal(

@@ -276,13 +276,15 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 
 ---
 
-### 阶段四：UI 现状审计与美化（待启动，需先定基调）
+### 阶段四：UI 现状审计与美化 ✅ 已完成（2026-07-22，React 重构 + UI 现代化）
 
 > 目标：从自娱自乐界面逐步优化到成熟游戏界面。**不破坏可玩性**为铁律。
 >
 > **复盘说明（2026-07-21，基于阶段一/二/三已完成）**：阶段二已把 5 个 view 层纯函数（teamScores/pricing/parseGameState/statusBar/boardLayout）抽入 `common/` 并配 110 个单测——这正是当初"为 React 重构铺路"的目标。由此阶段四的 A/C 抉择成本结构已变，见 4.2。
+>
+> **结果**：4.2 选定 **C 方案（Vite + React 18 + Zustand + React Router + i18next）**，React 客户端全量迁移完成（见 4.4），随后分批完成 UI 现代化（见 4.5）。Vue 客户端 `client/` 保留为遗留参考，`client-react/` 为现役前端。
 
-#### 4.0 前置决策（启动 4.1 前需先拍板）
+#### 4.0 前置决策（两项行为怪癖，至今未修，独立于 UI 工作可随时处理）
 
 阶段三测试钉死了 2 项"当前行为怪癖"，二者都影响**结算页 / 得分显示**（阶段四关键页面之一）。美化一个显示错误数字的 UI 是返工，故须先决定"修还是当成房规接受"：
 
@@ -293,7 +295,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 
 > 这两项与阶段四的 UI 工作解耦，可独立先行（修 bug 不算 UI 美化，不违反"不动 Vue"纪律）。
 
-#### 4.1 现状审计（先做）
+#### 4.1 现状审计（已完成，作为定调依据）
 
 通读 27 个 `.vue` 组件的 template/style，输出视觉与交互问题清单：
 
@@ -304,7 +306,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 - 残留技术债：`App.vue:13,52` 的 Bootstrap 4 `data-toggle`/`data-dismiss`（jQuery 未彻底移除）
 - 注：`CenterPanel.vue` / `BoardScreen.vue` 的状态栏逻辑已在阶段二 2.1 抽入 common，逻辑层已干净，审计聚焦其 template/style
 
-#### 4.2 定基调（需维护者决策）
+#### 4.2 定基调 ✅ 已决策：选 C（React 重构）
 
 | 方向 | 优点 | 缺点 |
 |---|---|---|
@@ -313,12 +315,75 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 | **C. 重构为 Vite+React+shadcn** | 维护者最熟，UI 天花板高，与未来移动端（RN）对齐；**阶段二已把业务逻辑抽入 common 并配 110 单测作为行为契约，React 侧直接 import 同一套已测函数，逻辑回归风险大幅降低** | 工作量仍约 1-2 人周（Vuex→状态管理、template→JSX、Bootstrap→shadcn），期间需双跑验证 |
 
 > **复盘后的推荐**：阶段二完成前，C 的主要风险是"重写时把业务逻辑改错且无测试兜底"；现在该风险已被 110 个 common 单测消除，C 剩下的主要是机械式转换工作量。若维护者时间充裕**或**已确定要做移动端，直接走 C；若近期只想让现有界面更好看且不确定移动端时间表，走 A，但接受其投入可能在 React 重写时被丢弃。**注意：A 与"不投资 Vue 技术债"的既定纪律有张力——A 的每次 Vue 美化都是该纪律的例外，需自觉控制范围。**
+>
+> **实际决策（2026-07）**：选 **C**。技术栈落地为 Vite + **React 18** + **Zustand 5**（替代 Vuex）+ **React Router 6**（`createBrowserRouter`）+ **i18next**（替代 vue-i18n）；保留 Bootstrap 4 网格工具类但视觉组件全部自绘 SCSS。理由：阶段二铺路完成 + 维护者主栈 + 为移动端预留。详见 4.4。
 
-#### 4.3 分批改造（基调确定后）
+#### 4.3 分批改造（基调确定后）✅ 已完成
 
 - 每次只动 1-2 个高频页面（首页 → 大厅 → 对局桌 → 结算页）
 - 改完 VPS 验证可玩再继续
-- 新增的任何业务/显示纯逻辑仍须遵循阶段二纪律（入 `common/view/` + 补单测），不在 `.vue` / Vuex 里写死
+- 新增的任何业务/显示纯逻辑仍须遵循阶段二纪律（入 `common/view/` + 补单测），不在组件 / store 里写死
+
+实际按"先重构后美化"两步走：4.4 完成全量 React 迁移（行为对齐），4.5 在 React 侧分批做视觉现代化。
+
+---
+
+#### 4.4 React 客户端全量迁移（已完成，2026-07，commit 5598287 已推送 origin/main）
+
+> 目标：把 Vue 3（Options API + Vuex + vue-i18n）整套对齐到 React 18，**行为零回归**，复用阶段二抽出的 common 纯函数。
+
+**技术栈映射**
+
+| Vue 侧 | React 侧 | 备注 |
+|---|---|---|
+| Vue 3.0.5 Options API | React 18 函数组件 + Hooks | |
+| Vuex 4 modules（auth/game/chat） | Zustand 5 slices（`@/store` re-export 全部 selector） | selector 须返回稳定引用，派生计算用 `useMemo` |
+| vue-router 4 | react-router-dom 6 `createBrowserRouter` + `RouterProvider` | `RoomScreen` 的 `useBlocker` 离开确认需数据路由器 |
+| vue-i18n 9 | i18next + react-i18next | 文案走 i18n 键，不硬编码 |
+| Bootstrap 4 组件 | 保留 BS4 网格工具类，视觉组件自绘 SCSS | |
+| `socket.io-client` | 同（4.x，与服务端主版本对齐） | |
+
+**范围**：`client/src` 下全部 26 个 `.vue` 组件迁移至 `client-react/src/`，分 6 批推进；末批补全 store/api（`authSlice` 新增 login/register/logout/updateDisplayName + initAuth；`gameSlice`/`chatSlice` 对齐）。
+
+**关键纪律（迁移踩坑沉淀，已存入项目 memory）**
+- `client_react.early_return_isolation`：React early return 后各分支互相隔离，modal portal 等共享 UI 必须提取为变量在所有 return 分支都渲染，否则跨分支 setState 后弹窗不显示。
+- `client_react.zustand_selector_stable_reference`：Zustand selector 禁止 `{...x}` 展开等每次创建新对象，否则 `useSyncExternalStore` 误判快照变化导致无限重渲染。
+- `client_react.router_type`：必须 `createBrowserRouter`，因 `useBlocker` 需数据路由器；`App.tsx` 作布局路由用 `<Outlet />`。
+
+**遗留**：Vue 客户端 `client/` 保留为遗留参考，不再投入；部署/开发均以 `client-react/` 为准。
+
+---
+
+#### 4.5 UI 现代化批次（已完成，2026-07-22）
+
+> 在 React 侧分批做视觉现代化，确立**深色中世纪金**设计基调，统一关键页面与组件外观。仅 UI/SCSS/TSX 表现层改动，**未触碰任何游戏逻辑**。
+
+**设计基调（CSS 变量，定义于 `main.scss`）**
+- `--bg-void: #0d0b08`（主背景）、`--gold: #d4af37`、`--gold-bright: #f0d77b`、`--parchment: #e8dcc0`（正文）
+- `--font-display: Cinzel`（标题）、`--font-body: EB Garamond`（正文）
+- BEM 命名；保留 Bootstrap 4 网格工具类，视觉组件自绘
+
+**分批清单**
+
+| 批次 | 页面/组件 | 改动要点 |
+|---|---|---|
+| 首页 | `HomeScreen.tsx` + `_home-screen.scss` | 卡片网格房间列表（状态点 / 座位填充可视化）、英雄区重设计、特性卡 hover 抬升 |
+| 玩家列表 | `PlayersList.tsx` + `_players-list.scss` | 放大玩家名、头像圆环、座位卡、A/B 队分列；根类 `.players-list.card` → `.players-list` |
+| 大厅 | `LobbyScreen.tsx` + `_lobby-screen.scss` | 协调式现代设计、模式标签、设置列 / 玩家区 / 聊天区 |
+| 战绩 | `StatsScreen.tsx` + `_stats-screen.scss`（新） | 弃 Bootstrap nav-tabs + bg-white 表格，改 CSS-grid 卡片列表、深色主题、结果胶囊；已 import 入 `main.scss` |
+| 头部 | `App.tsx` + `_app.scss` | `.header-row` / `.header-brand` / `.header-actions` 布局；`.hdr-link` / `.hdr-btn` / `.locale-select` 统一金色主题类 |
+| 语言切换 | `LocaleSelector.tsx` | 原生 `<select>` 改自绘 div 下拉（避免浏览器白色 `<option>`），支持外部点击/ESC 关闭 |
+| 认证 | `AuthPanel.tsx` | `.auth-panel--guest` / `.auth-panel--in` BEM 类，`.hdr-btn--gold` / `.hdr-btn--ghost` 按钮 |
+| 模态框 | `AuthPanel.tsx` + `App.tsx` + `_app.scss` | About / 登录 / 注册 / Profile 统一用共享深色 `.app-modal` 类，弃 BS4 浅色 `.modal-content text-dark`（决策 `client_react.modal_dark_theme`） |
+| 布局修复 | `main.scss` / `_app.scss` / `_board-table.scss` / `BoardScreen.tsx` / `PlayerHand.tsx` | `#app` 固定 `height:100vh`；`html,body` 深色底 + `min-height:100%`；`.body` `flex:1 1 auto; min-height:0; overflow:auto`（`.body--game` 仍 `overflow:hidden`）；棋盘 grid 第 3 行 `1fr→1.5fr`；`__self-role` 固定 `8rem` 防 hand 区跳动；`__self-hand` `min-height:10.5rem`；补 `__self-role-empty` 占位 |
+
+**关键决策**
+- `#app` 用固定 `height:100vh`（非 `min-height`），让 flex 子项解析到真实视口高度——防止大厅聊天撑高页面。
+- `.body` 内部滚动（`overflow:auto`）容纳长页（战绩、首页）——深色底覆盖，无白边。
+- `__self-role` 固定 `8rem`，避免角色卡出现/消失时手牌区跳动。
+- 所有模态框共享 `.app-modal` SCSS 类，而非逐 modal 覆写 Bootstrap。
+
+**验收**：`tsc --noEmit` 通过；`vite build` 成功（CSS ~202 kB / JS ~428 kB）；dev server HTTP 200。改动文件 lint 仅预存告警（`StatsScreen.tsx:65` `no-lonely-if`、多处 `no-console`、`PlayersList.tsx` `exhaustive-deps`），无新增 error。
 
 ---
 
@@ -358,7 +423,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 之后：阶段四 UI 审计 → 定基调 → 分批美化
 ```
 
-阶段一/二/三 串行（每步验证后再下一步）；阶段一/二/三 已全部完成（2026-07-21），阶段四待基调确定后启动。
+阶段一/二/三 串行（每步验证后再下一步）；阶段一/二/三 已全部完成（2026-07-21），阶段四已完成（2026-07-22，React 重构 + UI 现代化）。
 
 ---
 
@@ -375,3 +440,4 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 | 2026-07-21 | 阶段三完成：核心规则测试。3.1 DB 测试隔离（`database.ts` 仅在 `VITEST_WORKER_ID` 存在时用 `:memory:` SQLite，避免 `NODE_ENV=test` 误入生产静默清库；激活时 `console.warn`；生产不变）+ `ScoreCalculator.test.ts`（15 测试，固化 +4/+2 建成加分与队伍结算；发现并钉死 `extra_points`/`extraPoints` 键名不匹配导致 dragon_gate/university +2 失效的已知 bug）；3.2 `ChoosingState.test.ts`（9 测试，6P FSM 10 态序列 + DONE 边界）；3.3 `PlayerBoardState.test.ts`（42 测试，建造/拆毁/税收/计分全路径，固化 school_of_magic 对非赚钱角色也 +1 的当前行为）。共 66 新测试，`npx vitest run` 5 文件 83 测试全绿，根 typecheck 通过，改动文件 lint 0 error。**未改任何游戏逻辑**。代码审查后加固 DB 守卫（改用 vitest 专属信号 + warn）。同时修正本文件背景中"+8/+6 建成加分"的错误描述为 +4/+2 |
 | 2026-07-21 | 阶段二 2.1 完成（阶段二至此 5/5 全部完成）：`getStatusBarData` 抽取到 `common/view/statusBar.ts` 纯函数（56 测试），剥离 Vuex `store.getters.selectedCards` 直读改为 `options.selectedCards` 参数注入；client `statusBarData.ts` 243→22 行薄封装保持原签名，两个 `.vue` 调用点零改动；删除死文件 `client/src/types/gameTypes.ts`（类型迁入 common）。枚举映射用函数内 switch 避免 top-level 循环依赖求值。common 测试 54→110，根 typecheck + client build 通过 |
 | 2026-07-21 | 阶段四复盘（未启动，仅重排计划）：基于阶段一/二/三已完成重新审视。新增 4.0 前置决策——阶段三钉死的 2 项行为怪癖（dragon_gate/university +2 因 `extra_points`/`extraPoints` 键名不匹配而失效；school_of_magic 对非赚钱角色也 +1 收入）都影响结算页/得分显示，美化前须先定"修还是当房规接受"。4.2 重估：阶段二"为 React 重构铺路"目标已达成（5 纯函数 + 110 单测 = 行为契约），C 方案的"逻辑改错无测试兜底"风险被消除，只剩机械转换工作量；并指出 A 与"不投资 Vue 技术债"纪律的张力。4.1 组件数订正 24→27，标注 CenterPanel/BoardScreen 逻辑层已干净。4.3 "穿插阶段二"改为前瞻纪律 |
+| 2026-07-22 | 阶段四完成：4.2 决策选 C（Vite + React 18 + Zustand 5 + React Router 6 + i18next），4.4 React 客户端全量迁移完成（26 个 `.vue` → `client-react/src/`，commit 5598287 已推送，行为零回归，复用 common 纯函数；沉淀 early-return 隔离 / Zustand 稳定引用 / 数据路由器三条迁移纪律入 memory）。4.5 UI 现代化批次完成：确立深色中世纪金设计基调（`--bg-void`/`--gold`/Cinzel+EB Garamond），首页/玩家列表/大厅/战绩/头部/语言切换/认证/模态框分批重设计 + 布局修复（`#app` 固定视口高、`.body` 内滚、`__self-role` 固定高防跳动）；仅表现层改动未触碰游戏逻辑。`tsc --noEmit` 通过、`vite build` 成功、dev server 200。同步归档 `ROADMAP.md`/`DEV_DEPLOY.md`/`DEPENDENCY_BASELINE.md`（内容已被本计划与 README 取代/吸收）并重写根 README 以 React 客户端为准 |

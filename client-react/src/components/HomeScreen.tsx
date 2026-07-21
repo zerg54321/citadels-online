@@ -63,12 +63,6 @@ export default function HomeScreen() {
     return t('ui.rooms.phase_finished');
   };
 
-  const phaseBadge = (phase: string) => {
-    if (phase === 'lobby') return 'badge-success';
-    if (phase === 'in_game') return 'badge-primary';
-    return 'badge-secondary';
-  };
-
   const modeLabel = (room: RoomListItem) => {
     if (room.phase === 'lobby') {
       return room.playerCount === 6
@@ -93,10 +87,20 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // Visual seat-fill row: 6 dots, first `count` filled, rest hollow.
+  const renderSeatDots = (count: number, max: number) => (
+    <span className="home-rooms__seats" aria-hidden>
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`home-rooms__seat${i < count ? ' home-rooms__seat--on' : ''}`} />
+      ))}
+    </span>
+  );
+
   return (
     <div className="home">
       <section className="home-hero">
         <div className="home-hero__glow" />
+        <div className="home-hero__ornament" />
         <div className="container py-5">
           <div className="row align-items-center">
             <div className="col-lg-7 mb-4 mb-lg-0">
@@ -108,7 +112,7 @@ export default function HomeScreen() {
                 <li>{t('ui.homepage.bullet_ai')}</li>
                 <li>{t('ui.homepage.bullet_rank')}</li>
               </ul>
-              <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+              <div className="d-flex flex-wrap align-items-center gap-2 mt-4 home-hero__actions">
                 <button
                   type="button"
                   className="btn btn-lg btn-gold home-hero__cta"
@@ -122,7 +126,7 @@ export default function HomeScreen() {
                 </button>
               </div>
               {!isLoggedIn && (
-                <p className="text-gold small mt-2 mb-0">{t('ui.homepage.login_to_play')}</p>
+                <p className="text-gold small mt-3 mb-0">{t('ui.homepage.login_to_play')}</p>
               )}
               {createError && <p className="text-danger small mt-2 mb-0">{createError}</p>}
             </div>
@@ -144,31 +148,31 @@ export default function HomeScreen() {
       <section className="container py-4 home-main">
         <div className="row">
           <div className="col-lg-8 mb-4">
-            <div className="card home-rooms shadow-sm">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <div>
-                  <strong className="text-gold">{t('ui.rooms.title')}</strong>
-                  <span className="badge badge-secondary ml-2">{rooms.length}</span>
+            <div className="home-rooms">
+              <div className="home-rooms__bar">
+                <div className="d-flex align-items-center">
+                  <strong className="text-gold home-rooms__bar-title">{t('ui.rooms.title')}</strong>
+                  <span className="home-rooms__count">{rooms.length}</span>
                 </div>
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-sm btn-outline-gold home-rooms__refresh"
                   disabled={roomsLoading}
                   onClick={loadRooms}
                 >
-                  {t('ui.rooms.refresh')}
+                  {roomsLoading ? t('ui.loading') : t('ui.rooms.refresh')}
                 </button>
               </div>
-              <div className="card-body">
-                <p className="small text-muted mb-3">{t('ui.rooms.hint')}</p>
+              <div className="home-rooms__body">
+                <p className="small text-muted-gold mb-3">{t('ui.rooms.hint')}</p>
                 {roomsError && <div className="alert alert-danger py-2">{roomsError}</div>}
                 {roomsLoading && rooms.length === 0 && (
-                  <div className="text-muted py-4 text-center">{t('ui.loading')}</div>
+                  <div className="text-muted-gold py-5 text-center home-rooms__loading">{t('ui.loading')}</div>
                 )}
                 {!roomsLoading && rooms.length === 0 && (
-                  <div className="home-rooms__empty text-center py-4">
-                    <div className="display-4 mb-2 opacity-50">🏛</div>
-                    <p className="text-muted mb-3">{t('ui.rooms.empty')}</p>
+                  <div className="home-rooms__empty text-center py-5">
+                    <div className="home-rooms__empty-icon">🏛</div>
+                    <p className="text-muted-gold mb-3">{t('ui.rooms.empty')}</p>
                     <button
                       type="button"
                       className="btn btn-gold"
@@ -180,66 +184,62 @@ export default function HomeScreen() {
                   </div>
                 )}
                 {rooms.length > 0 && (
-                  <div className="table-responsive">
-                    <table className="table table-hover mb-0 align-middle">
-                      <thead className="home-rooms__head">
-                        <tr>
-                          <th>{t('ui.rooms.room_id')}</th>
-                          <th>{t('ui.rooms.phase')}</th>
-                          <th>{t('ui.rooms.mode')}</th>
-                          <th>{t('ui.rooms.players')}</th>
-                          <th> </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rooms.map((room) => (
-                          <tr key={room.roomId}>
-                            <td>
-                              <code className="home-rooms__id">{room.roomId}</code>
-                              <div className="small text-muted text-truncate" style={{ maxWidth: '14rem' }}>
-                                {playerNames(room)}
-                              </div>
-                            </td>
-                            <td>
-                              <span className={`badge home-rooms__badge-lobby ${phaseBadge(room.phase)}`}>
-                                {phaseLabel(room.phase)}
-                              </span>
-                              {room.spectatorCount > 0 && (
-                                <span className="badge badge-light ml-1">
-                                  {t('ui.rooms.spectators', { n: room.spectatorCount })}
-                                </span>
-                              )}
-                            </td>
-                            <td className="small">{modeLabel(room)}</td>
-                            <td>
-                              <strong>{room.playerCount}</strong>
-                              <span className="text-muted">/{room.maxPlayers}</span>
-                            </td>
-                            <td className="text-right text-nowrap">
-                              {room.canJoinAsPlayer && (
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-primary mr-1"
-                                  disabled={!isLoggedIn}
-                                  onClick={() => goJoin(room.roomId)}
-                                >
-                                  {t('ui.rooms.join')}
-                                </button>
-                              )}
-                              {room.canSpectate && (
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-outline-secondary"
-                                  onClick={() => goSpectate(room.roomId)}
-                                >
-                                  {t('ui.rooms.spectate')}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="home-rooms__grid">
+                    {rooms.map((room) => (
+                      <div
+                        key={room.roomId}
+                        className={`home-rooms__card home-rooms__card--${room.phase}`}
+                      >
+                        <div className="home-rooms__card-top">
+                          <code className="home-rooms__id">{room.roomId}</code>
+                          <span className="home-rooms__status">
+                            <span className="home-rooms__status-dot" />
+                            {phaseLabel(room.phase)}
+                          </span>
+                        </div>
+                        <div className="home-rooms__card-mid">
+                          <span className="home-rooms__mode">{modeLabel(room)}</span>
+                          {room.spectatorCount > 0 && (
+                            <span className="home-rooms__spec">
+                              {t('ui.rooms.spectators', { n: room.spectatorCount })}
+                            </span>
+                          )}
+                        </div>
+                        <div className="home-rooms__fill">
+                          {renderSeatDots(room.playerCount, room.maxPlayers)}
+                          <span className="home-rooms__fill-count">
+                            <strong>{room.playerCount}</strong>/{room.maxPlayers}
+                          </span>
+                        </div>
+                        <div className="home-rooms__names text-truncate" title={playerNames(room)}>
+                          {playerNames(room)}
+                        </div>
+                        <div className="home-rooms__card-actions">
+                          {room.canJoinAsPlayer && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-gold home-rooms__btn"
+                              disabled={!isLoggedIn}
+                              onClick={() => goJoin(room.roomId)}
+                            >
+                              {t('ui.rooms.join')}
+                            </button>
+                          )}
+                          {room.canSpectate && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-gold home-rooms__btn"
+                              onClick={() => goSpectate(room.roomId)}
+                            >
+                              {t('ui.rooms.spectate')}
+                            </button>
+                          )}
+                          {!room.canJoinAsPlayer && !room.canSpectate && (
+                            <span className="home-rooms__closed text-muted-gold small">—</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -247,26 +247,25 @@ export default function HomeScreen() {
           </div>
 
           <div className="col-lg-4">
-            <div className="card mb-3 shadow-sm home-side">
-              <div className="card-body">
-                <h6 className="text-uppercase text-muted small mb-2">
-                  {t('ui.homepage.features_title')}
-                </h6>
-                {FEATURE_KEYS.map((f) => (
-                  <div className="home-feature" key={f.title}>
-                    <div className="home-feature__icon">{f.icon}</div>
-                    <div>
-                      <div className="font-weight-bold">{t(f.title)}</div>
-                      <div className="small text-muted">{t(f.desc)}</div>
-                    </div>
+            <div className="home-side home-side--features">
+              <h6 className="home-side__title">
+                {t('ui.homepage.features_title')}
+              </h6>
+              {FEATURE_KEYS.map((f) => (
+                <div className="home-feature" key={f.title}>
+                  <div className="home-feature__icon">{f.icon}</div>
+                  <div className="home-feature__text">
+                    <div className="home-feature__name">{t(f.title)}</div>
+                    <div className="small text-muted-gold">{t(f.desc)}</div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-            <div className="card shadow-sm home-side">
-              <div className="card-body small text-muted">
-                <div className="font-weight-bold text-dark mb-1">{t('ui.homepage.tip_title')}</div>
-                <p className="mb-0">{t('ui.homepage.tip_body')}</p>
+            <div className="home-side home-side--tip">
+              <div className="home-side__tip-icon">💡</div>
+              <div>
+                <div className="home-side__tip-title">{t('ui.homepage.tip_title')}</div>
+                <p className="mb-0 small text-muted-gold">{t('ui.homepage.tip_body')}</p>
               </div>
             </div>
           </div>

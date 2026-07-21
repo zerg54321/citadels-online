@@ -74,8 +74,8 @@ if [ "$SKIP_BUILD" = false ]; then
   npm ci
   npm run build
 
-  log "构建 client"
-  cd "$REPO_DIR/client"
+  log "构建 client-react"
+  cd "$REPO_DIR/client-react"
   npm ci
   npm run build
 

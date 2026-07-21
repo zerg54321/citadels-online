@@ -1,15 +1,14 @@
-// App shell styles — extracted from Vue App.vue scoped <style lang="scss">.
-// The :deep(.auth-panel) overrides become plain nested rules here since React
-// has no scoping.
+// App shell styles — modernized header. Right-side cluster (auth + stats/about
+// + locale) now shares one consistent control vocabulary: .hdr-btn /
+// .hdr-link / .locale-select, all gold-themed, same font + size + spacing.
 
 header {
   background: linear-gradient(180deg, rgba(13, 11, 8, 0.97) 0%, rgba(26, 20, 16, 0.95) 100%);
   color: var(--parchment);
   margin: 0;
-  padding: 0.6em 0;
+  padding: 0.55em 0;
   border-bottom: 1px solid rgba(212, 175, 55, 0.35);
   box-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
-  transition: padding 0.25s ease;
 
   h1, h2, h6 {
     padding: 0;
@@ -36,54 +35,340 @@ header {
     margin-bottom: 0;
     overflow: hidden;
   }
+}
 
-  .header-extra {
-    transition: all 0.25s ease;
+// Header layout: brand on the left, actions cluster on the right.
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.header-brand {
+  text-align: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+// Stats / About links — text controls, not buttons.
+.hdr-link {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: none;
+  border: none;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.18s ease, text-shadow 0.18s ease;
+  &:hover {
+    color: var(--gold-bright);
+    text-decoration: none;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
+  }
+}
+
+// Compact pill buttons used by AuthPanel.
+.hdr-btn {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+
+  &--gold {
+    background: linear-gradient(180deg, #f0d77b 0%, #d4af37 100%);
+    border-color: #b8922e;
+    color: #1a1410;
+    &:hover {
+      background: linear-gradient(180deg, #f7e4a5 0%, #e8c66a 100%);
+      box-shadow: 0 0 14px rgba(212, 175, 55, 0.4);
+      color: #0d0b08;
+    }
+  }
+  &--ghost {
+    color: var(--text-muted);
+    border-color: rgba(184, 168, 136, 0.4);
+    &:hover {
+      color: var(--parchment);
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.08);
+    }
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.header-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  transition: all 0.25s ease;
+}
+.header-extra--hidden {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  display: none;
+}
+
+// ── AuthPanel ──────────────────────────────────────────────────────────────
+.auth-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+
+  &__btns {
+    display: flex;
+    gap: 0.35rem;
   }
 
-  .header-extra--hidden {
-    max-height: 0;
-    opacity: 0;
-    margin-bottom: 0;
-    overflow: hidden;
-    display: none;
+  &__status {
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    line-height: 1.4;
+    &--guest {
+      color: var(--text-muted);
+      background: rgba(120, 110, 95, 0.18);
+      border: 1px solid rgba(120, 110, 95, 0.4);
+    }
+    &--muted {
+      color: var(--text-muted);
+    }
+  }
+
+  // Logged-in: name + online dot
+  &__who {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 9rem;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    color: var(--parchment);
+  }
+  &__who-name {
+    font-weight: 600;
+  }
+  &__dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #7ec47e;
+    box-shadow: 0 0 7px rgba(126, 196, 126, 0.6);
+    flex-shrink: 0;
+  }
+
+  // Compact on narrow widths
+  &--guest &__btns { gap: 0.3rem; }
+}
+
+// ── LocaleSelector (custom dropdown, replaces native white <select>) ───────
+.locale-select {
+  position: relative;
+  display: inline-block;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    background: rgba(13, 11, 8, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 6px;
+    padding: 0.35rem 0.55rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    &:hover {
+      border-color: var(--gold-bright);
+      color: var(--gold-bright);
+      background: rgba(20, 16, 10, 0.7);
+    }
+  }
+  &__flag {
+    display: inline-flex;
+    align-items: center;
+    img.emoji { height: 1.05em; width: 1.05em; }
+  }
+  &__name { font-weight: 700; }
+  &__caret {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    transition: transform 0.18s ease;
+    &--open { transform: rotate(180deg); }
+  }
+
+  &__menu {
+    position: absolute;
+    top: calc(100% + 0.3rem);
+    right: 0;
+    z-index: 1060;
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem;
+    min-width: 8rem;
+    background: var(--bg-panel-2);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 8px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 175, 55, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    color: var(--parchment);
+    padding: 0.4rem 0.55rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    &:hover {
+      background: rgba(212, 175, 55, 0.12);
+      color: var(--gold-bright);
+    }
+    &--active {
+      color: var(--gold-bright);
+      background: rgba(212, 175, 55, 0.08);
+    }
+  }
+  &__check {
+    margin-left: auto;
+    color: var(--gold-bright);
+    font-size: 0.8rem;
   }
 }
 
 .body {
   background: var(--bg-void);
+  // Fill the remaining viewport below the header so child h-100 chains
+  // resolve to a real height. Long pages scroll inside here (dark bg) rather
+  // than growing the document and revealing white at the edges.
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: auto;
 }
 
 .body--game {
   background: #1a1410;
+  // Game board manages its own internal scrolling; never let the shell scroll.
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-// Vue :deep(.auth-panel) overrides
-.auth-panel {
-  .badge-success {
-    background: rgba(212, 175, 55, 0.2);
+// ── Shared app modal (About / Login / Register / Profile) ─────────────────
+// Replaces the light Bootstrap .modal-content (white bg, dark text) so the
+// popups coordinate with the dark/gold theme instead of glaring white.
+.app-modal {
+  background: linear-gradient(180deg, var(--bg-panel-2) 0%, var(--bg-panel) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 14px;
+  color: var(--parchment);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.14);
+
+  .modal-title,
+  &__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--gold-bright);
-    border: 1px solid rgba(212, 175, 55, 0.4);
+    font-size: 1.05rem;
   }
-  .btn-outline-light {
+
+  &__close {
     color: var(--gold);
-    border-color: rgba(212, 175, 55, 0.55);
+    text-shadow: none;
+    opacity: 0.8;
+    &:hover { color: var(--gold-bright); opacity: 1; }
   }
-  .btn-outline-light:hover {
-    background: rgba(212, 175, 55, 0.08);
-    color: var(--gold-bright);
+
+  &__label {
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.25rem;
   }
-  .btn-outline-secondary {
-    color: var(--text-muted);
-    border-color: rgba(184, 168, 136, 0.4);
-  }
-  .btn-outline-secondary:hover {
+
+  &__input {
+    background: rgba(13, 11, 8, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.35);
     color: var(--parchment);
-    border-color: var(--parchment);
-    background: rgba(232, 220, 192, 0.06);
+    &:focus {
+      background: rgba(13, 11, 8, 0.7);
+      border-color: var(--gold);
+      color: var(--gold-bright);
+      box-shadow: 0 0 0 0.15rem rgba(212, 175, 55, 0.15);
+    }
+  }
+
+  &__switch {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    &:hover { color: var(--gold-bright); text-decoration: none; }
+  }
+
+  &__line {
+    color: var(--parchment);
+    strong { color: var(--gold); margin-right: 0.4rem; }
+  }
+
+  &__ok {
+    background: rgba(76, 140, 76, 0.22);
+    border: 1px solid rgba(76, 140, 76, 0.45);
+    color: #a3d9a3;
+  }
+
+  // About modal body — links themed gold
+  &__about {
+    line-height: 1.7;
+    font-size: 0.95rem;
+    color: var(--parchment);
+    a {
+      color: var(--gold-bright);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      &:hover { color: #fff; }
+    }
+    p { margin-bottom: 0; }
   }
 }

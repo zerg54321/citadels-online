@@ -98,25 +98,25 @@ export default function AuthPanel() {
   const authModal = showAuthModal && createPortal(
     <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
       <div className="modal-dialog modal-dialog-centered">
-        <div className="modal-content text-dark text-left">
-          <div className="modal-header">
-            <h5 className="modal-title">
+        <div className="modal-content app-modal">
+          <div className="modal-header border-0 pb-2">
+            <h5 className="modal-title app-modal__title">
               {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
             </h5>
-            <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowAuthModal(false)}>
+            <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowAuthModal(false)}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div className="modal-body">
             {error && <div className="alert alert-danger py-2">{error}</div>}
             <div className="form-group">
-              <label>{t('ui.auth.username')}</label>
-              <input className="form-control" value={username} autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
+              <label className="app-modal__label">{t('ui.auth.username')}</label>
+              <input className="form-control app-modal__input" value={username} autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
             </div>
             <div className="form-group">
-              <label>{t('ui.auth.password')}</label>
+              <label className="app-modal__label">{t('ui.auth.password')}</label>
               <input
-                className="form-control"
+                className="form-control app-modal__input"
                 type="password"
                 value={password}
                 autoComplete="current-password"
@@ -125,9 +125,9 @@ export default function AuthPanel() {
             </div>
             {mode === 'register' && (
               <div className="form-group">
-                <label>{t('ui.auth.display_name')}</label>
+                <label className="app-modal__label">{t('ui.auth.display_name')}</label>
                 <input
-                  className="form-control"
+                  className="form-control app-modal__input"
                   value={displayName}
                   placeholder={t('ui.auth.display_name_hint') as string}
                   onChange={(e) => setDisplayName(e.target.value)}
@@ -135,15 +135,15 @@ export default function AuthPanel() {
               </div>
             )}
           </div>
-          <div className="modal-footer">
+          <div className="modal-footer border-0">
             <button
               type="button"
-              className="btn btn-link"
+              className="btn btn-link app-modal__switch"
               onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
             >
               {mode === 'login' ? t('ui.auth.switch_to_register') : t('ui.auth.switch_to_login')}
             </button>
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={submitAuth}>
+            <button type="button" className="btn btn-gold" disabled={busy} onClick={submitAuth}>
               {mode === 'login' ? t('ui.auth.login') : t('ui.auth.register')}
             </button>
           </div>
@@ -156,30 +156,30 @@ export default function AuthPanel() {
   const profileModal = showProfileModal && createPortal(
     <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
       <div className="modal-dialog modal-dialog-centered">
-        <div className="modal-content text-dark text-left">
-          <div className="modal-header">
-            <h5 className="modal-title">{t('ui.auth.profile')}</h5>
-            <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowProfileModal(false)}>
+        <div className="modal-content app-modal">
+          <div className="modal-header border-0 pb-2">
+            <h5 className="modal-title app-modal__title">{t('ui.auth.profile')}</h5>
+            <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowProfileModal(false)}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div className="modal-body">
             {profileError && <div className="alert alert-danger py-2">{profileError}</div>}
-            {profileOk && <div className="alert alert-success py-2">{t('ui.auth.saved')}</div>}
-            <p className="mb-2">
+            {profileOk && <div className="alert app-modal__ok py-2">{t('ui.auth.saved')}</div>}
+            <p className="mb-2 app-modal__line">
               <strong>{t('ui.auth.username')}:</strong>
-              {authUser?.username}
+              <span>{authUser?.username}</span>
             </p>
             <div className="form-group mb-0">
-              <label>{t('ui.auth.display_name')}</label>
-              <input className="form-control" value={profileDisplayName} onChange={(e) => setProfileDisplayName(e.target.value)} />
+              <label className="app-modal__label">{t('ui.auth.display_name')}</label>
+              <input className="form-control app-modal__input" value={profileDisplayName} onChange={(e) => setProfileDisplayName(e.target.value)} />
             </div>
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={() => setShowProfileModal(false)}>
+          <div className="modal-footer border-0">
+            <button type="button" className="btn btn-outline-gold" onClick={() => setShowProfileModal(false)}>
               {t('ui.close')}
             </button>
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={saveProfile}>
+            <button type="button" className="btn btn-gold" disabled={busy} onClick={saveProfile}>
               {t('ui.confirm')}
             </button>
           </div>
@@ -191,8 +191,8 @@ export default function AuthPanel() {
 
   if (!authReady) {
     return (
-      <div className="auth-panel text-right">
-        <small className="text-muted">...</small>
+      <div className="auth-panel">
+        <span className="auth-panel__status auth-panel__status--muted">…</span>
         {authModal}
         {profileModal}
       </div>
@@ -201,20 +201,18 @@ export default function AuthPanel() {
 
   if (isLoggedIn && authUser) {
     return (
-      <div className="auth-panel text-right">
-        <div className="d-flex flex-column align-items-end">
-          <span className="small">
-            {authUser.displayName}
-            <span className="badge badge-success">{t('ui.auth.logged_in')}</span>
-          </span>
-          <div className="btn-group btn-group-sm mt-1">
-            <button type="button" className="btn btn-outline-light btn-sm" onClick={() => setShowProfileModal(true)}>
-              {t('ui.auth.profile')}
-            </button>
-            <button type="button" className="btn btn-outline-light btn-sm" onClick={logout}>
-              {t('ui.auth.logout')}
-            </button>
-          </div>
+      <div className="auth-panel auth-panel--in">
+        <span className="auth-panel__who">
+          <span className="auth-panel__who-name text-truncate">{authUser.displayName}</span>
+          <span className="auth-panel__dot" title={t('ui.auth.logged_in') as string} />
+        </span>
+        <div className="auth-panel__btns">
+          <button type="button" className="hdr-btn" onClick={() => setShowProfileModal(true)}>
+            {t('ui.auth.profile')}
+          </button>
+          <button type="button" className="hdr-btn hdr-btn--ghost" onClick={logout}>
+            {t('ui.auth.logout')}
+          </button>
         </div>
         {authModal}
         {profileModal}
@@ -223,14 +221,16 @@ export default function AuthPanel() {
   }
 
   return (
-    <div className="auth-panel text-right">
-      <span className="badge badge-secondary mr-1">{t('ui.auth.guest')}</span>
-      <button type="button" className="btn btn-sm btn-light" onClick={() => openAuth('login')}>
-        {t('ui.auth.login')}
-      </button>
-      <button type="button" className="btn btn-sm btn-outline-light ml-1" onClick={() => openAuth('register')}>
-        {t('ui.auth.register')}
-      </button>
+    <div className="auth-panel auth-panel--guest">
+      <span className="auth-panel__status auth-panel__status--guest">{t('ui.auth.guest')}</span>
+      <div className="auth-panel__btns">
+        <button type="button" className="hdr-btn hdr-btn--gold" onClick={() => openAuth('login')}>
+          {t('ui.auth.login')}
+        </button>
+        <button type="button" className="hdr-btn hdr-btn--ghost" onClick={() => openAuth('register')}>
+          {t('ui.auth.register')}
+        </button>
+      </div>
       {authModal}
       {profileModal}
     </div>

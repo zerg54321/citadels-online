@@ -174,11 +174,12 @@ export default function LobbyScreen() {
         document.body,
       )}
 
-      <div className="card h-100 medieval-panel lobby-screen">
-        <div className="card-header border-0 pt-3 pb-2">
+      <div className="medieval-panel lobby-screen">
+        <div className="lobby-screen__header">
           <h5 className="mb-0 text-gold lobby-title">
             {t('ui.lobby.title')}
           </h5>
+          <span className="lobby-screen__mode-tag">{t('ui.lobby.settings.mode_team6')}</span>
         </div>
         <div className="card-body lobby-body p-0">
           <div className="row no-gutters lobby-players-area">
@@ -220,7 +221,7 @@ export default function LobbyScreen() {
             <RoomChat />
           </div>
         </div>
-        <div className="card-footer border-0">
+        <div className="lobby-screen__footer">
           <div className="d-flex gap-2">
             <input
               type="button"

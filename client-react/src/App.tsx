@@ -21,25 +21,25 @@ export default function App() {
     <div className="d-flex flex-column h-100">
       <header>
         <div className="container-fluid">
-          <div className="d-flex flex-wrap align-items-center justify-content-end">
-            <div className="flex-grow-1 text-center pb-1">
+          <div className="header-row">
+            <div className="header-brand">
               <h1><a href="/" className="text-reset">{t('ui.title')}</a></h1>
               <h6 className={inGame ? 'header-subtitle--hidden' : ''}>{t('ui.subtitle2')}</h6>
             </div>
-            <div className="text-right header-actions">
-              <AuthPanel />
-              <div className={`mb-1 header-extra${inGame ? ' header-extra--hidden' : ''}`}>
-                <Link className="text-reset text-decoration-none mr-2" to="/stats">
+            <div className="header-actions">
+              <div className={`header-extra${inGame ? ' header-extra--hidden' : ''}`}>
+                <Link className="hdr-link" to="/stats">
                   {t('ui.stats.title')}
                 </Link>
                 <button
                   type="button"
-                  className="text-reset text-decoration-none btn btn-link p-0"
+                  className="hdr-link"
                   onClick={() => setShowAbout(true)}
                 >
                   {t('ui.about.title')}
                 </button>
               </div>
+              <AuthPanel />
               <LocaleSelector />
             </div>
           </div>
@@ -52,15 +52,15 @@ export default function App() {
 
       {showAbout && createPortal(
         <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">{t('ui.about.title')}</h5>
-                <button type="button" className="close" aria-label={t('ui.close') as string} onClick={() => setShowAbout(false)}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content app-modal">
+              <div className="modal-header border-0 pb-2">
+                <h5 className="modal-title app-modal__title">{t('ui.about.title')}</h5>
+                <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowAbout(false)}>
                   <span aria-hidden="true">&times;</span>
                 </button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body app-modal__about">
                 {/* eslint-disable-next-line react/no-danger */}
                 <p dangerouslySetInnerHTML={{ __html: t('ui.about.text') as string }} />
               </div>

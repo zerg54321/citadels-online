@@ -103,81 +103,83 @@ export default function PlayersList() {
     }
   };
 
-  const renderRow = (row: { id: string; username: string; isAi?: boolean; manager?: boolean; seatNo: number }, teamBadge: string) => (
+  const renderRow = (row: { id: string; username: string; isAi?: boolean; manager?: boolean; seatNo: number }, teamClass: string) => (
     <li
       key={row.id}
-      className={`list-group-item py-2 px-2 d-flex align-items-center${row.id === self?.id ? ' self-row' : ''}`}
+      className={`seat-card${row.id === self?.id ? ' seat-card--self' : ''}${row.isAi ? ' seat-card--ai' : ''}`}
     >
-      <span className={`badge ${teamBadge} badge-pill mr-1`}>
-        {row.seatNo}
+      <span className={`seat-card__no ${teamClass}`}>{row.seatNo}</span>
+      <span className="seat-card__avatar" aria-hidden>
+        {row.isAi ? '🤖' : row.username.charAt(0).toUpperCase()}
       </span>
-      <span className="flex-fill text-truncate small">
-        {row.username}
-        {row.id === self?.id && <span className="badge badge-info">{t('ui.lobby.you')}</span>}
-        {row.isAi && <span className="badge badge-dark">AI</span>}
-        {row.manager && <span className="badge manager-badge">{t('ui.lobby.manager')}</span>}
+      <span className="seat-card__name">
+        <span className="seat-card__name-text text-truncate">{row.username}</span>
+        <span className="seat-card__tags">
+          {row.id === self?.id && <span className="tag tag--you">{t('ui.lobby.you')}</span>}
+          {row.isAi && <span className="tag tag--ai">AI</span>}
+          {row.manager && <span className="tag tag--mgr">{t('ui.lobby.manager')}</span>}
+        </span>
       </span>
       {canManageAi && !row.isAi && (
-        <span className="btn-group btn-group-sm">
-          <button type="button" className="btn btn-outline-secondary btn-sm py-0" onClick={() => moveSeat(row.id, -1)}>↑</button>
-          <button type="button" className="btn btn-outline-secondary btn-sm py-0" onClick={() => moveSeat(row.id, 1)}>↓</button>
+        <span className="btn-group btn-group-sm seat-card__reorder">
+          <button type="button" className="btn btn-outline-secondary btn-sm py-0" onClick={() => moveSeat(row.id, -1)} aria-label="up">↑</button>
+          <button type="button" className="btn btn-outline-secondary btn-sm py-0" onClick={() => moveSeat(row.id, 1)} aria-label="down">↓</button>
         </span>
       )}
       {canManageAi && row.isAi && (
-        <button type="button" className="btn btn-sm btn-outline-danger py-0 ml-1" onClick={() => removeAi(row.id)}>×</button>
+        <button type="button" className="btn btn-sm btn-outline-danger py-0 ml-1 seat-card__remove" onClick={() => removeAi(row.id)} aria-label="remove">×</button>
       )}
     </li>
   );
 
   return (
-    <div className="card players-list">
-      <div className="card-header d-flex justify-content-between align-items-center">
-        <span>{t('ui.lobby.players')}</span>
-        <span className="small text-muted">{t('ui.lobby.team_preview_hint')}</span>
+    <div className="players-list">
+      <div className="players-list__header">
+        <span className="players-list__title">{t('ui.lobby.players')}</span>
+        <span className="players-list__subtitle">{t('ui.lobby.team_preview_hint')}</span>
       </div>
 
-      <div className="row no-gutters">
-        <div className="col-6 border-right">
-          <div className="px-2 py-1 team-a-header text-white small font-weight-bold text-center">
-            {t('ui.team.a')}
-          </div>
-          <ul className="list-group list-group-flush">
-            {teamARows.map((r) => renderRow(r, 'team-a-badge'))}
-            {!teamARows.length && <li className="list-group-item small text-muted text-center py-2">—</li>}
+      <div className="players-list__teams">
+        <div className="players-list__team players-list__team--a">
+          <div className="players-list__team-head">{t('ui.team.a')}</div>
+          <ul className="players-list__seats">
+            {teamARows.map((r) => renderRow(r, 'team-a'))}
+            {!teamARows.length && <li className="players-list__empty">—</li>}
           </ul>
         </div>
-        <div className="col-6">
-          <div className="px-2 py-1 team-b-header text-white small font-weight-bold text-center">
-            {t('ui.team.b')}
-          </div>
-          <ul className="list-group list-group-flush">
-            {teamBRows.map((r) => renderRow(r, 'team-b-badge'))}
-            {!teamBRows.length && <li className="list-group-item small text-muted text-center py-2">—</li>}
+        <div className="players-list__team players-list__team--b">
+          <div className="players-list__team-head">{t('ui.team.b')}</div>
+          <ul className="players-list__seats">
+            {teamBRows.map((r) => renderRow(r, 'team-b'))}
+            {!teamBRows.length && <li className="players-list__empty">—</li>}
           </ul>
         </div>
       </div>
 
       {spectators.length > 0 && (
-        <div className="border-top">
-          <div className="px-2 py-1 small text-muted">{t('ui.lobby.spectator')}</div>
-          <ul className="list-group list-group-flush">
+        <div className="players-list__spectators">
+          <div className="players-list__spectators-head">{t('ui.lobby.spectator')}</div>
+          <ul className="players-list__seats players-list__seats--spec">
             {spectators.map((p) => (
-              <li key={p.id} className="list-group-item py-1 px-2 small">
-                {p.username}
-                {p.id === self?.id && <span className="badge badge-info">{t('ui.lobby.you')}</span>}
+              <li key={p.id} className="seat-card seat-card--spec">
+                <span className="seat-card__avatar" aria-hidden>{p.username.charAt(0).toUpperCase()}</span>
+                <span className="seat-card__name">
+                  <span className="seat-card__name-text text-truncate">{p.username}</span>
+                  {p.id === self?.id && <span className="tag tag--you">{t('ui.lobby.you')}</span>}
+                </span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="card-footer">
-        <div className="small text-muted mb-2">
-          {t('ui.lobby.player_count', { n: counts.players })}
-          {' · '}
-          {t('ui.lobby.spectator_count', { n: counts.spectators })}
-          {' · '}
-          {t('ui.lobby.ai_count', { n: counts.ai })}
+      <div className="players-list__footer">
+        <div className="players-list__counts">
+          <span className="players-list__count"><strong>{counts.players}</strong> {t('ui.lobby.players')}</span>
+          <span className="players-list__dot">·</span>
+          <span className="players-list__count"><strong>{counts.spectators}</strong> {t('ui.lobby.spectator')}</span>
+          <span className="players-list__dot">·</span>
+          <span className="players-list__count"><strong>{counts.ai}</strong> AI</span>
         </div>
 
         {inLobby && self && (
@@ -185,7 +187,7 @@ export default function PlayersList() {
             {self.role === PlayerRole.SPECTATOR ? (
               <button
                 type="button"
-                className="btn btn-sm btn-primary btn-block"
+                className="btn btn-sm btn-gold btn-block"
                 disabled={counts.players >= 6}
                 onClick={() => setRole('player')}
               >
@@ -194,7 +196,7 @@ export default function PlayersList() {
             ) : (
               <button
                 type="button"
-                className="btn btn-sm btn-outline-secondary btn-block"
+                className="btn btn-sm btn-outline-gold btn-block"
                 onClick={() => setRole('spectator')}
               >
                 {t('ui.lobby.become_spectator')}
@@ -207,13 +209,13 @@ export default function PlayersList() {
           <>
             <button
               type="button"
-              className="btn btn-sm btn-outline-primary btn-block"
+              className="btn btn-sm btn-outline-gold btn-block"
               disabled={!canAddAi || aiBusy}
               onClick={addAi}
             >
               {t('ui.lobby.add_ai')}
             </button>
-            <div className="small text-muted mt-1">{t('ui.lobby.add_ai_hint')}</div>
+            <div className="players-list__ai-hint">{t('ui.lobby.add_ai_hint')}</div>
           </>
         )}
       </div>

@@ -11,6 +11,7 @@
 @import './players-list';
 @import './lobby-screen';
 @import './home-screen';
+@import './stats-screen';
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 
@@ -27,6 +28,20 @@
   --font-body: 'EB Garamond', 'Georgia', serif;
 }
 
+// Ensure the dark theme covers the whole document, not just #app, so any
+// overflow never reveals the browser-default white html/body background.
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-void);
+  color: var(--parchment);
+  min-height: 100%;
+}
+
+// Fixed viewport height so the flex column has a definite height: the .body
+// child (flex:1) is then capped to viewport-minus-header and scrolls
+// internally (dark bg) instead of growing the page. This is what keeps the
+// lobby chat from pushing the player list off-screen.
 #app {
   padding: 0;
   margin: 0;
@@ -38,7 +53,6 @@
   color: var(--parchment);
   font-family: var(--font-body);
 }
-
 /* Disable user selection */
 #app, .tooltip {
   user-select: none;

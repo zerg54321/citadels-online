@@ -45,13 +45,13 @@ const io = new Server(http, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
       ? (process.env.CORS_ORIGIN || 'http://localhost:8081')
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3010', 'http://127.0.0.1:3010'],
     credentials: true,
   },
 });
 initSocket(io);
 
-app.use(express.static('../client/dist'));
+app.use(express.static('../client-react/dist'));
 app.use(history());
 
 http.listen(port, () => {

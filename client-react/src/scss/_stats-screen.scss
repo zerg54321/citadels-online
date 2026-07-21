@@ -1,0 +1,218 @@
+// StatsScreen styles — modernized dark/gold theme. Replaces the Bootstrap
+// nav-tabs + bg-white table that produced near-black text on a near-black
+// page. The "table" is now a CSS-grid card list matching Home/Room styling.
+
+.stats-screen {
+  max-width: 60rem;
+
+  &__head {
+    margin-bottom: 1rem;
+  }
+  &__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--gold-bright);
+    font-size: 1.5rem;
+    margin: 0;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  }
+  &__loading,
+  &__empty {
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 2.5rem 0;
+    text-align: center;
+  }
+  &__hint {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+.stats-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  padding-bottom: 0.6rem;
+
+  &__btn {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+      color: var(--parchment);
+      background: rgba(212, 175, 55, 0.06);
+    }
+    &--active {
+      color: var(--gold-bright);
+      background: rgba(212, 175, 55, 0.12);
+      border-color: rgba(212, 175, 55, 0.45);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.12);
+    }
+  }
+}
+
+// ── Table (grid card list) ─────────────────────────────────────────────────
+.stats-table {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-panel-2) 0%, var(--bg-panel) 100%);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+
+  &__head {
+    display: grid;
+    grid-template-columns: 1.6fr 0.9fr 0.8fr 0.7fr 1.3fr 0.9fr;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    background: rgba(13, 11, 8, 0.55);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    span {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+  }
+  &__head--rank {
+    grid-template-columns: 0.5fr 1.8fr 0.8fr 0.8fr 0.8fr 0.8fr;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1.6fr 0.9fr 0.8fr 0.7fr 1.3fr 0.9fr;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    align-items: center;
+    font-size: 0.88rem;
+    color: var(--parchment);
+    transition: background 0.15s ease;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: rgba(212, 175, 55, 0.05); }
+  }
+  // Ranking rows use the rank column layout
+  &__row--rank {
+    grid-template-columns: 0.5fr 1.8fr 0.8fr 0.8fr 0.8fr 0.8fr;
+  }
+
+  &__cell--time { font-size: 0.8rem; color: var(--text-muted); }
+  &__cell--team { font-family: var(--font-display); letter-spacing: 0.04em; }
+  &__cell--score { font-weight: 700; color: var(--gold-bright); }
+  &__cell--teamscore { font-size: 0.82rem; color: var(--parchment); }
+  &__cell--player { font-weight: 600; }
+  &__cell--rank {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gold);
+    text-align: center;
+  }
+  &__strong { color: var(--gold-bright); font-size: 1rem; }
+
+  // Top-3 ranking rows
+  &__row--top1 {
+    background: rgba(212, 175, 55, 0.14);
+    border-left: 3px solid var(--gold-bright);
+  }
+  &__row--top2 {
+    background: rgba(180, 180, 180, 0.08);
+    border-left: 3px solid #b0b0b0;
+  }
+  &__row--top3 {
+    background: rgba(150, 100, 50, 0.1);
+    border-left: 3px solid #b07a3a;
+  }
+  &__row--top1 &__cell--rank { color: var(--gold-bright); }
+  &__row--top2 &__cell--rank { color: #c8c8c8; }
+  &__row--top3 &__cell--rank { color: #d8a868; }
+}
+
+// ── Mode badge ─────────────────────────────────────────────────────────────
+.stats-badge {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid;
+
+  &--ranked {
+    color: var(--gold-bright);
+    background: rgba(212, 175, 55, 0.18);
+    border-color: rgba(212, 175, 55, 0.45);
+  }
+  &--casual {
+    color: var(--text-muted);
+    background: rgba(120, 110, 95, 0.18);
+    border-color: rgba(120, 110, 95, 0.4);
+  }
+}
+
+// ── Result pill ────────────────────────────────────────────────────────────
+.stats-result {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid;
+
+  &--win {
+    color: #a3d9a3;
+    background: rgba(76, 140, 76, 0.22);
+    border-color: rgba(76, 140, 76, 0.5);
+  }
+  &--loss {
+    color: #e0a3a3;
+    background: rgba(140, 76, 76, 0.22);
+    border-color: rgba(140, 76, 76, 0.5);
+  }
+  &--draw {
+    color: var(--text-muted);
+    background: rgba(120, 110, 95, 0.18);
+    border-color: rgba(120, 110, 95, 0.4);
+  }
+  &--done {
+    color: var(--parchment);
+    background: rgba(232, 220, 192, 0.08);
+    border-color: rgba(232, 220, 192, 0.25);
+  }
+}
+
+// ── Responsive ─────────────────────────────────────────────────────────────
+@media (max-width: 760px) {
+  .stats-table__head,
+  .stats-table__row {
+    grid-template-columns: 1fr 1fr;
+    font-size: 0.8rem;
+  }
+  .stats-table__head--rank,
+  .stats-table__row--rank {
+    grid-template-columns: 0.5fr 1.5fr 1fr 1fr;
+  }
+}

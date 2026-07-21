@@ -374,6 +374,11 @@ export default function BoardScreen() {
                         size="medium"
                       />
                     )}
+                    {gameProgress === 'IN_GAME' && !selfRoleCard.show && (
+                      <div className="board-table__self-role-empty" title={t('ui.game.character_unknown')}>
+                        <span>？</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="board-table__self-hand">

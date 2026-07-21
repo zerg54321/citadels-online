@@ -95,7 +95,7 @@ export default function PlayerHand({
       )}
       <div className="flex-grow-1 px-2 pb-2 d-flex overflow-hidden">
         {board.hand.map((id, i) => id && (
-          <div key={i} className="district-card-wrapper pt-3">
+          <div key={i} className="district-card-wrapper pt-1">
             <div className="district-card">
               <DistrictCard
                 districtId={id}

@@ -121,7 +121,9 @@
       minmax(220px, 1.2fr)
       minmax(140px, 0.8fr)
       minmax(180px, 260px);
-    grid-template-rows: 1fr 1fr 1fr;
+    // Self strip (row 3) gets extra height so the hand area can show full
+    // cards + cost without clipping.
+    grid-template-rows: 1fr 1fr 1.5fr;
     gap: 0.45rem;
     padding: 0.35rem 0.55rem 0.45rem;
   }
@@ -389,15 +391,39 @@
 
   &__self-role {
     flex: 0 0 auto;
+    // Reserve a fixed slot for the role card so the body row height is
+    // constant whether or not a character card is present — prevents the
+    // hand area from jumping up/down when a role card is dealt.
+    height: 8rem;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding-left: 0.15rem;
   }
 
+  &__self-role-empty {
+    width: 5.8rem;
+    height: 8rem;
+    border-radius: 0.5rem;
+    border: 1px dashed rgba(212, 175, 55, 0.4);
+    background: rgba(13, 11, 8, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    span {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(212, 175, 55, 0.35);
+    }
+  }
+
   &__self-hand {
     flex: 1 1 auto;
-    min-height: 0;
+    // Floor the hand area so full district cards + the rotated cost at the
+    // top are visible (cost/几费 never clipped). The enlarged grid row 3
+    // (1.5fr) provides the room.
+    min-height: 10.5rem;
     overflow: auto;
     padding: 0.25rem 0.4rem 0.4rem;
     display: flex;

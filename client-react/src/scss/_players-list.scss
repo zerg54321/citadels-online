@@ -1,72 +1,289 @@
-// PlayersList styles — extracted from Vue scoped <style>. Scoped to
-// .players-list parent to avoid leaking badge overrides into the rest of the
-// app. NOTE: the root element is <div class="card players-list">, so the card
-// itself uses a compound selector (.players-list.card, no space) — a
-// descendant selector (.players-list .card) would NOT match the same element
-// and Bootstrap's default white .card background would leak through.
+// PlayersList styles — modernized. Larger player names + avatar circles +
+// team-tinted seat cards. Root is now <div class="players-list"> (no .card
+// class), so all styles key off .players-list and its descendants.
 
-.players-list.card {
-  background: transparent;
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+.players-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--bg-panel-2) 0%, var(--bg-panel) 100%);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+
+  // ── Header ─────────────────────────────────────────────────
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.7rem 0.95rem;
+    background: rgba(13, 11, 8, 0.5);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.28);
+  }
+  &__title {
+    font-family: var(--font-display);
+    color: var(--gold-bright);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.88rem;
+  }
+  &__subtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+  }
+
+  // ── Teams grid ─────────────────────────────────────────────
+  &__teams {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  &__team {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    &--a { border-right: 1px solid rgba(212, 175, 55, 0.22); }
+  }
+  &__team-head {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 0.4rem 0;
+  }
+  &__team--a &__team-head {
+    color: #b8c8d8;
+    background: rgba(70, 90, 110, 0.32);
+    border-bottom: 1px solid rgba(70, 90, 110, 0.4);
+  }
+  &__team--b &__team-head {
+    color: #d8a8a8;
+    background: rgba(110, 60, 60, 0.32);
+    border-bottom: 1px solid rgba(110, 60, 60, 0.4);
+  }
+
+  &__seats {
+    list-style: none;
+    margin: 0;
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  &__seats--spec {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 0.4rem 0.6rem;
+  }
+  &__empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 1rem 0;
+    opacity: 0.5;
+  }
+
+  // ── Spectators strip ───────────────────────────────────────
+  &__spectators {
+    border-top: 1px solid rgba(212, 175, 55, 0.22);
+    background: rgba(13, 11, 8, 0.3);
+  }
+  &__spectators-head {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.4rem 0.6rem 0.2rem;
+  }
+
+  // ── Footer ─────────────────────────────────────────────────
+  &__footer {
+    padding: 0.65rem 0.95rem;
+    background: rgba(13, 11, 8, 0.4);
+    border-top: 1px solid rgba(212, 175, 55, 0.25);
+  }
+  &__counts {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.55rem;
+    strong {
+      color: var(--gold-bright);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+    }
+  }
+  &__dot { opacity: 0.5; }
+  &__ai-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    line-height: 1.4;
+  }
 }
-.players-list .card-header {
-  background: rgba(13, 11, 8, 0.45);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
-  color: var(--gold);
+
+// ── Seat card (per player row) ────────────────────────────────────────────
+.seat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 9px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(13, 11, 8, 0.3);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    background: rgba(20, 16, 10, 0.5);
+    border-color: rgba(212, 175, 55, 0.3);
+  }
+
+  // Self highlight
+  &--self {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.45);
+    box-shadow: inset 0 0 12px rgba(212, 175, 55, 0.08);
+  }
+
+  // AI seat: muted
+  &--ai {
+    background: rgba(120, 110, 95, 0.1);
+    border-color: rgba(120, 110, 95, 0.25);
+  }
+
+  // Spectator rows: compact, inline
+  &--spec {
+    flex: 0 0 auto;
+    padding: 0.3rem 0.5rem;
+  }
+
+  &__no {
+    flex-shrink: 0;
+    width: 1.55rem;
+    height: 1.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.82rem;
+
+    &.team-a {
+      background: rgba(70, 90, 110, 0.35);
+      color: #c8d8e8;
+      border: 1px solid rgba(70, 90, 110, 0.55);
+    }
+    &.team-b {
+      background: rgba(110, 60, 60, 0.35);
+      color: #e8b8b8;
+      border: 1px solid rgba(110, 60, 60, 0.55);
+    }
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gold-bright);
+    background: linear-gradient(145deg, rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.08));
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+  }
+  .seat-card--ai &__avatar {
+    background: linear-gradient(145deg, rgba(120, 110, 95, 0.3), rgba(120, 110, 95, 0.12));
+    border-color: rgba(120, 110, 95, 0.45);
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+  .seat-card--spec &__avatar {
+    width: 1.7rem;
+    height: 1.7rem;
+    font-size: 0.85rem;
+  }
+
+  // Name + tags — ENLARGED per request
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  &__name-text {
+    font-family: var(--font-body);
+    font-size: 1.1rem;       // ↑ enlarged from 0.85rem
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--parchment);
+    max-width: 100%;
+  }
+  .seat-card--spec &__name-text {
+    font-size: 0.95rem;
+  }
+  &__tags {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__reorder { flex-shrink: 0; }
+  &__remove { flex-shrink: 0; }
+}
+
+// ── Tags ──────────────────────────────────────────────────────────────────
+.tag {
+  display: inline-flex;
+  align-items: center;
   font-family: var(--font-display);
-  font-size: 0.8rem;
+  font-size: 0.62rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  line-height: 1.5;
+
+  &--you {
+    background: rgba(212, 175, 55, 0.22);
+    color: var(--gold-bright);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+  }
+  &--ai {
+    background: rgba(120, 110, 95, 0.28);
+    color: var(--text-muted);
+    border: 1px solid rgba(120, 110, 95, 0.45);
+  }
+  &--mgr {
+    background: rgba(180, 130, 50, 0.28);
+    color: #e8c66a;
+    border: 1px solid rgba(180, 130, 50, 0.55);
+  }
 }
-.players-list .list-group-item {
-  background: transparent;
-  border-color: rgba(212, 175, 55, 0.12);
-  color: var(--parchment);
-}
-.players-list .team-a-header {
-  background: rgba(70, 90, 110, 0.35);
-  border-bottom: 1px solid rgba(70, 90, 110, 0.45);
-}
-.players-list .team-b-header {
-  background: rgba(110, 60, 60, 0.35);
-  border-bottom: 1px solid rgba(110, 60, 60, 0.45);
-}
-.players-list .team-a-badge {
-  background: rgba(70, 90, 110, 0.25);
-  color: #b8c8d8;
-  border: 1px solid rgba(70, 90, 110, 0.45);
-}
-.players-list .team-b-badge {
-  background: rgba(110, 60, 60, 0.25);
-  color: #d8a8a8;
-  border: 1px solid rgba(110, 60, 60, 0.45);
-}
-.players-list .manager-badge {
-  background: rgba(180, 130, 50, 0.25);
-  color: #e8c66a;
-  border: 1px solid rgba(180, 130, 50, 0.5);
-}
-.players-list .self-row {
-  background: rgba(212, 175, 55, 0.08) !important;
-}
-.players-list .badge-info {
-  background: rgba(212, 175, 55, 0.2);
-  color: var(--gold-bright);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-}
-.players-list .badge-dark {
-  background: rgba(120, 110, 95, 0.25);
-  color: var(--text-muted);
-  border: 1px solid rgba(120, 110, 95, 0.4);
-}
-.players-list .text-muted {
-  color: var(--text-muted) !important;
-}
-.players-list .card-footer {
-  background: rgba(13, 11, 8, 0.35);
-  border-top: 1px solid rgba(212, 175, 55, 0.25);
-}
+
+// ── Button overrides (kept from before) ───────────────────────────────────
 .players-list .btn-outline-secondary {
   color: var(--text-muted);
   border-color: rgba(184, 168, 136, 0.4);
@@ -83,7 +300,4 @@
 .players-list .btn-outline-danger:hover {
   background: rgba(110, 60, 60, 0.15);
   color: #f5caca;
-}
-.players-list .border-right {
-  border-right: 1px solid rgba(212, 175, 55, 0.25) !important;
 }

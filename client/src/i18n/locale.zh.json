@@ -194,6 +194,7 @@
             "stat_city": "已建城区",
             "no_buildings": "暂无建筑",
             "warn_destroy_ally": "确定要拆除队友「{name}」的建筑吗？这通常会损害己方利益。",
+            "destroy_confirm_title": "拆除确认",
             "messages": {
                 "welcome": "欢迎来到《富饶之城》经典版！",
                 "choose_characters": {

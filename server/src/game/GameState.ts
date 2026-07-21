@@ -428,6 +428,31 @@ export default class GameState implements Subject {
     return true;
   }
 
+  /**
+   * P4 timeout: force a human player into autoplay (AI takeover).
+   *
+   * Differs from `setAutoplay(id, true)`:
+   *   - does NOT call `refreshTurnDeadline()` (caller — TurnTimer — clears the
+   *     deadline itself and immediately re-arms for AI work, so refreshing a
+   *     human deadline here would be wrong/no-op);
+   *   - bypasses the `isAi` short-circuit (timeout only fires for humans).
+   *
+   * Previously TurnTimer wrote `actor.isAutoplay = true` directly, which
+   * skipped this method entirely and risked the timer/flag going out of sync
+   * if `setAutoplay` ever gained side effects.
+   */
+  forceAutoplayForTimeout(playerId: PlayerId): boolean {
+    const player = this.players.get(playerId);
+    if (!player || player.role !== PlayerRole.PLAYER) return false;
+    player.isAutoplay = true;
+    return true;
+  }
+
+  /** Clear the action deadline (e.g. when leaving IN_GAME or entering AI drive). */
+  clearTurnDeadline() {
+    this.turnDeadlineAt = null;
+  }
+
   markEffectiveAiControl(playerId: PlayerId) {
     const player = this.players.get(playerId);
     if (player) player.hadEffectiveAiControl = true;

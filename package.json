@@ -5,7 +5,7 @@
         "heroku-prebuild": "npm install --prefix common && npm install --prefix server && npm install --prefix client",
         "heroku-postbuild": "cd ./server && npm run build && cd ../client && npm run build",
         "lint": "npm run lint --prefix common && npm run lint --prefix server && npm run lint --prefix client",
-        "typecheck": "npm run build --prefix common && npx tsc --noEmit --prefix server && npx vue-tsc --noEmit --prefix client"
+        "typecheck": "npm run build --prefix common && npm run typecheck --prefix server"
     },
     "engines": {
         "node": "^20.0.0",

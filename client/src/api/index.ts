@@ -1,24 +1,8 @@
 import { Socket } from 'socket.io-client';
 import {
-  ClientGameState, GameSetupData, PlayerId, RoomId,
+  ClientGameState, GameSetupData, parseClientGameState, PlayerId, RoomId,
 } from 'citadels-common';
 import { RoomInfoResponse, StartGameReponse } from '../types/apiTypes';
-
-function parseGameState(data: any): ClientGameState {
-  return {
-    progress: data.progress,
-    gameMode: data.gameMode,
-    players: data.players,
-    self: data.self,
-    board: {
-      ...data.board,
-      players: data.board?.players,
-    },
-    settings: data.settings,
-    teamScores: data.teamScores,
-    matchResult: data.matchResult,
-  };
-}
 
 export default {
   createRoom(socket: Socket) {
@@ -61,11 +45,11 @@ export default {
           return reject(Error(data.message || 'join failed'));
         }
         if (data.status === 'ok' && data.gameState) {
-          return resolve(parseGameState(data.gameState));
+          return resolve(parseClientGameState(data.gameState));
         }
         // legacy: raw game state
         if (data.progress !== undefined) {
-          return resolve(parseGameState(data));
+          return resolve(parseClientGameState(data));
         }
         return reject(Error('join failed'));
       });

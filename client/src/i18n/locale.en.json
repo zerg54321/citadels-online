@@ -194,6 +194,7 @@
             "stat_city": "Districts built",
             "no_buildings": "No districts yet",
             "warn_destroy_ally": "Destroy a district owned by ally \"{name}\"? This usually hurts your team.",
+            "destroy_confirm_title": "Destroy Confirmation",
             "messages": {
                 "welcome": "Welcome to Citadels Classic Edition!",
                 "choose_characters": {

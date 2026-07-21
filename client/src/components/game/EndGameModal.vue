@@ -72,7 +72,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { MatchResult, TeamId } from 'citadels-common';
+import { computeTeamScores, MatchResult, TeamId } from 'citadels-common';
 
 export default defineComponent({
   name: 'EndGameModal',
@@ -134,20 +134,8 @@ export default defineComponent({
       return 'bg-secondary text-white';
     },
     liveTeamScores() {
-      const ts = this.gameState?.teamScores;
-      let A = 0;
-      let B = 0;
-      if (ts && (ts.A != null || ts.B != null)) {
-        A = ts.A ?? 0;
-        B = ts.B ?? 0;
-      } else {
-        (this.gameState?.board?.playerOrder || []).forEach((pid: string) => {
-          const meta = this.getPlayerFromId(pid);
-          const total = this.gameState?.board?.players?.[pid]?.score?.total ?? 0;
-          if (meta?.team === TeamId.A) A += total;
-          if (meta?.team === TeamId.B) B += total;
-        });
-      }
+      if (!this.gameState) return { A: 0, B: 0 };
+      const { A, B } = computeTeamScores(this.gameState);
       const mine = this.getPlayerFromId(this.selfId)?.team;
       if (!this.isSpectator && mine === TeamId.B) {
         return { A: B, B: A };

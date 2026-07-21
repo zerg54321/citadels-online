@@ -86,6 +86,27 @@
         </div>
       </div>
     </div>
+
+    <AppModal
+      :show="pendingDestroy !== null"
+      :title="$t('ui.game.destroy_confirm_title')"
+      header-class="bg-warning text-white"
+      @close="cancelDestroy"
+    >
+      <p>{{ $t('ui.game.warn_destroy_ally', { name: username }) }}</p>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="cancelDestroy"
+        >{{ $t('ui.cancel') }}</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          @click="confirmDestroy"
+        >{{ $t('ui.confirm') }}</button>
+      </template>
+    </AppModal>
   </div>
 </template>
 
@@ -98,6 +119,7 @@ import {
 import { store } from '../../../store';
 import DistrictCard from './DistrictCard.vue';
 import CharacterCard from './CharacterCard.vue';
+import AppModal from '../../common/Modal.vue';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 
@@ -106,6 +128,7 @@ export default defineComponent({
   components: {
     DistrictCard,
     CharacterCard,
+    AppModal,
   },
   props: {
     playerId: { type: String, required: true },
@@ -116,6 +139,11 @@ export default defineComponent({
     exchangeHandMode: { type: Boolean, default: false },
     stash: { type: Number, default: 0 },
     relation: { type: String, default: 'enemy' },
+  },
+  data() {
+    return {
+      pendingDestroy: null as DistrictId | null,
+    };
   },
   computed: {
     ...mapGetters([
@@ -168,14 +196,24 @@ export default defineComponent({
       const cost = store.getters.getDistrictDestroyPrice(this.playerId, name);
       return cost >= 0 && cost <= this.stash;
     },
-    async chooseCardDestroy(name: DistrictId) {
+    chooseCardDestroy(name: DistrictId) {
       if (!this.canDestroy(name)) return;
       if (this.isAllyTarget()) {
-        const ok = window.confirm(
-          this.$t('ui.game.warn_destroy_ally', { name: this.username }) as string,
-        );
-        if (!ok) return;
+        this.pendingDestroy = name;
+        return;
       }
+      this.sendDestroyMove(name);
+    },
+    cancelDestroy() {
+      this.pendingDestroy = null;
+    },
+    confirmDestroy() {
+      if (this.pendingDestroy !== null) {
+        this.sendDestroyMove(this.pendingDestroy);
+        this.pendingDestroy = null;
+      }
+    },
+    async sendDestroyMove(name: DistrictId) {
       try {
         const move: Move = {
           type: MoveType.WARLORD_DESTROY_DISTRICT,

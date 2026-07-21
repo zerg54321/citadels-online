@@ -1,4 +1,4 @@
-import { ClientGameState, GameProgress, GameSetupData, Move, PlayerRole, PlayerId, RoomId, DistrictId, districts, CharacterType } from 'citadels-common';
+import { ClientGameState, GameProgress, GameSetupData, Move, PlayerRole, PlayerId, RoomId, DistrictId, districts, getDistrictDestroyPrice } from 'citadels-common';
 import socket from '../../socket';
 import api from '../../api';
 import { State } from '../index';
@@ -61,28 +61,10 @@ export const gameGetters = {
   isCurrentPlayerSelf(state: GameState, getters: any) {
     return state.gameState !== undefined && state.gameState.self === getters.currentPlayerId;
   },
-  getDistrictDestroyPrice(state: GameState, getters: any) {
-    return (playerId: PlayerId, districtId: DistrictId) => {
-      if (districtId === 'keep') return -1;
-
-      if (state.gameState === undefined) return -1;
-      const player = state.gameState.board.players[playerId];
-      if (player === undefined) return -1;
-
-      if (player.city.length >= state.gameState.settings.completeCitySize) return -1;
-
-      const isBishopDead = state.gameState.board.characters.callable.find(
-        ({ id }) => id === CharacterType.BISHOP + 1,
-      )?.killed ?? false;
-      const isPlayerBishop = player.characters.some(({ id }) => id === CharacterType.BISHOP + 1);
-      if (!isBishopDead && isPlayerBishop) return -1;
-
-      const discount = (
-        player.city.includes('great_wall') && districtId !== 'great_wall'
-      ) ? 0 : 1;
-
-      return Math.max(getters.getDistrictFromId(districtId)?.cost - discount, 0);
-    };
+  getDistrictDestroyPrice(state: GameState) {
+    return (playerId: PlayerId, districtId: DistrictId) => (
+      getDistrictDestroyPrice(state.gameState, playerId, districtId)
+    );
   },
   getPlayerPosition(state: GameState) {
     return (playerId: PlayerId) => state.gameState?.board.playerOrder.indexOf(playerId);

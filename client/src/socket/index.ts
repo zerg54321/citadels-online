@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { ClientGameState } from 'citadels-common';
+import { parseClientGameState } from 'citadels-common';
 import { store } from '../store';
 
 const socket = io('/', {
@@ -7,9 +7,11 @@ const socket = io('/', {
   autoConnect: false,
 });
 
-socket.onAny((event, ...args) => {
-  console.debug('socket:', event, args);
-});
+if (import.meta.env.DEV) {
+  socket.onAny((event, ...args) => {
+    console.debug('socket:', event, args);
+  });
+}
 
 socket.on('connect_error', (err) => {
   console.error('connection error:', err.message);
@@ -47,24 +49,7 @@ socket.on('disconnectPlayer', (playerId) => {
   store.commit('removePlayer', playerId);
 });
 socket.on('update game state', (data) => {
-  const newGameState: ClientGameState = {
-    progress: data.progress,
-    gameMode: data.gameMode,
-    players: data.players,
-    self: data.self,
-    board: {
-      ...data.board,
-      players: data.board?.players,
-    },
-    settings: data.settings,
-    turnDeadlineAt: data.turnDeadlineAt ?? null,
-    teamScores: data.teamScores,
-    matchResult: data.matchResult,
-    lastRoundSummary: data.lastRoundSummary ?? null,
-    lobbyPlayerOrder: data.lobbyPlayerOrder || [],
-    actionFeed: data.actionFeed || [],
-  };
-  store.commit('setGameState', newGameState);
+  store.commit('setGameState', parseClientGameState(data));
 });
 
 socket.on('chat message', (msg) => {

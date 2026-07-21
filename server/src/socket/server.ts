@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 import Debug from 'debug';
 import {
   GameProgress,
-  Move, MoveType, PlayerId, PlayerRole, RoomId,
+  Move, PlayerId, PlayerRole, RoomId,
 } from 'citadels-common';
 import InMemoryGameStore from '../gameManager/InMemoryGameStore';
 import Player from '../game/Player';
@@ -13,6 +13,7 @@ import GameSetupData from '../game/GameSetupData';
 import { verifyAuthToken } from '../auth/jwt';
 import { getPublicUser } from '../db/users';
 import { disposeTurnTimer, getTurnTimer } from '../gameManager/TurnTimer';
+import { validateMove } from '../game/moveValidator';
 
 const debug = Debug('citadels-server');
 
@@ -578,8 +579,9 @@ export function initSocket(io: Server) {
 
     socket.on('make move', (move: Move, callback) => {
       try {
-        if (!move || typeof move.type !== 'number') {
-          callback({ status: 'error', message: 'invalid move format' });
+        const validation = validateMove(move);
+        if (!validation.ok) {
+          callback({ status: 'error', message: validation.message });
           return;
         }
 
@@ -602,11 +604,6 @@ export function initSocket(io: Server) {
 
         if (player.isAutoplay && !player.isAi) {
           callback({ status: 'error', message: 'autoplay enabled — cancel autoplay to play' });
-          return;
-        }
-
-        if (move.type === MoveType.AUTO) {
-          callback({ status: 'error', message: 'invalid move' });
           return;
         }
 

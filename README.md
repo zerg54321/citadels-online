@@ -23,9 +23,11 @@
 
 | 文档 | 说明 |
 |---|---|
+| [docs/IMPROVEMENT_PLAN_2026.md](./docs/IMPROVEMENT_PLAN_2026.md) | 当前优化计划（防 bug / 逻辑抽取 / 测试 / UI 美化） |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 项目分阶段路线与验收目标 |
 | [docs/DEV_DEPLOY.md](./docs/DEV_DEPLOY.md) | 开发与部署约定、构建顺序、VPS 部署说明 |
 | [docs/DEPENDENCY_BASELINE.md](./docs/DEPENDENCY_BASELINE.md) | 依赖基线与升级策略 |
+| [docs/archive/](./docs/archive/) | 已归档文档（旧 `CODE_IMPROVEMENT_PLAN.md` 等） |
 | [scripts/README.md](./scripts/README.md) | 本地调试脚本、自动模拟、回放脚本说明 |
 
 ## 仓库结构

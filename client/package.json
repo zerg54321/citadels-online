@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "lint": "eslint --ext .js,.ts,.vue --ignore-path .gitignore ."
+    "lint": "eslint --ext .js,.ts,.vue --ignore-path .gitignore .",
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@types/twemoji": "^12.1.2",
@@ -34,6 +35,7 @@
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-vue": "^7.7.0",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vue-tsc": "^3.3.7"
   }
 }

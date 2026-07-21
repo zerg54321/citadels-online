@@ -64,14 +64,14 @@ export class TurnTimer {
     const gs = this.room.gameState;
     if (gs.progress !== GameProgress.IN_GAME) {
       this.clearTimers();
-      gs.turnDeadlineAt = null;
+      gs.clearTurnDeadline();
       return;
     }
 
     this.clearTimers();
 
     if (this.shouldDriveNow()) {
-      gs.turnDeadlineAt = null;
+      gs.clearTurnDeadline();
       const actorId = gs.board?.getCurrentPlayerId();
       const actor = actorId ? gs.players.get(actorId) : undefined;
       const delay = (actor && (actor.isAi || actor.isAutoplay) && !this.needsSystemWork())
@@ -90,7 +90,7 @@ export class TurnTimer {
       return;
     }
 
-    gs.turnDeadlineAt = null;
+    gs.clearTurnDeadline();
   }
 
   /** human-vs-AI pacing: longer when pure AI seats act so players can read the board */
@@ -164,8 +164,8 @@ export class TurnTimer {
       this.arm(false);
       return;
     }
-    actor.isAutoplay = true;
-    gs.turnDeadlineAt = null;
+    gs.forceAutoplayForTimeout(actorId);
+    gs.clearTurnDeadline();
     this.pushUpdate();
   }
 

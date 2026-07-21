@@ -67,6 +67,27 @@
     </div>
     <div class="flex-fill"></div>
     <PlayerScore :score="board.score" />
+
+    <AppModal
+      :show="pendingDestroy !== null"
+      :title="$t('ui.game.destroy_confirm_title')"
+      header-class="bg-warning text-white"
+      @close="cancelDestroy"
+    >
+      <p>{{ $t('ui.game.warn_destroy_ally', { name: username }) }}</p>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="cancelDestroy"
+        >{{ $t('ui.cancel') }}</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          @click="confirmDestroy"
+        >{{ $t('ui.confirm') }}</button>
+      </template>
+    </AppModal>
   </div>
 </template>
 
@@ -80,6 +101,7 @@ import { store } from '../../../store';
 import CharactersList from './CharactersList.vue';
 import DistrictCard from './DistrictCard.vue';
 import PlayerScore from './PlayerScore.vue';
+import AppModal from '../../common/Modal.vue';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 
@@ -89,6 +111,7 @@ export default defineComponent({
     DistrictCard,
     CharactersList,
     PlayerScore,
+    AppModal,
   },
   props: {
     playerId: {
@@ -111,6 +134,11 @@ export default defineComponent({
       type: Number,
       default: 0,
     },
+  },
+  data() {
+    return {
+      pendingDestroy: null as DistrictId | null,
+    };
   },
   computed: {
     ...mapGetters([
@@ -148,16 +176,26 @@ export default defineComponent({
       const cost = store.getters.getDistrictDestroyPrice(this.playerId, name);
       return cost >= 0 && cost <= this.stash;
     },
-    async chooseCardDestroy(name: DistrictId) {
+    chooseCardDestroy(name: DistrictId) {
       if (!this.canDestroy(name)) return;
       const myTeam = store.getters.getPlayerFromId(store.state.gameState?.self)?.team;
       const theirTeam = store.getters.getPlayerFromId(this.playerId)?.team;
       if (myTeam != null && theirTeam != null && myTeam === theirTeam) {
-        const ok = window.confirm(
-          this.$t('ui.game.warn_destroy_ally', { name: this.username }) as string,
-        );
-        if (!ok) return;
+        this.pendingDestroy = name;
+        return;
       }
+      this.sendDestroyMove(name);
+    },
+    cancelDestroy() {
+      this.pendingDestroy = null;
+    },
+    confirmDestroy() {
+      if (this.pendingDestroy !== null) {
+        this.sendDestroyMove(this.pendingDestroy);
+        this.pendingDestroy = null;
+      }
+    },
+    async sendDestroyMove(name: DistrictId) {
       try {
         const move: Move = {
           type: MoveType.WARLORD_DESTROY_DISTRICT,

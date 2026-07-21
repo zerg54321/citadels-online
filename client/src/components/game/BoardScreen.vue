@@ -158,11 +158,15 @@ import { mapGetters } from 'vuex';
 import {
   CharacterChoosingStateType as CCST,
   ClientTurnState,
+  computeTeamScores,
   GameMode,
-  MatchResult,
+  getMyTeam as getMyTeamOf,
+  getRelation,
+  getSeatOrder,
+  getTableSlots,
+  isSpectator as isSpectatorOf,
   Move,
   MoveType,
-  PlayerRole,
   TeamId,
 } from 'citadels-common';
 import { store } from '../../store';
@@ -242,80 +246,26 @@ export default defineComponent({
       return this.countdownSecondsLeft !== null && this.countdownSecondsLeft <= 15;
     },
     isSpectator() {
-      const me = this.getPlayerFromId(this.self);
-      if (me?.role === PlayerRole.SPECTATOR) return true;
-      const order = this.gameState?.board?.playerOrder || [];
-      return !order.includes(this.self);
+      if (!this.gameState) return true;
+      return isSpectatorOf(this.gameState);
     },
     myTeam() {
-      if (this.isSpectator) return null;
-      return this.getPlayerFromId(this.self)?.team ?? null;
+      if (!this.gameState) return null;
+      return getMyTeamOf(this.gameState, this.isSpectator);
     },
     relationOf() {
       return (playerId: string) => {
-        if (this.isSpectator || playerId === this.self) return 'self';
-        const t = this.getPlayerFromId(playerId)?.team;
-        const mine = this.myTeam;
-        if (mine == null || t == null || t === TeamId.NONE || mine === TeamId.NONE) {
-          if (this.isSpectator) {
-            const idx = (this.gameState.board.playerOrder || []).indexOf(playerId);
-            return idx % 2 === 0 ? 'ally' : 'enemy';
-          }
-          return 'enemy';
-        }
-        return t === mine ? 'ally' : 'enemy';
+        if (!this.gameState) return 'self' as const;
+        return getRelation(this.gameState, playerId, this.isSpectator);
       };
     },
     seatOrder() {
-      const order = [...(this.gameState.board.playerOrder || [])];
-      if (this.isSpectator || !order.length) return order;
-      const idx = order.indexOf(this.gameState.self);
-      if (idx < 0) return order;
-      return [...order.slice(idx), ...order.slice(0, idx)];
+      if (!this.gameState) return [];
+      return getSeatOrder(this.gameState, this.isSpectator);
     },
     tableSlots() {
-      const order = this.gameState.board.playerOrder || [];
-      const pickOf = (playerId: string) => {
-        const idx = order.indexOf(playerId);
-        return idx >= 0 ? idx + 1 : 0;
-      };
-      const mk = (playerId: string, pos: string) => {
-        const board = this.gameState.board.players[playerId] || {
-          stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [],
-        };
-        return {
-          playerId,
-          pos,
-          pickOrder: pickOf(playerId),
-          relation: this.relationOf(playerId),
-          board: {
-            ...board,
-            crown: order[0] === playerId,
-          },
-        };
-      };
-
-      if (this.isSpectator) {
-        return order.map((pid: string, i: number) => {
-          const pos = i < 3 ? `l${i + 1}` : `r${i - 2}`;
-          return mk(pid, pos);
-        });
-      }
-
-      const rotated = this.seatOrder;
-      const others = rotated.slice(1);
-      const leftThree = others.slice(0, 3);
-      const rightTwo = others.slice(3, 5);
-      const leftTopToBottom = [...leftThree].reverse();
-      const mapped = [
-        ...leftTopToBottom.map((playerId: string, i: number) => ({
-          playerId, pos: ['l1', 'l2', 'l3'][i],
-        })),
-        ...rightTwo.map((playerId: string, i: number) => ({
-          playerId, pos: ['r1', 'r2'][i],
-        })),
-      ];
-      return mapped.map((item) => mk(item.playerId, item.pos));
+      if (!this.gameState) return [];
+      return getTableSlots(this.gameState, this.isSpectator);
     },
     selfBoard() {
       if (this.isSpectator) {
@@ -428,29 +378,12 @@ export default defineComponent({
       );
     },
     liveTeamScores() {
-      const ts = this.gameState?.teamScores;
-      let A = 0;
-      let B = 0;
-      if (ts && (ts.A != null || ts.B != null)) {
-        A = ts.A ?? 0;
-        B = ts.B ?? 0;
-      } else {
-        (this.gameState?.board?.playerOrder || []).forEach((pid: string) => {
-          const meta = this.getPlayerFromId(pid);
-          const total = this.gameState?.board?.players?.[pid]?.score?.total ?? 0;
-          if (meta?.team === TeamId.A) A += total;
-          if (meta?.team === TeamId.B) B += total;
-        });
+      if (!this.gameState) return { A: 0, B: 0, myLabel: 'A', enemyLabel: 'B' };
+      const { A, B } = computeTeamScores(this.gameState);
+      if (!this.isSpectator && this.myTeam === TeamId.B) {
+        return { A: B, B: A, myLabel: 'B', enemyLabel: 'A' };
       }
-      const mine = this.myTeam;
-      if (!this.isSpectator && mine === TeamId.B) {
-        return {
-          A: B, B: A, myLabel: 'B', enemyLabel: 'A',
-        };
-      }
-      return {
-        A, B, myLabel: 'A', enemyLabel: 'B',
-      };
+      return { A, B, myLabel: 'A', enemyLabel: 'B' };
     },
     turnOrderChips() {
       const list = this.charactersList?.callable || [];

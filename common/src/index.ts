@@ -3,6 +3,27 @@ import type { DistrictId } from './districts';
 
 export const districts = districtsJson;
 
+// View-layer pure functions (framework-agnostic; reusable by future React client)
+// Note: view modules import types/enums from index, creating a static import
+// cycle. This is safe at runtime because the view functions only reference
+// those symbols inside function bodies, by which point index.ts has fully loaded.
+// eslint-disable-next-line import/no-cycle
+export { computeTeamScores } from './view/teamScores';
+// eslint-disable-next-line import/no-cycle
+export { getDistrictDestroyPrice } from './view/pricing';
+// eslint-disable-next-line import/no-cycle
+export { parseClientGameState } from './view/parseGameState';
+// eslint-disable-next-line import/no-cycle
+export {
+  isSpectator,
+  getMyTeam,
+  getRelation,
+  getSeatOrder,
+  getTableSlots,
+} from './view/boardLayout';
+// eslint-disable-next-line import/no-cycle
+export type { Relation, TableSlot } from './view/boardLayout';
+
 export type PlayerId = string;
 export type RoomId = string;
 export { DistrictId };

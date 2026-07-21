@@ -4,9 +4,9 @@ import {
   ClientGameState,
   DistrictId,
 } from 'citadels-common';
+import { useStatusBarData } from '@/data/useStatusBarData';
 import DistrictCard from './elements/DistrictCard';
 import CharacterCard from './elements/CharacterCard';
-import { useStatusBarData } from '@/data/useStatusBarData';
 
 interface CenterCharacter {
   id: number;

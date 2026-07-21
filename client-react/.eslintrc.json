@@ -1,0 +1,77 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": [
+    "airbnb-base",
+    "plugin:react/recommended",
+    "plugin:react/jsx-runtime",
+    "plugin:react-hooks/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 12,
+    "ecmaFeatures": { "jsx": true },
+    "sourceType": "module"
+  },
+  "plugins": [
+    "react",
+    "@typescript-eslint",
+    "react-hooks",
+    "react-refresh"
+  ],
+  "rules": {
+    "no-param-reassign": [
+      "error",
+      {
+        "props": true,
+        "ignorePropertyModificationsFor": ["state", "event", "draft"]
+      }
+    ],
+    "no-global-assign": "off",
+    "import/extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "ts": "never",
+        "tsx": "never",
+        "js": "never",
+        "mjs": "never",
+        "jsx": "never"
+      }
+    ],
+    "import/prefer-default-export": "off",
+    "import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
+    "lines-between-class-members": "off",
+    "@typescript-eslint/lines-between-class-members": ["off"],
+    "no-shadow": "off",
+    "@typescript-eslint/no-shadow": "error",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "react/require-default-props": "off",
+    "react/prop-types": "off",
+    "react-refresh/only-export-components": ["warn", { "allowConstantExport": true }],
+    "max-len": ["error", { "code": 140, "ignoreStrings": true, "ignoreTemplateLiterals": true, "ignoreComments": true, "ignoreRegExpLiterals": true }],
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-promise-executor-return": "off",
+    "consistent-return": "off",
+    "no-nested-ternary": "off",
+    "implicit-arrow-linebreak": "off",
+    "no-use-before-define": ["error", { "functions": false, "variables": true }]
+  },
+  "settings": {
+    "react": { "version": "18" },
+    "import/resolver": {
+      "typescript": { "project": "./tsconfig.json", "alwaysTryTypes": true },
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      },
+      "alias": {
+        "map": [["@", "./src"]],
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      }
+    }
+  }
+}

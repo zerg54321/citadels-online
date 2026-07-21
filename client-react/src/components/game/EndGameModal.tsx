@@ -91,7 +91,7 @@ export default function EndGameModal({
   const endSubtitle = matchSummary?.detail || matchSummary?.title || '';
   const endHeaderClass = isWin ? 'bg-success text-white'
     : isLose ? 'bg-danger text-white'
-    : 'bg-secondary text-white';
+      : 'bg-secondary text-white';
 
   const endScoreRows = useMemo<EndScoreRow[]>(() => {
     const order = gameState?.board?.playerOrder || [];

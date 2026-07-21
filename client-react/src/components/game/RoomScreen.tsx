@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useBlocker } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
+import { useAppStore, useIsInRoom } from '@/store';
 import GameScreen from './GameScreen';
 import RoomEntryScreen from './RoomEntryScreen';
-import { useAppStore, useIsInRoom } from '@/store';
 
 // Mirrors Vue RoomScreen.vue. The Vue beforeRouteLeave guard → React Router
 // 6.4+ useBlocker; the beforeunload listener → useEffect. The leave-confirm

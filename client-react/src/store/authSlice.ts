@@ -50,14 +50,14 @@ export const createAuthSlice: StateCreator<AuthSlice, [], [], AuthSlice> = (set,
     socket.auth = authToken ? { token: authToken } : {};
     if (socket.connected) return Promise.resolve();
     return new Promise<void>((resolve, reject) => {
-      const onConnect = () => {
+      function onConnect() {
         socket.off('connect_error', onError);
         resolve();
-      };
-      const onError = (err: Error) => {
+      }
+      function onError(err: Error) {
         socket.off('connect', onConnect);
         reject(err);
-      };
+      }
       socket.once('connect', onConnect);
       socket.once('connect_error', onError);
       socket.connect();

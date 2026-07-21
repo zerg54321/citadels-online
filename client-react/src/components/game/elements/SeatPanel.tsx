@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   DistrictId, Move, MoveType, PlayerBoard,
 } from 'citadels-common';
-import DistrictCard from './DistrictCard';
-import CharacterCard from './CharacterCard';
 import Modal from '@/components/common/Modal';
 import { cn } from '@/utils/cn';
 import {
@@ -15,6 +13,8 @@ import {
   selectDistrictDestroyPrice,
   selectPlayerPosition,
 } from '@/store';
+import CharacterCard from './CharacterCard';
+import DistrictCard from './DistrictCard';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 
@@ -54,7 +54,9 @@ export default function SeatPanel({
   const roleCard = (() => {
     const chars = (board?.characters || []) as Array<{ id: number; faceDown?: boolean; killed?: boolean; robbed?: boolean }>;
     if (!chars.length) {
-      return { show: false, id: 0, faceDown: true, killed: false, robbed: false };
+      return {
+        show: false, id: 0, faceDown: true, killed: false, robbed: false,
+      };
     }
     const revealed = chars.find((c) => c.id > 0 && !c.faceDown);
     if (revealed) {
@@ -66,7 +68,9 @@ export default function SeatPanel({
         robbed: Boolean(revealed.robbed),
       };
     }
-    return { show: true, id: 0, faceDown: true, killed: false, robbed: false };
+    return {
+      show: true, id: 0, faceDown: true, killed: false, robbed: false,
+    };
   })();
 
   const isAllyTarget = relation === 'ally' || relation === 'self';

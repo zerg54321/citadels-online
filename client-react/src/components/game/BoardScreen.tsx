@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,15 +16,6 @@ import {
   type TableSlot,
   type DistrictId,
 } from 'citadels-common';
-import SeatPanel from './elements/SeatPanel';
-import PlayerHand from './elements/PlayerHand';
-import DistrictCard from './elements/DistrictCard';
-import CharacterCard from './elements/CharacterCard';
-import TurnOrderBar from './TurnOrderBar';
-import ActionLog from './ActionLog';
-import ActionPanel from './ActionPanel';
-import CenterPanel from './CenterPanel';
-import EndGameModal from './EndGameModal';
 import { useStatusBarData } from '@/data/useStatusBarData';
 import {
   useAppStore,
@@ -32,6 +25,15 @@ import {
   useCharactersList,
   selectPlayerFromId,
 } from '@/store';
+import SeatPanel from './elements/SeatPanel';
+import PlayerHand from './elements/PlayerHand';
+import DistrictCard from './elements/DistrictCard';
+import CharacterCard from './elements/CharacterCard';
+import TurnOrderBar from './TurnOrderBar';
+import ActionLog from './ActionLog';
+import ActionPanel from './ActionPanel';
+import CenterPanel from './CenterPanel';
+import EndGameModal from './EndGameModal';
 
 // Mirrors Vue BoardScreen.vue (561 lines). The orchestration component that
 // assembles all migrated subcomponents. Vue data() → useState; computed →
@@ -104,11 +106,18 @@ export default function BoardScreen() {
 
   const selfBoard = useMemo(() => {
     if (isSpectator || !gameState) {
-      return { stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [], crown: false } as const;
+      return {
+        stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [], crown: false,
+      } as const;
     }
     const board = gameState.board.players[self] as Record<string, unknown> | undefined;
     return {
-      stash: 0, hand: [], tmpHand: [], city: [], score: {}, characters: [],
+      stash: 0,
+      hand: [],
+      tmpHand: [],
+      city: [],
+      score: {},
+      characters: [],
       ...(board || {}),
       crown: gameState.board.playerOrder[0] === self,
     };
@@ -125,7 +134,11 @@ export default function BoardScreen() {
 
   const selfRoleCard = useMemo(() => {
     const chars = (selfBoard?.characters || []) as Array<{ id: number; faceDown?: boolean; killed?: boolean; robbed?: boolean }>;
-    if (!chars.length) return { show: false, id: 0, faceDown: true, killed: false, robbed: false };
+    if (!chars.length) {
+      return {
+        show: false, id: 0, faceDown: true, killed: false, robbed: false,
+      };
+    }
     const revealed = chars.find((c) => c.id > 0);
     if (revealed) {
       return {
@@ -136,13 +149,24 @@ export default function BoardScreen() {
         robbed: Boolean(revealed.robbed),
       };
     }
-    return { show: true, id: 0, faceDown: true, killed: false, robbed: false };
+    return {
+      show: true, id: 0, faceDown: true, killed: false, robbed: false,
+    };
   }, [selfBoard]);
 
   const modeFlags = useMemo(() => {
     if (!gameState) {
-      return { build: false, destroy: false, kill: false, rob: false, putAside: false,
-        chooseChar: false, exchangeHand: false, discardCards: false, laboratory: false };
+      return {
+        build: false,
+        destroy: false,
+        kill: false,
+        rob: false,
+        putAside: false,
+        chooseChar: false,
+        exchangeHand: false,
+        discardCards: false,
+        laboratory: false,
+      };
     }
     const seated = !isSpectator && isCurrentPlayerSelf;
     const ts = gameState.board.turnState;
@@ -172,12 +196,20 @@ export default function BoardScreen() {
   }, [gameState]);
 
   const liveTeamScores = useMemo(() => {
-    if (!gameState) return { A: 0, B: 0, myLabel: 'A', enemyLabel: 'B' };
+    if (!gameState) {
+      return {
+        A: 0, B: 0, myLabel: 'A', enemyLabel: 'B',
+      };
+    }
     const { A, B } = computeTeamScores(gameState);
     if (!isSpectator && myTeam === TeamId.B) {
-      return { A: B, B: A, myLabel: 'B', enemyLabel: 'A' };
+      return {
+        A: B, B: A, myLabel: 'B', enemyLabel: 'A',
+      };
     }
-    return { A, B, myLabel: 'A', enemyLabel: 'B' };
+    return {
+      A, B, myLabel: 'A', enemyLabel: 'B',
+    };
   }, [gameState, isSpectator, myTeam]);
 
   const turnOrderChips = useMemo(() => {

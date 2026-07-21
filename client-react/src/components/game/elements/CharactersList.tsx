@@ -60,25 +60,25 @@ export default function CharactersList({
   const { t } = useTranslation();
   const sendMove = useAppStore((s) => s.sendMove);
 
-  const processedCharacters = useMemo<ProcessedChar[]>(() => {
-    return characters.map((character) => {
-      const killed = Boolean(character.killed);
-      const robbed = Boolean(character.robbed);
-      const faceUp = Boolean(character.faceUp || character.discardedFaceUp);
-      let selectable = Boolean(character.selectable);
+  const processedCharacters = useMemo<ProcessedChar[]>(() => characters.map((character) => {
+    const killed = Boolean(character.killed);
+    const robbed = Boolean(character.robbed);
+    const faceUp = Boolean(character.faceUp || character.discardedFaceUp);
+    let selectable = Boolean(character.selectable);
 
-      if (killMode) {
-        selectable = character.id > 1 && character.id !== 0 && !character.faceDown;
-      } else if (robMode) {
-        selectable = character.id > 2 && !killed && character.id !== 0
+    if (killMode) {
+      selectable = character.id > 1 && character.id !== 0 && !character.faceDown;
+    } else if (robMode) {
+      selectable = character.id > 2 && !killed && character.id !== 0
           && !character.faceDown && !faceUp;
-      } else if (putAsideMode) {
-        selectable = Boolean(character.selectable);
-      }
+    } else if (putAsideMode) {
+      selectable = Boolean(character.selectable);
+    }
 
-      return { ...character, killed, robbed, faceUp, selectable };
-    });
-  }, [characters, killMode, robMode, putAsideMode]);
+    return {
+      ...character, killed, robbed, faceUp, selectable,
+    };
+  }), [characters, killMode, robMode, putAsideMode]);
 
   if (characters.length === 0) return null;
 

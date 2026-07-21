@@ -87,7 +87,11 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice, [], [], GameSl
     const completeCitySize = players.length === 6 ? 8 : (cfg.completeCitySize ?? 7);
     const t = Number(cfg.actionTimeoutSeconds);
     const actionTimeoutSeconds = Number.isFinite(t) ? Math.min(180, Math.max(10, Math.round(t))) : 120;
-    return { gameSetupData: { ...state.gameSetupData, players, completeCitySize, actionTimeoutSeconds } };
+    return {
+      gameSetupData: {
+        ...state.gameSetupData, players, completeCitySize, actionTimeoutSeconds,
+      },
+    };
   }),
   setSelectedCards: (cards) => set({ selectedCards: cards }),
 
@@ -102,7 +106,9 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice, [], [], GameSl
     return api.getRoomInfo(socket, roomId);
   },
 
-  async joinRoom({ roomId, playerId, username, asSpectator = false }) {
+  async joinRoom({
+    roomId, playerId, username, asSpectator = false,
+  }) {
     await get().connect();
     const gs = await api.joinRoom(socket, roomId, playerId, username, asSpectator);
     localStorage.setItem(roomId, gs.self);

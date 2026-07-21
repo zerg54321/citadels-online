@@ -3,9 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Move, MoveType, DistrictId, TeamId, PlayerBoard,
 } from 'citadels-common';
-import CharactersList from './CharactersList';
-import DistrictCard from './DistrictCard';
-import PlayerScore from './PlayerScore';
 import Modal from '@/components/common/Modal';
 import Emoji from '@/components/common/Emoji';
 import { cn } from '@/utils/cn';
@@ -17,6 +14,9 @@ import {
   selectDistrictDestroyPrice,
   selectPlayerPosition,
 } from '@/store';
+import PlayerScore from './PlayerScore';
+import DistrictCard from './DistrictCard';
+import CharactersList from './CharactersList';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 

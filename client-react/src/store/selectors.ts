@@ -41,15 +41,12 @@ export const useGameState = () => useAppStore((s) => s.gameState);
 // --- Pure selectors (operate on gameState, no subscription) ---
 // Components call these inside useMemo with the gameState from useGameState().
 
-export const selectPlayerFromId = (gs: ClientGameState | undefined) =>
-  (playerId: PlayerId) => gs?.players[playerId];
+export const selectPlayerFromId = (gs: ClientGameState | undefined) => (playerId: PlayerId) => gs?.players[playerId];
 
-export const getDistrictData = (districtId: DistrictId) =>
-  districts[districtId as keyof typeof districts];
+export const getDistrictData = (districtId: DistrictId) => districts[districtId as keyof typeof districts];
 
 export const selectDistrictDestroyPrice = (gs: ClientGameState | undefined) =>
   (playerId: PlayerId, districtId: DistrictId) =>
     getDistrictDestroyPrice(gs, playerId, districtId);
 
-export const selectPlayerPosition = (gs: ClientGameState | undefined) =>
-  (playerId: PlayerId) => gs?.board.playerOrder.indexOf(playerId);
+export const selectPlayerPosition = (gs: ClientGameState | undefined) => (playerId: PlayerId) => gs?.board.playerOrder.indexOf(playerId);

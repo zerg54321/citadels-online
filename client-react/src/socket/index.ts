@@ -7,7 +7,7 @@ import { useAppStore } from '../store';
 const socket: Socket = io('/', { path: '/s/', autoConnect: false });
 
 // Inbound events are registered once here and pushed into the store.
-// Components never register their own socket listeners â€?same seam model as
+// Components never register their own socket listeners ï¿½?same seam model as
 // the Vue client's socket/index.ts.
 socket.on('connect', () => {
   const { currentRoomId, gameState, rejoinCurrentRoom } = useAppStore.getState();

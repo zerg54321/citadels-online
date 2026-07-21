@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Move, MoveType, DistrictId, PlayerBoard, districts } from 'citadels-common';
-import DistrictCard from './DistrictCard';
+import {
+  Move, MoveType, DistrictId, PlayerBoard, districts,
+} from 'citadels-common';
 import Emoji from '@/components/common/Emoji';
 import { useAppStore } from '@/store';
+import DistrictCard from './DistrictCard';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 

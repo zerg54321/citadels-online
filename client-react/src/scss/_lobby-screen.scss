@@ -1,0 +1,123 @@
+// LobbyScreen styles — extracted from Vue scoped <style>. Scoped under
+// .lobby-screen and .lobby-modal so the badge overrides only affect this
+// screen's modal, not the global PlayersList component.
+
+.lobby-screen {
+  .lobby-settings-col {
+    background: rgba(13, 11, 8, 0.35);
+    border-right: 1px solid rgba(212, 175, 55, 0.2);
+  }
+  .lobby-players-col {
+    background: rgba(13, 11, 8, 0.15);
+  }
+  .lobby-alert-info {
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--gold-bright);
+    border-radius: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .lobby-alert-warn {
+    background: rgba(180, 120, 40, 0.12);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--gold);
+    border-radius: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .lobby-title {
+    font-family: var(--font-display);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .lobby-label {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .lobby-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .lobby-players-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+  .lobby-chat-area {
+    flex: 0 0 auto;
+    max-height: 35vh;
+    min-height: 3rem;
+  }
+  .form-control {
+    background: rgba(13, 11, 8, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--parchment);
+
+    &:focus {
+      background: rgba(13, 11, 8, 0.7);
+      border-color: var(--gold);
+      color: var(--gold-bright);
+      box-shadow: 0 0 0 0.15rem rgba(212, 175, 55, 0.15);
+    }
+  }
+}
+
+// Modal (rendered via portal to document.body, so scoped by its own class)
+.lobby-modal {
+  background: var(--bg-panel);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.15);
+
+  .lobby-modal-title {
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .lobby-modal-card {
+    background: rgba(13, 11, 8, 0.45);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .lobby-modal-card-header {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .lobby-table td {
+    border-color: rgba(212, 175, 55, 0.18);
+    padding: 0.45rem 0.5rem;
+  }
+  // Vue :deep() badge overrides for the modal player list
+  .list-group-item {
+    background: transparent;
+    border-color: rgba(212, 175, 55, 0.12);
+    color: var(--parchment);
+  }
+  .badge-info {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--gold-bright);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+  }
+  .badge-success {
+    background: rgba(76, 140, 76, 0.25);
+    color: #a3d9a3;
+    border: 1px solid rgba(76, 140, 76, 0.45);
+  }
+  .badge-secondary {
+    background: rgba(120, 110, 95, 0.2);
+    color: var(--text-muted);
+    border: 1px solid rgba(120, 110, 95, 0.35);
+  }
+}
+
+// Shared by RoomScreen leave-confirm modal too
+.lobby-modal-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

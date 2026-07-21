@@ -21,6 +21,7 @@ export {
   useCharactersList,
   useSelectedCards,
   useGameState,
+  useIsConnected,
   selectPlayerFromId,
   getDistrictData,
   selectDistrictDestroyPrice,

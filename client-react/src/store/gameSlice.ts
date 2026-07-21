@@ -12,10 +12,12 @@ export interface GameSlice {
   gameSetupData: GameSetupData;
   selectedCards: DistrictId[];
   currentRoomId: RoomId | null;
+  isConnected: boolean;
 
   // mutations
   setGameState: (gameState: ClientGameState) => void;
   setCurrentRoomId: (roomId: RoomId | null) => void;
+  setConnected: (connected: boolean) => void;
   resetGameState: () => void;
   addPlayer: (player: any) => void;
   removePlayer: (playerId: PlayerId) => void;
@@ -48,9 +50,11 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
   },
   selectedCards: [],
   currentRoomId: null,
+  isConnected: socket.connected,
 
   setGameState: (gs) => set({ gameState: gs }),
   setCurrentRoomId: (roomId) => set({ currentRoomId: roomId }),
+  setConnected: (connected) => set({ isConnected: connected }),
   resetGameState: () => {
     const { currentRoomId } = get();
     if (currentRoomId) localStorage.removeItem(currentRoomId);

@@ -10,6 +10,7 @@ const socket: Socket = io('/', { path: '/s/', autoConnect: false });
 // Components never register their own socket listeners �?same seam model as
 // the Vue client's socket/index.ts.
 socket.on('connect', () => {
+  useAppStore.getState().setConnected(true);
   const { currentRoomId, gameState, rejoinCurrentRoom } = useAppStore.getState();
   if (currentRoomId && gameState) {
     rejoinCurrentRoom();
@@ -21,6 +22,7 @@ socket.on('connect_error', (err: Error) => {
 });
 
 socket.on('disconnect', () => {
+  useAppStore.getState().setConnected(false);
   console.log('[socket] disconnected');
 });
 

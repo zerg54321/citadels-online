@@ -578,6 +578,11 @@ export function initSocket(io: Server) {
 
     socket.on('make move', (move: Move, callback) => {
       try {
+        if (!move || typeof move.type !== 'number') {
+          callback({ status: 'error', message: 'invalid move format' });
+          return;
+        }
+
         const room = gameStore.findRoom(socket.roomId);
         if (!room) {
           callback({ status: 'error', message: 'room id is invalid' });

@@ -206,6 +206,7 @@ export default defineComponent({
       /** end-game result dialog; can dismiss without leaving room */
       showEndModal: true,
       showSetupConfirm: false,
+      _isUnmounted: false,
     };
   },
   computed: {
@@ -563,6 +564,7 @@ export default defineComponent({
     }, 250);
   },
   beforeUnmount() {
+    this._isUnmounted = true;
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     if (this.eventBannerTimer) clearTimeout(this.eventBannerTimer);
     this.showSetupConfirm = false;
@@ -580,6 +582,7 @@ export default defineComponent({
           this.showEvent(last.text);
         }
         this.$nextTick(() => {
+          if (this._isUnmounted) return;
           const el = this.$refs.actionLogList as HTMLElement | undefined;
           if (el) el.scrollTop = el.scrollHeight;
         });

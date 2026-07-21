@@ -100,6 +100,9 @@ export const gameMutations = {
     state.currentRoomId = roomId;
   },
   resetGameState(state: GameState) {
+    if (state.currentRoomId) {
+      localStorage.removeItem(state.currentRoomId);
+    }
     state.gameState = undefined;
     state.currentRoomId = null;
   },

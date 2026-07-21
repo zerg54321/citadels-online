@@ -43,14 +43,16 @@ app.use('/replays', express.static(path.resolve(__dirname, '../replays')));
 const io = new Server(http, {
   path: '/s/',
   cors: {
-    origin: true,
+    origin: process.env.NODE_ENV === 'production'
+      ? (process.env.CORS_ORIGIN || 'http://localhost:8081')
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   },
 });
 initSocket(io);
 
-app.use(history());
 app.use(express.static('../client/dist'));
+app.use(history());
 
 http.listen(port, () => {
   console.log(`Citadels game server listening on http://localhost:${port}`);

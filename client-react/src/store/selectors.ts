@@ -30,9 +30,7 @@ export const useIsCurrentPlayerSelf = () => useAppStore((s) => {
   return s.gameState.self === cp;
 });
 
-export const useCharactersList = () => useAppStore((s) => ({
-  ...s.gameState?.board.characters,
-}));
+export const useCharactersList = () => useAppStore((s) => s.gameState?.board.characters);
 
 export const useSelectedCards = () => useAppStore((s) => s.selectedCards);
 

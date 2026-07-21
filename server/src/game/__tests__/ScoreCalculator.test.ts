@@ -16,12 +16,12 @@ import { refreshLiveScores } from '../ScoreCalculator';
  * +2 later), 5-color bonus (+3), team aggregation, and final match-result
  * resolution (A win / B win / draw).
  *
- * NOTE on a known scoring bug: `districts.json` declares `extra_points: 2` for
- * `dragon_gate` and `university`, but `DistrictCard.ts` reads `data.extraPoints`
- * (camelCase) while the JSON key is `extra_points` (snake_case) — so the bonus
- * never takes effect and those districts contribute only their `cost` to `base`.
- * The test "dragon_gate contributes cost only (known extraPoints bug)" pins this
- * current behavior; if the bug is fixed, update that assertion to 8.
+ * NOTE: `districts.json` declares `extra_points: 2` (snake_case) for
+ * `dragon_gate` and `university`; `DistrictCard.ts` normalizes this to
+ * `card.extraPoints` so both districts correctly contribute cost + 2 to
+ * `base`. The test "dragon_gate contributes cost + extra_points" verifies
+ * this. (Previously a key-name mismatch silently dropped the +2; fixed
+ * 2026-07-21 in Phase 4.0.)
  */
 
 const SIX = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
@@ -188,9 +188,9 @@ describe('refreshLiveScores — 3v3 scoring', () => {
     expect(totalOf(gs, 'p1')).toBe(24);
   });
 
-  it('dragon_gate contributes cost only (known extraPoints bug)', () => {
+  it('dragon_gate contributes cost + extra_points (2)', () => {
     const gs = create3v3State();
-    // dragon_gate: cost 6, extra_points:2 in JSON but NOT applied (key mismatch)
+    // dragon_gate: cost 6, extra_points: 2 → base = 8
     setCity(gs, 'p1', ['dragon_gate']);
     setCity(gs, 'p2', []);
     setCity(gs, 'p3', []);
@@ -200,8 +200,7 @@ describe('refreshLiveScores — 3v3 scoring', () => {
 
     refreshLiveScores(gs, false);
 
-    // base = 6 (cost), no +2 extra → 6. If bug fixed, this should be 8.
-    expect(totalOf(gs, 'p1')).toBe(6);
+    expect(totalOf(gs, 'p1')).toBe(8);
   });
 
   it('finalize=true sets TEAM_A_WIN when A > B', () => {

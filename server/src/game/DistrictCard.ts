@@ -43,16 +43,25 @@ type DistrictsMap = Map<DistrictId, { card: DistrictCard, count: number }>;
 // create districts Map from JSON
 export const ALL_DISTRICTS = (Object.keys(districts) as DistrictId[]).reduce(
   (res: DistrictsMap, districtId) => {
-    const data = {
-      // default values
-      count: 1,
-      extraPoints: 0,
-      // actual values
-      ...districts[districtId as keyof typeof districts],
+    // districts.json uses snake_case keys; only dragon_gate/university carry
+    // `extra_points`, and `count` is omitted on single-copy districts. Cast to
+    // a permissive shape so the union inferred from JSON doesn't trip TS.
+    const raw = districts[districtId as keyof typeof districts] as {
+      type: DistrictType;
+      cost: number;
+      count?: number;
+      extra_points?: number;
     };
+    // normalize snake_case JSON → camelCase DistrictCard fields so the rest
+    // of the engine can use `card.extraPoints` uniformly.
     return res.set(districtId, {
-      card: new DistrictCard(districtId, data.type, data.cost, data.extraPoints),
-      count: data.count,
+      card: new DistrictCard(
+        districtId,
+        raw.type,
+        raw.cost,
+        raw.extra_points ?? 0,
+      ),
+      count: raw.count ?? 1,
     });
   }, new Map(),
 );

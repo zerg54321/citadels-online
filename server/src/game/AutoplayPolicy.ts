@@ -34,7 +34,10 @@ const CARD_TYPE: Record<string, number> = Object.fromEntries(
 );
 
 const CARD_EXTRA: Record<string, number> = Object.fromEntries(
-  Object.entries(districts).map(([id, d]) => [id, (d as { extraPoints?: number }).extraPoints ?? 0]),
+  Object.entries(districts).map(([id, d]) => {
+    const extra = (d as { extra_points?: number }).extra_points ?? 0;
+    return [id, extra];
+  }),
 );
 
 const GE_GOLD = 1;

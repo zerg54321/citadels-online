@@ -76,7 +76,11 @@ export default class PlayerBoardState {
     const earnings = districtType === undefined ? 0 : this.city.filter((card) => (
       ALL_DISTRICTS.get(card)?.card.type === districtType
     )).length;
-    const extraEarnings = this.city.includes('school_of_magic') ? 1 : 0;
+    // school_of_magic counts as any color, but only earning characters
+    // (King/Bishop/Merchant/Warlord — i.e. those with a matching district
+    // type) collect from it. Non-earning characters (Assassin/Thief/
+    // Magician/Architect) never collect earnings, including from school.
+    const extraEarnings = (districtType !== undefined && this.city.includes('school_of_magic')) ? 1 : 0;
 
     return earnings + extraEarnings;
   }

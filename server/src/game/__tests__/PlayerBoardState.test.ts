@@ -196,16 +196,22 @@ describe('PlayerBoardState — computeEarningsForCharacter', () => {
     expect(b.computeEarningsForCharacter(CharacterType.WARLORD)).toBe(1); // school only
   });
 
-  it('school_of_magic adds +1 to ALL characters incl. non-earners (current behavior)', () => {
-    // NOTE: computeEarningsForCharacter adds extraEarnings unconditionally
-    // when school_of_magic is in city — it does NOT check whether the
-    // character is an earning type. This pins current behavior; if the
-    // rule is tightened to earning characters only, update these to 0.
+  it('school_of_magic does NOT add earnings to non-earning characters', () => {
+    // Rule: school_of_magic counts as any color, but only earning
+    // characters (King/Bishop/Merchant/Warlord) collect from it. Assassin/
+    // Thief/Magician/Architect never collect earnings, including from school.
     const b = makeBoard(5, [], ['school_of_magic']);
-    expect(b.computeEarningsForCharacter(CharacterType.ASSASSIN)).toBe(1);
-    expect(b.computeEarningsForCharacter(CharacterType.MAGICIAN)).toBe(1);
-    expect(b.computeEarningsForCharacter(CharacterType.THIEF)).toBe(1);
-    expect(b.computeEarningsForCharacter(CharacterType.ARCHITECT)).toBe(1);
+    expect(b.computeEarningsForCharacter(CharacterType.ASSASSIN)).toBe(0);
+    expect(b.computeEarningsForCharacter(CharacterType.MAGICIAN)).toBe(0);
+    expect(b.computeEarningsForCharacter(CharacterType.THIEF)).toBe(0);
+    expect(b.computeEarningsForCharacter(CharacterType.ARCHITECT)).toBe(0);
+  });
+
+  it('non-earning characters still earn 0 even with school + matching districts', () => {
+    // School must not leak +1 to non-earners even when other districts exist.
+    const b = makeBoard(5, [], ['manor', 'temple', 'school_of_magic']);
+    expect(b.computeEarningsForCharacter(CharacterType.ASSASSIN)).toBe(0);
+    expect(b.computeEarningsForCharacter(CharacterType.MAGICIAN)).toBe(0);
   });
 
   it('mixed city earns correctly for each character', () => {

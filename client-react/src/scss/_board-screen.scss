@@ -1,0 +1,43 @@
+// BoardScreen-specific styles — extracted from Vue scoped <style>. These two
+// rules live on the BoardScreen root element and aren't covered by the
+// shared board-table.scss grid layout.
+.board-table__end-bar {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.board-table__leave-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: var(--gold);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: var(--gold-bright);
+    color: var(--gold-bright);
+  }
+}
+
+// RoomScreen scoped style: ensure the board table fills the flex container.
+.room-screen .board-table {
+  flex: 1 1 auto;
+  width: 100%;
+}

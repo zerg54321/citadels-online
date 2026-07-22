@@ -1009,13 +1009,14 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights, forceAssassin);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
 
-			// V3(MCTS): 如果硬编码刺客已生效(刺客在池中且forceAssassin=true)，不走MCTS
+			// V3(MCTS): forceAssassin=true 时，对队伍首发(P1/P4)硬编码刺客不走MCTS
 			const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 			if (useMCTS && remaining.length > 0) {
 				const meta = gameState.players.get(actorId);
 				const assassinInPool = remaining.includes(CharacterType.ASSASSIN);
-				if (forceAssassin && assassinInPool && remaining.length >= 6) {
-					// 首发且刺客在池中 → 保持硬编码，不走 MCTS
+				const isTeamLead = actorId === board.playerOrder[0] || actorId === board.playerOrder[3];
+				if (forceAssassin && assassinInPool && isTeamLead) {
+					// 队伍首发且刺客在池中 → 保持硬编码
 				} else {
 					const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
 					if (mctsMove) {

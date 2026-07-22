@@ -569,17 +569,27 @@ describe('AI 详细评估', () => {
 				if (move) {
 					metrics.audit.aiMoveCount += 1;
 					// 统计首发选刺客率（仅首轮）
-					if (move.type === 1 && gs.board && roundNum <= 1) {
-						const p1Id = gs.board.playerOrder[0];
-						if (actorId === p1Id) {
-							if (actor?.team === TeamId.A) {
+					if (move.type === 1 && gs.board && gs.board.gamePhase === 1) {
+						const st = cm.choosingState.getState();
+						// stateNumber: 2=CHOOSE_CHARACTER_P1, 5=CHOOSE_CHARACTER_P4(6P)
+						// st.player 是 playerOrder 索引(0-5),不是 PlayerPosition 枚举值
+						const isP1 = st.type === 4 && st.player === 0; // playerOrder[0]
+						const isP4 = st.type === 4 && st.player === 3; // playerOrder[3]
+						if (isP1 && roundNum === 0) {
+							const assassinAside = cm.characters[CharacterType.ASSASSIN] === CharacterPosition.ASIDE_FACE_DOWN;
+							if (!assassinAside) {
 								aTotalP1Picks += 1;
 								if (cm.characters[CharacterType.ASSASSIN] === CharacterPosition.PLAYER_1) {
 									aAssassinPicks += 1;
 								}
-							} else {
+							}
+						}
+						if (isP4 && roundNum === 0) {
+							const assassinAside = cm.characters[CharacterType.ASSASSIN] === CharacterPosition.ASIDE_FACE_DOWN;
+							if (!assassinAside) {
 								bTotalP1Picks += 1;
-								if (cm.characters[CharacterType.ASSASSIN] === CharacterPosition.PLAYER_1) {
+								// PLAYER_1+3 = 6 (B队首发座位对应)
+								if (cm.characters[CharacterType.ASSASSIN] === 6) {
 									bAssassinPicks += 1;
 								}
 							}
@@ -614,7 +624,7 @@ describe('AI 详细评估', () => {
 		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
 		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
 		console.log(`\n首发选刺客率:`);
-		console.log(`  A队(V3Unforced无硬编码): ${aAssassinPicks}/${aTotalP1Picks} = ${aTotalP1Picks ? ((aAssassinPicks / aTotalP1Picks) * 100).toFixed(1) : 'N/A'}%`);
+		console.log(`  A队(V3Unforced无硬编码): ${aAssassinPicks}/${aTotalP1Picks} = ${aTotalP1Picks ? ((aAssassinPicks / aTotalP1Picks) * 100).toFixed(1) : 'N/A'}%（注：P1先选，P4时刺客常已被选走）`);
 		console.log(`  B队(V3硬编码): ${bAssassinPicks}/${bTotalP1Picks} = ${bTotalP1Picks ? ((bAssassinPicks / bTotalP1Picks) * 100).toFixed(1) : 'N/A'}%`);
 		console.log('================================\n');
 		expect(finished).toBeGreaterThan(0);

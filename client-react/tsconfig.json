@@ -16,10 +16,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": ".",
     "paths": {
-      "citadels-common": ["../common/src/index.ts"],
-      "@/*": ["src/*"]
+      "citadels-common": ["./../common/src/index.ts"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],

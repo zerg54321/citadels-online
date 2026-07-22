@@ -22,7 +22,7 @@ import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
 import { CharacterPosition } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
-import { pickV1, pickV2, scoreCharacterPick } from '../game/AutoplayPolicy';
+import { pickV1, pickV2, pickV3, scoreCharacterPick } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
 
 // ─── 常量 ─────────────────────────────────────────────────────────
@@ -31,14 +31,14 @@ const MAX_STEPS = 50000;
 const GAMES = 10;
 const BATTLE_GAMES = 100;
 
-/** 评估中 A 队用 V2(排除法推理+口诀)，B 队用 V1(仅口诀) */
+/** 评估中 A 队用 V3(MCTS)，B 队用 V2(排除法) */
 function teamPick(gs: GameState): ((gs: GameState) => Move | null) | null {
 	if (!gs.board) return null;
 	const actorId = gs.board.getCurrentPlayerId();
 	if (!actorId) return null;
 	const player = gs.players.get(actorId);
 	if (!player) return null;
-	return player.team === TeamId.A ? pickV2 : pickV1;
+	return player.team === TeamId.A ? pickV3 : pickV2;
 }
 
 const CHAR_NAMES: Record<number, string> = {
@@ -492,7 +492,7 @@ describe('AI 详细评估', () => {
 		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
 	});
 
-	it(`双策略对战 ${BATTLE_GAMES} 局 (A队V2排除法 vs B队V1口诀)`, () => {
+	it(`双策略对战 ${BATTLE_GAMES} 局 (A队V3 MCTS vs B队V2排除法)`, { timeout: 600000 }, () => {
 		const all: PerGameMetrics[] = [];
 		const start = Date.now();
 		for (let i = 0; i < BATTLE_GAMES; i += 1) {
@@ -521,7 +521,7 @@ describe('AI 详细评估', () => {
 		const avgAutoPerGame = totalAutoSteps / BATTLE_GAMES;
 		console.log(`\n======= 双策略对战报告 (${elapsed}s) =======`);
 		console.log(`局数: ${BATTLE_GAMES}  完成: ${all.filter((m) => m.finished).length}`);
-		console.log(`A队(V2)胜: ${aWins}  B队(V1)胜: ${bWins}  平: ${draws}`);
+		console.log(`A队(MCTS)胜: ${aWins}  B队(V2)胜: ${bWins}  平: ${draws}`);
 		console.log(`胜负比: ${(aWins / Math.max(bWins, 1)).toFixed(2)}`);
 		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
 		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);

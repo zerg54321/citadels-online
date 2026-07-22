@@ -19,6 +19,7 @@ import {
 	ClientTurnState,
 	DistrictId,
 	GamePhase,
+	GameProgress,
 	Move,
 	MoveType,
 	TeamId,
@@ -953,7 +954,7 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' = 'v2'): Move | null {
+export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v3'): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -977,8 +978,9 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	// =====================================================================
 	// 选角阶段
 	// =====================================================================
-	const useSeatWeights = version === 'v1' || version === 'v2';
-	const usePredV2 = version === 'v2';
+	const useSeatWeights = version === 'v1' || version === 'v2' || version === 'v3';
+	const usePredV2 = version === 'v2' || version === 'v3';
+	const useMCTS = version === 'v3';
 
 	if (board.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
 		const t = cm.choosingState.getState().type;
@@ -1004,6 +1006,19 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 			}
 			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
+
+			// V3(MCTS): 非首发且池中有剩余时，用 MCTS 选角替代静态评分
+			if (useMCTS) {
+				const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+				if (remaining.length > 0) {
+					const meta = gameState.players.get(actorId);
+					const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
+					if (mctsMove) {
+						return tryMoves(gameState, [mctsMove]);
+					}
+				}
+			}
+
 			for (let i = 0; i < 8; i += 1) if (i !== best) moves.push({ type: MoveType.CHOOSE_CHARACTER, data: i });
 			return tryMoves(gameState, moves);
 		}
@@ -1232,15 +1247,83 @@ export function pickV0(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v0');
 }
 
-/** V1 版本（含口诀座位权重+同色截断+墓地铁匠→国王） */
+/** V1 版本 */
 export function pickV1(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v1');
 }
 
-/** V2 版本（V1 + 排除法推理 + 特殊建筑联动尚未加入），用于 AB 对比评估 */
+/** V2 版本（V1 + 排除法推理） */
 export function pickV2(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v2');
 }
 
+/** V3 版本（V2 + MCTS 选角）—— 默认策略 */
+export function pickV3(gs: GameState): Move | null {
+	return pickAndApplyAutoplayMove(gs, 'v3');
+}
+
 /** 导出评分函数供评估脚本使用 */
 export { scoreCharacterPick, buildScore };
+
+// =====================================================================
+// V3：MCTS 选角（通过 rollout 模拟评估每个候选角色的长远影响）
+// =====================================================================
+
+const MCTS_ROLLOUTS = 10;
+const MCTS_MAX_STEPS = 6000;
+
+function mctsRollout(gs: GameState): number {
+	let steps = 0;
+	while (steps < MCTS_MAX_STEPS) {
+		steps += 1;
+		if (gs.progress === GameProgress.FINISHED) break;
+		const move = pickAndApplyAutoplayMove(gs, 'v2');
+		if (move) continue;
+		gs.step({ type: MoveType.AUTO });
+	}
+	if (gs.progress === GameProgress.FINISHED) {
+		return (gs.teamScores?.A ?? 0) - (gs.teamScores?.B ?? 0);
+	}
+	let teamAScore = 0;
+	let teamBScore = 0;
+	if (gs.board) {
+		gs.board.playerOrder.forEach((pid, idx) => {
+			const pb = gs.board?.players.get(pid);
+			const cityScore = pb?.city.reduce((s, c) => s + (costOf(c) + (CARD_EXTRA[c] ?? 0)), 0) ?? 0;
+			if (idx % 2 === 0) teamAScore += cityScore;
+			else teamBScore += cityScore;
+		});
+	}
+	return teamAScore - teamBScore;
+}
+
+function mctsPick(
+	gs: GameState, actorId: string,
+	remaining: number[],
+	team: TeamId,
+): Move | null {
+	const scores: { ch: number; totalScore: number }[] = [];
+	for (const ch of remaining) {
+		let totalScore = 0;
+		for (let r = 0; r < MCTS_ROLLOUTS; r += 1) {
+			const fork = gs.clone();
+			const idx = fork.board!.characterManager
+				.getCharactersAtPosition(0)
+				.indexOf(ch);
+			if (idx >= 0) {
+				const ok = fork.step({ type: MoveType.CHOOSE_CHARACTER, data: idx });
+				if (ok) {
+					const adv = mctsRollout(fork);
+					totalScore += (team === TeamId.A) ? adv : -adv;
+				}
+			}
+		}
+		scores.push({ ch, totalScore });
+	}
+	scores.sort((a, b) => b.totalScore - a.totalScore);
+	const best = scores[0];
+	if (!best) return null;
+	const bestIdx = remaining.indexOf(best.ch);
+	if (bestIdx < 0) return null;
+	return { type: MoveType.CHOOSE_CHARACTER, data: bestIdx };
+}

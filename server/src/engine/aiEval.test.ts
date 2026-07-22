@@ -22,7 +22,7 @@ import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
 import { CharacterPosition } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
-import { pickV1, pickV2, pickV3, scoreCharacterPick } from '../game/AutoplayPolicy';
+import { pickV1, pickV2, pickV3, pickV3Unforced, scoreCharacterPick } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
 
 // ─── 常量 ─────────────────────────────────────────────────────────
@@ -533,5 +533,55 @@ describe('AI 详细评估', () => {
 		else console.log(`异常局: 0`);
 		console.log('================================\n');
 		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
+	});
+
+	it('首发硬编码测试 10 局 (A队V3Unforced无硬编码 vs B队V3硬编码)', { timeout: 120000 }, () => {
+		const all: PerGameMetrics[] = [];
+		for (let i = 0; i < 10; i += 1) {
+			const gs = createGame();
+			const metrics: PerGameMetrics = {
+				picks: [], assassinations: [], thefts: [],
+				resourceDecisions: [], specialActions: [], incomeMatches: [],
+				pickQualityRecords: [],
+				citySizes: [], scoreA: 0, scoreB: 0, matchResult: undefined,
+				steps: 0, finished: false,
+				audit: { aiMoveCount: 0, autoStepCount: 0, noopSequences: 0, lastStateSignature: '' },
+			};
+			while (metrics.steps < MAX_STEPS) {
+				metrics.steps += 1;
+				if (gs.progress === GameProgress.FINISHED) break;
+				const actorId = gs.board?.getCurrentPlayerId();
+				const actor = actorId ? gs.players.get(actorId) : undefined;
+				const pickFn = actor?.team === TeamId.A ? pickV3Unforced : pickV3;
+				const move = pickFn(gs);
+				if (move) { metrics.audit.aiMoveCount += 1; continue; }
+				gs.step({ type: MoveType.AUTO });
+				metrics.audit.autoStepCount += 1;
+			}
+			const done = gs.progress === GameProgress.FINISHED;
+			if (gs.board) {
+				gs.board.playerOrder.forEach((pid) => metrics.citySizes.push(gs.board!.players.get(pid)?.city.length ?? 0));
+			}
+			metrics.scoreA = gs.teamScores?.A ?? 0;
+			metrics.scoreB = gs.teamScores?.B ?? 0;
+			metrics.matchResult = gs.matchResult;
+			metrics.finished = done;
+			all.push(metrics);
+		}
+		const aWins = all.filter((m) => m.matchResult === MatchResult.TEAM_A_WIN).length;
+		const bWins = all.filter((m) => m.matchResult === MatchResult.TEAM_B_WIN).length;
+		const draws = all.filter((m) => m.matchResult === MatchResult.DRAW).length;
+		const avgScoreA = all.reduce((s, m) => s + m.scoreA, 0) / all.length;
+		const avgScoreB = all.reduce((s, m) => s + m.scoreB, 0) / all.length;
+		const avgCityA = all.reduce((s, m) => s + [m.citySizes[0], m.citySizes[2], m.citySizes[4]].reduce((a, c) => a + c, 0), 0) / (all.length * 3);
+		const avgCityB = all.reduce((s, m) => s + [m.citySizes[1], m.citySizes[3], m.citySizes[5]].reduce((a, c) => a + c, 0), 0) / (all.length * 3);
+		const finished = all.filter((m) => m.finished).length;
+		console.log(`\n======= 首发硬编码测试 =======`);
+		console.log(`局数: ${all.length}  完成: ${finished}`);
+		console.log(`A队(V3Unforced无硬编码)胜: ${aWins}  B队(V3硬编码)胜: ${bWins}  平: ${draws}`);
+		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
+		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
+		console.log('================================\n');
+		expect(finished).toBeGreaterThan(0);
 	});
 });

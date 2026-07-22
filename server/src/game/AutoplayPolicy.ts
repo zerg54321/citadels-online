@@ -453,15 +453,17 @@ function colorInterceptScore(
 	return 0;
 }
 
-/** 选角入口：决定选哪个角色。AI 首发必拿刺客。 */
-function pickBestCharacterIndex(gs: GameState, actorId: string, useSeatWeights = true): number {
+/** 选角入口：决定选哪个角色。AI 首发必拿刺客（forceAssassin=true 时）。 */
+function pickBestCharacterIndex(gs: GameState, actorId: string, useSeatWeights = true, forceAssassin = true): number {
 	if (!gs.board) return 0;
 	const remaining = gs.board.characterManager.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 	if (!remaining.length) return 0;
 
 	// 首发：如果有刺客，必拿刺客
-	const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
-	if (assassinIdx >= 0) return assassinIdx;
+	if (forceAssassin) {
+		const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
+		if (assassinIdx >= 0) return assassinIdx;
+	}
 
 	let bestIdx = 0;
 	let bestScore = -1e9;
@@ -954,7 +956,7 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v3'): Move | null {
+export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v3', forceAssassin = true): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -1004,7 +1006,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 				const moves = order.map((o) => ({ type: MoveType.CHOOSE_CHARACTER, data: o.idx } as Move));
 				return tryMoves(gameState, moves.length ? moves : [{ type: MoveType.CHOOSE_CHARACTER, data: 0 }]);
 			}
-			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights);
+			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights, forceAssassin);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
 
 			// V3(MCTS): 非首发且池中有剩余时，用 MCTS 选角替代静态评分
@@ -1242,7 +1244,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	}
 }
 
-export default { pickAndApplyAutoplayMove };
+export default { pickAndApplyAutoplayMove, pickV3Unforced };
 export function pickV0(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v0');
 }
@@ -1260,6 +1262,11 @@ export function pickV2(gs: GameState): Move | null {
 /** V3 版本（V2 + MCTS 选角）—— 默认策略 */
 export function pickV3(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v3');
+}
+
+/** V3Unforced: V3 但首发不硬编码刺客，MCTS 自己 decide */
+export function pickV3Unforced(gs: GameState): Move | null {
+	return pickAndApplyAutoplayMove(gs, 'v3', false);
 }
 
 /** 导出评分函数供评估脚本使用 */

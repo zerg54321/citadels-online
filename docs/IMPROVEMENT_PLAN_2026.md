@@ -414,6 +414,64 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 
 ---
 
+### 阶段五：AI 策略增强 + 评估体系 + 开局流程优化 ✅ 已完成（2026-07-22）
+
+> 目标：提升 AI 决策质量，建立自动化评估体系，优化开局流程提升游戏体验。
+
+#### 5.1 AI 策略重写
+
+重写 `server/src/game/AutoplayPolicy.ts`，核心改动：
+
+| 模块 | 改动 |
+|---|---|
+| 选角评分 | 全函数加中文注释；保留首发必拿刺客的硬编码（实践验证；后期极端场景可通过软评分自然放掉） |
+| 团队保护 | 队友有大量金币时刺客评分 +N（可刺盗贼保护）；队友手牌多时同样加权重 |
+| `predictLikelyRoles` 收紧 | 移除魔术师/商人的宽松触发条件（之前导致刺客总是刺魔术师/盗贼总是偷商人）；收紧为只输出高确信预测 |
+| 刺杀权重修正 | 魔术师基础威胁分从 1 提到 3，`predictLikelyRoles` 加入手牌多→魔术师的预测（`hc>=3`时） |
+| 铁匠铺策略 | 城市有铁匠铺 + 手牌少 → 绝不二选一选牌（2金买 3 张 vs 2金买 1 张），优先拿金后使用铁匠铺 |
+| 实验室策略 | 手牌多时主动用实验室卖低价值牌换金 |
+| 建筑师联动 | 有实验室时建筑师评分 +4（每轮 2 金 + 2 牌 + 卖 1 无用牌 = 3 金 1 牌，空手起建筑） |
+| 收租顺序 | 先建建筑→手动收租→再拿资源，让新建城区参与当轮收租 |
+| 军阀摧毁评分 | 拆后余量评分（拆完还能盖→+12，否则→-5）；拆已全色对手 +15；高价值建筑（铁匠铺/实验室/魔法学校）+15 递减；阻止建成 +50/+20 |
+| 墓地回收 | 墓地有牌且付得起时回收 |
+
+#### 5.2 AI 自动评估体系
+
+新增 `server/src/engine/aiEval.test.ts`，纯内存跑多局 3v3 AI vs AI，输出详细统计：
+
+- 选角偏好：各角色被选次数 + 首发/中位/末位分布
+- 刺杀目标分布：132 次刺杀样本，军阀/商人/建筑师 占主导，魔术师由 0→6 次（修复后）
+- 资源决策：拿金 44% / 抽牌 56% 平衡
+- 特殊建筑使用率：铁匠铺/实验室/墓地回收统计
+- 10 局约 70ms，全完成率 100%
+
+**用法**：
+```
+npm --prefix server exec vitest run -- --reporter verbose src/engine/aiEval.test.ts
+```
+
+#### 5.3 开局流程优化
+
+| # | 改动 | 文件 | 说明 |
+|---|---|---|---|
+| 1 | 随机首发 | `GameState.setupGame` | Fisher-Yates 洗牌打乱 playerOrder，实现首轮首发玩家随机 |
+| 2 | 初始二选一手牌 | `BoardState.ts` + `GameFlowController.ts` + `AutoplayPolicy.ts` | 每人初始抽 2 张到 tmpHand，按 playerOrder 依次选 1 张保留，弃牌放回牌库底，选完后进入选角阶段 |
+| 3 | 状态栏适配 | `statusBar.ts` / `locale.*.json` | INITIAL 阶段检测选牌状态显示 `choose_card` 消息 |
+| 4 | 点击提示 | `PlayerHand.tsx` | tmpHand 显示区加"点击要保留的牌"提示 |
+| 5 | UI 布局修复 | `_board-table.scss` | `__self-city` max-height 5.5→10rem（两行建筑）；`__self-panel` `justify-content: space-between` + `__self-hand` `margin-top: auto` 沉底 |
+| 6 | 轮次信息清空 | `GameFlowController.ts` | 选角阶段 INITIAL→PUT_ASIDE_FACE_DOWN 时清除上一轮 `lastRoundSummary`，修复军阀被刺杀后信息不更新 |
+| 7 | 防御无限刷屏 | `TurnTimer.ts:134` | 初始选牌阶段 `needsSystemWork()` 返回 false，防止每 40ms `update game state` 推送 |
+
+#### 5.4 实验室费用修正
+
+`ActionExecutor.ts:113` `stash += 2` → `stash += 1`，与标准规则对齐（弃 1 牌换 1 金）。
+
+#### 5.5 测试适配
+
+因随机首发破坏了固定 p1=A 的假设，修复 `ScoreCalculator.test.ts`（动态从 `playerOrder` 推断队伍）和 `engineConsistency.test.ts`（不从外部 GameState 取 playerOrder）。86 测试全绿。
+
+---
+
 ## 5. 推进节奏
 
 ```
@@ -423,7 +481,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 之后：阶段四 UI 审计 → 定基调 → 分批美化
 ```
 
-阶段一/二/三 串行（每步验证后再下一步）；阶段一/二/三 已全部完成（2026-07-21），阶段四已完成（2026-07-22，React 重构 + UI 现代化）。
+**阶段一/二/三 串行（每步验证后再下一步）；阶段一/二/三 已全部完成（2026-07-21），阶段四已完成（2026-07-22，React 重构 + UI 现代化）。阶段五已完成（2026-07-22，AI 策略 + 评估 + gameplay 优化）。
 
 ---
 
@@ -441,3 +499,4 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 | 2026-07-21 | 阶段二 2.1 完成（阶段二至此 5/5 全部完成）：`getStatusBarData` 抽取到 `common/view/statusBar.ts` 纯函数（56 测试），剥离 Vuex `store.getters.selectedCards` 直读改为 `options.selectedCards` 参数注入；client `statusBarData.ts` 243→22 行薄封装保持原签名，两个 `.vue` 调用点零改动；删除死文件 `client/src/types/gameTypes.ts`（类型迁入 common）。枚举映射用函数内 switch 避免 top-level 循环依赖求值。common 测试 54→110，根 typecheck + client build 通过 |
 | 2026-07-21 | 阶段四复盘（未启动，仅重排计划）：基于阶段一/二/三已完成重新审视。新增 4.0 前置决策——阶段三钉死的 2 项行为怪癖（dragon_gate/university +2 因 `extra_points`/`extraPoints` 键名不匹配而失效；school_of_magic 对非赚钱角色也 +1 收入）都影响结算页/得分显示，美化前须先定"修还是当房规接受"。4.2 重估：阶段二"为 React 重构铺路"目标已达成（5 纯函数 + 110 单测 = 行为契约），C 方案的"逻辑改错无测试兜底"风险被消除，只剩机械转换工作量；并指出 A 与"不投资 Vue 技术债"纪律的张力。4.1 组件数订正 24→27，标注 CenterPanel/BoardScreen 逻辑层已干净。4.3 "穿插阶段二"改为前瞻纪律 |
 | 2026-07-22 | 阶段四完成：4.2 决策选 C（Vite + React 18 + Zustand 5 + React Router 6 + i18next），4.4 React 客户端全量迁移完成（26 个 `.vue` → `client-react/src/`，commit 5598287 已推送，行为零回归，复用 common 纯函数；沉淀 early-return 隔离 / Zustand 稳定引用 / 数据路由器三条迁移纪律入 memory）。4.5 UI 现代化批次完成：确立深色中世纪金设计基调（`--bg-void`/`--gold`/Cinzel+EB Garamond），首页/玩家列表/大厅/战绩/头部/语言切换/认证/模态框分批重设计 + 布局修复（`#app` 固定视口高、`.body` 内滚、`__self-role` 固定高防跳动）；仅表现层改动未触碰游戏逻辑。`tsc --noEmit` 通过、`vite build` 成功、dev server 200。同步归档 `ROADMAP.md`/`DEV_DEPLOY.md`/`DEPENDENCY_BASELINE.md`（内容已被本计划与 README 取代/吸收）并重写根 README 以 React 客户端为准 |
+| 2026-07-22 | 阶段五完成：5.1 AI 策略重写（全中文注释、首发必拿刺客、铁匠铺/实验室策略、收租顺序、军阀拆建筑评分重写、predictLikelyRoles 修复、团队保护）；5.2 AI 自动评估体系（`aiEval.test.ts`，10 局 70ms，输出选角/刺杀/资源/特殊建筑统计）；5.3 开局流程优化（随机首发 Fisher-Yates、初始二选一手牌、布局修复、轮次信息清除）；5.4 实验室费用 `stash+=2→+=1`；5.5 测试适配（洗牌导致固定 P1=A 的假设失效→动态推断队伍）。`pickAndApplyAutoplayMove` 已适配 INITIAL 阶段的初始选牌。服务器 `server.ts`/`server-react` 切换至 React 客户端。`server/src/index.ts` CORS 增加 3010。86 测试全绿、typecheck 通过、client-react build 成功 |

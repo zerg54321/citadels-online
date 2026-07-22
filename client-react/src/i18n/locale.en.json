@@ -197,6 +197,8 @@
             "destroy_confirm_title": "Destroy Confirmation",
             "messages": {
                 "welcome": "Welcome to Citadels Classic Edition!",
+                "choose_card": "Choose an initial card to keep; the other will be returned to the deck.",
+                "choose_card_prompt": "Click the card you want to keep",
                 "choose_characters": {
                     "initial": "The player owning the crown will start choosing characters.",
                     "put_aside_face_up": "{0} must choose a character to put aside face up.",

@@ -31,16 +31,13 @@ describe('TrainingEngine consistency', () => {
   });
 
   it('observation reflects underlying GameState after actions', () => {
-    const gs = createBaseGameState();
     const engine = new TrainingEngine(['Alice', 'Bob', 'Carol', 'Dave', 'Eve', 'Frank']);
 
     const obs = engine.getObservation();
     expect(obs.phase).toBe(EnginePhase.CHARACTER_SELECTION);
     expect(obs.players).toHaveLength(6);
     expect(obs.deckCount).toBeGreaterThan(0);
-
-    const board = gs.board!;
-    expect(obs.crownPlayerId).toBe(board.playerOrder[0]);
+    expect(obs.crownPlayerId).toBe(obs.players[0].id);
     expect(obs.players[0].hasCrown).toBe(true);
   });
 

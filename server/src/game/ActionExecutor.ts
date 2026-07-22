@@ -110,7 +110,7 @@ export default class ActionExecutor {
           return false;
         }
         this.state.board.districtsDeck.discardCards(card);
-        player.stash += 2;
+        player.stash += 1;
         cm.isUsingLaboratory = false;
         cm.hasUsedLaboratory = true;
         break;

@@ -24,17 +24,31 @@ export default class BoardState {
   // graveyard (1 card)
   graveyard: DistrictId | undefined;
 
+  // 初始选牌队列（每人二选一后进入选角阶段）
+  initialCardSelectionQueue: PlayerId[];
+  initialCardSelectionIndex: number;
+
   constructor(players: PlayerId[]) {
     this.players = new Map();
     this.playerOrder = [...players];
     this.characterManager = new CharacterManager(players.length);
     this.gamePhase = GamePhase.INITIAL;
     this.districtsDeck = new DistrictsDeck();
+    this.initialCardSelectionQueue = [];
+    this.initialCardSelectionIndex = 0;
 
-    // initialize each player hand with 2 gold and 1 district card
+    // 初始每人 2 金币 + 抽 2 张到 tmpHand（二选一）
+    // 选完后保留的手牌移入 hand，弃牌放回牌库底
     players.forEach((playerId) => {
-      this.players.set(playerId, new PlayerBoardState(2, this.districtsDeck.drawCards(1)));
+      this.players.set(playerId, new PlayerBoardState(2, this.districtsDeck.drawCards(2)));
+      // PlayerBoardState 构造后，tmpHand 和 hand 是引用——drawCards(2) 返回的数组即 hand,
+      // 需要把 hand 中的牌转存到 tmpHand，让 hand 为空
+      const p = this.players.get(playerId)!;
+      p.tmpHand = [...p.hand]; // 拷贝到 tmpHand
+      p.hand = []; // 选完再移入 hand
     });
+
+    this.initialCardSelectionQueue = [...players];
   }
 
   exportForPlayer(destPlayerId: PlayerId) {
@@ -73,6 +87,13 @@ export default class BoardState {
   // current player (index of playerOrder)
   getCurrentPlayerPosition(): PlayerPosition {
     switch (this.gamePhase) {
+      case GamePhase.INITIAL:
+        // 初始二选一手牌阶段
+        if (this.initialCardSelectionQueue.length > 0
+            && this.initialCardSelectionIndex < this.initialCardSelectionQueue.length) {
+          return this.playerOrder.indexOf(this.initialCardSelectionQueue[this.initialCardSelectionIndex]);
+        }
+        return PlayerPosition.SPECTATOR;
       case GamePhase.CHOOSE_CHARACTERS:
         return this.characterManager.choosingState.getState().player;
       case GamePhase.DO_ACTIONS:

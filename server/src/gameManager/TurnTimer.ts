@@ -131,7 +131,11 @@ export class TurnTimer {
     const phase = gs.board.gamePhase;
     const cm = gs.board.characterManager;
 
-    if (phase === GamePhase.INITIAL) return true;
+    if (phase === GamePhase.INITIAL) {
+      // 初始选牌阶段（initialCardSelectionQueue 非空）——等待玩家或AI自行决策，不由系统驱动
+      if (gs.board && gs.board.initialCardSelectionQueue.length > 0) return false;
+      return true;
+    }
 
     if (phase === GamePhase.CHOOSE_CHARACTERS) {
       const st = cm.choosingState.getState();

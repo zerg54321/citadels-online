@@ -221,6 +221,14 @@ export function getStatusBarData(
 
       switch (state.board.gamePhase) {
         case GamePhase.INITIAL:
+          if (state.board.currentPlayer >= 0
+              && state.board.currentPlayer < state.board.playerOrder.length) {
+            // 初始二选一手牌阶段
+            return {
+              type: isCurrentPlayerSelf ? 'HIGHLIGHTED' : 'NORMAL',
+              message: 'ui.game.messages.choose_card',
+            };
+          }
           return {
             type: 'NORMAL',
             message: 'ui.game.messages.welcome',

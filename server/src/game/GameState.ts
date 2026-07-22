@@ -320,13 +320,20 @@ export default class GameState implements Subject {
 
   setupGame(gameSetupData: GameSetupData) {
     // prefer lobby seat order (team preview), fall back to payload order
-    const orderedIds = (this.lobbyPlayerOrder.length
+    const orderedIdsSrc = (this.lobbyPlayerOrder.length
       ? this.lobbyPlayerOrder
       : gameSetupData.players
     ).filter((id) => this.players.has(id));
 
+    // 随机打乱 playerOrder，实现随机首发（不修改 this.lobbyPlayerOrder）
+    const shuffled = [...orderedIdsSrc];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
     const players: PlayerId[] = [];
-    orderedIds.forEach((playerId) => {
+    shuffled.forEach((playerId) => {
       const player = this.players.get(playerId);
       if (player && player.role === PlayerRole.PLAYER) {
         players.push(playerId);

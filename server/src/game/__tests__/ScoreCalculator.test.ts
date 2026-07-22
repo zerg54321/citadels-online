@@ -49,15 +49,24 @@ function totalOf(gs: GameState, pid: string): number {
   return gs.board!.players.get(pid)!.score.total ?? 0;
 }
 
+/** 从 playerOrder 的奇偶位推断玩家队伍 */
+function teamIds(gs: GameState): { a: string[]; b: string[] } {
+  const a: string[] = [];
+  const b: string[] = [];
+  gs.board?.playerOrder.forEach((pid, idx) => {
+    if (idx % 2 === 0) a.push(pid); else b.push(pid);
+  });
+  return { a, b };
+}
+
 describe('refreshLiveScores — 3v3 scoring', () => {
   it('team assignment: even seats = A, odd seats = B', () => {
     const gs = create3v3State();
-    expect(gs.players.get('p1')!.team).toBe(TeamId.A);
-    expect(gs.players.get('p2')!.team).toBe(TeamId.B);
-    expect(gs.players.get('p3')!.team).toBe(TeamId.A);
-    expect(gs.players.get('p4')!.team).toBe(TeamId.B);
-    expect(gs.players.get('p5')!.team).toBe(TeamId.A);
-    expect(gs.players.get('p6')!.team).toBe(TeamId.B);
+    const { a, b } = teamIds(gs);
+    expect(a.length).toBe(3);
+    expect(b.length).toBe(3);
+    a.forEach((pid) => expect(gs.players.get(pid)!.team).toBe(TeamId.A));
+    b.forEach((pid) => expect(gs.players.get(pid)!.team).toBe(TeamId.B));
   });
 
   it('base score = sum of district costs (no completion, no 5-color)', () => {
@@ -79,14 +88,17 @@ describe('refreshLiveScores — 3v3 scoring', () => {
     expect(totalOf(gs, 'p6')).toBe(2);
   });
 
-  it('aggregates team scores: A = p1+p3+p5, B = p2+p4+p6', () => {
+  it('aggregates team scores: A = even seats, B = odd seats', () => {
     const gs = create3v3State();
-    setCity(gs, 'p1', ['manor', 'temple']); // 4  (A)
-    setCity(gs, 'p2', ['castle']); // 4  (B)
-    setCity(gs, 'p3', ['tavern']); // 1  (A)
-    setCity(gs, 'p4', []); // 0  (B)
-    setCity(gs, 'p5', ['watchtower']); // 1  (A)
-    setCity(gs, 'p6', ['market']); // 2  (B)
+    const { a, b } = teamIds(gs);
+    const pA0 = a[0], pA1 = a[1], pA2 = a[2];
+    const pB0 = b[0], pB1 = b[1], pB2 = b[2];
+    setCity(gs, pA0, ['manor', 'temple']); // 4
+    setCity(gs, pB0, ['castle']); // 4
+    setCity(gs, pA1, ['tavern']); // 1
+    setCity(gs, pB1, []); // 0
+    setCity(gs, pA2, ['watchtower']); // 1
+    setCity(gs, pB2, ['market']); // 2
 
     refreshLiveScores(gs, false);
 
@@ -205,12 +217,11 @@ describe('refreshLiveScores — 3v3 scoring', () => {
 
   it('finalize=true sets TEAM_A_WIN when A > B', () => {
     const gs = create3v3State();
-    setCity(gs, 'p1', ['palace']); // 5 (A)
-    setCity(gs, 'p2', ['temple']); // 1 (B)
-    setCity(gs, 'p3', ['castle']); // 4 (A)
-    setCity(gs, 'p4', []);
-    setCity(gs, 'p5', []);
-    setCity(gs, 'p6', []);
+    const { a, b } = teamIds(gs);
+    setCity(gs, a[0], ['palace']); // 5
+    setCity(gs, a[1], ['castle']); // 4
+    setCity(gs, b[0], ['temple']); // 1
+    setCity(gs, b[1], []);
 
     refreshLiveScores(gs, true);
 
@@ -221,12 +232,10 @@ describe('refreshLiveScores — 3v3 scoring', () => {
 
   it('finalize=true sets TEAM_B_WIN when B > A', () => {
     const gs = create3v3State();
-    setCity(gs, 'p1', ['temple']); // 1 (A)
-    setCity(gs, 'p2', ['palace']); // 5 (B)
-    setCity(gs, 'p3', []);
-    setCity(gs, 'p4', ['castle']); // 4 (B)
-    setCity(gs, 'p5', []);
-    setCity(gs, 'p6', []);
+    const { a, b } = teamIds(gs);
+    setCity(gs, a[0], ['temple']); // 1
+    setCity(gs, b[0], ['palace']); // 5
+    setCity(gs, b[1], ['castle']); // 4
 
     refreshLiveScores(gs, true);
 
@@ -237,12 +246,9 @@ describe('refreshLiveScores — 3v3 scoring', () => {
 
   it('finalize=true sets DRAW when A == B', () => {
     const gs = create3v3State();
-    setCity(gs, 'p1', ['castle']); // 4 (A)
-    setCity(gs, 'p2', ['castle']); // 4 (B)
-    setCity(gs, 'p3', []);
-    setCity(gs, 'p4', []);
-    setCity(gs, 'p5', []);
-    setCity(gs, 'p6', []);
+    const { a, b } = teamIds(gs);
+    setCity(gs, a[0], ['castle']); // 4
+    setCity(gs, b[0], ['castle']); // 4
 
     refreshLiveScores(gs, true);
 
@@ -254,12 +260,8 @@ describe('refreshLiveScores — 3v3 scoring', () => {
   it('finalize=false does not change matchResult', () => {
     const gs = create3v3State();
     gs.matchResult = MatchResult.NONE;
-    setCity(gs, 'p1', ['palace']);
-    setCity(gs, 'p2', []);
-    setCity(gs, 'p3', []);
-    setCity(gs, 'p4', []);
-    setCity(gs, 'p5', []);
-    setCity(gs, 'p6', []);
+    const { a } = teamIds(gs);
+    setCity(gs, a[0], ['palace']); // 5
 
     refreshLiveScores(gs, false);
 
@@ -270,18 +272,14 @@ describe('refreshLiveScores — 3v3 scoring', () => {
 
   it('re-running refreshLiveScores resets scores (no double-counting)', () => {
     const gs = create3v3State();
-    setCity(gs, 'p1', ['manor', 'temple']); // 4
-    setCity(gs, 'p2', []);
-    setCity(gs, 'p3', []);
-    setCity(gs, 'p4', []);
-    setCity(gs, 'p5', []);
-    setCity(gs, 'p6', []);
+    const { a } = teamIds(gs);
+    setCity(gs, a[0], ['manor', 'temple']); // 4
 
     refreshLiveScores(gs, false);
     refreshLiveScores(gs, false);
     refreshLiveScores(gs, false);
 
-    expect(totalOf(gs, 'p1')).toBe(4);
+    expect(totalOf(gs, a[0])).toBe(4);
     expect(gs.teamScores.A).toBe(4);
   });
 

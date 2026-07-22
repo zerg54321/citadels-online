@@ -197,6 +197,8 @@
             "destroy_confirm_title": "拆除确认",
             "messages": {
                 "welcome": "欢迎来到《富饶之城》经典版！",
+                "choose_card": "请选择一张初始手牌保留，另一张将放回牌库。",
+                "choose_card_prompt": "点击要保留的牌",
                 "choose_characters": {
                     "initial": "持有王冠的玩家将开始选择角色。",
                     "put_aside_face_up": "{0} 需要选择一张角色牌正面朝上弃置。",

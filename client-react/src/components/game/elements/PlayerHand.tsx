@@ -110,6 +110,9 @@ export default function PlayerHand({
       </div>
       {showTmpHand && (
         <div className="bg-secondary d-flex justify-content-start pl-2 py-2 my-n2">
+          <span className="mr-2 text-white" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', alignSelf: 'center' }}>
+            点击要保留的牌
+          </span>
           {board.tmpHand.map((id, i) => id && (
             <DistrictCard
               key={i}

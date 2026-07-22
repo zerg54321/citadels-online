@@ -327,6 +327,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    justify-content: space-between; // banner 顶，hand 底
     border-radius: 12px;
     background: rgba(10, 18, 40, 0.75);
     border: 2px solid rgba(96, 165, 250, 0.55);
@@ -386,7 +387,7 @@
     flex-wrap: wrap;
     gap: 0.25rem;
     align-content: flex-start;
-    max-height: 5.5rem;
+    max-height: 10rem; // 两行建筑
   }
 
   &__self-role {
@@ -419,16 +420,14 @@
   }
 
   &__self-hand {
-    flex: 1 1 auto;
-    // Floor the hand area so full district cards + the rotated cost at the
-    // top are visible (cost/几费 never clipped). The enlarged grid row 3
-    // (1.5fr) provides the room.
+    flex: 0 0 auto;
     min-height: 10.5rem;
     overflow: auto;
     padding: 0.25rem 0.4rem 0.4rem;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+    margin-top: auto; // 手牌/金币沉底
   }
 
   &__actions-title {

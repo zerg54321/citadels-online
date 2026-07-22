@@ -1,12 +1,13 @@
 import Debug from 'debug';
 import {
-  Move,
-  MoveType,
-  ClientTurnState,
-  GameProgress,
-  GamePhase,
-  CharacterChoosingStateType as CCST,
-  PlayerId,
+	Move,
+	MoveType,
+	ClientTurnState,
+	GameProgress,
+	GamePhase,
+	CharacterChoosingStateType as CCST,
+	PlayerId,
+	DistrictId,
 } from 'citadels-common';
 import type GameState from './GameState';
 import { CharacterPosition, TurnState, CharacterType } from './CharacterManager';
@@ -36,6 +37,59 @@ export default class GameFlowController {
       case GameProgress.IN_GAME:
         switch (this.state.board?.gamePhase) {
           case GamePhase.INITIAL:
+          {
+            const board = this.state.board;
+
+            // 初始二选一手牌流程：遍历 initialCardSelectionQueue
+            if (board.initialCardSelectionQueue.length > 0) {
+              // AUTO 步或 DRAW_CARDS（选一张保留）
+              if (move.type === MoveType.AUTO) {
+                // 每步 AUTO 会递归进来，不需要做任何事——等客户端发 DRAW_CARDS
+                return true;
+              }
+
+              if (move.type === MoveType.DRAW_CARDS) {
+                const actorId = board.getCurrentPlayerId();
+                if (!actorId) return false;
+                const player = board.players.get(actorId);
+                if (!player) return false;
+
+                // player 选了一张牌 retainCard = move.data
+                const retainCard = move.data as unknown as DistrictId | undefined;
+                if (!retainCard) return false;
+
+                const idx = player.tmpHand.indexOf(retainCard);
+                if (idx === -1) return false;
+
+                // 保留选中到手牌
+                player.addCardsToHand([retainCard]);
+                player.tmpHand.splice(idx, 1);
+
+                // 另一张放回牌库底
+                if (player.tmpHand.length > 0) {
+                  board.districtsDeck.discardCards(player.tmpHand);
+                }
+                player.tmpHand = [];
+
+                // 队列前移
+                board.initialCardSelectionIndex += 1;
+                if (board.initialCardSelectionIndex >= board.initialCardSelectionQueue.length) {
+                  // 所有人选完 → 进入选角阶段
+                  board.initialCardSelectionQueue = [];
+                  board.initialCardSelectionIndex = 0;
+                  board.gamePhase = GamePhase.CHOOSE_CHARACTERS;
+                  this.step();
+                  this.state.notify();
+                } else {
+                  this.state.notify();
+                }
+                return true;
+              }
+
+              return false;
+            }
+
+            // 选牌完成后（或第一次 AUTO），正常进入 CHOOSE_CHARACTERS
             if (move.type === MoveType.AUTO) {
               this.state.schedulePhase(() => {
                 if (this.state.board) {
@@ -47,6 +101,7 @@ export default class GameFlowController {
               return true;
             }
             return false;
+          }
 
           case GamePhase.CHOOSE_CHARACTERS:
             {
@@ -56,6 +111,8 @@ export default class GameFlowController {
                 case CCST.INITIAL:
                   if (move.type === MoveType.AUTO) {
                     this.state.schedulePhase(() => {
+                      // 新轮选角开始，清除上一轮的回合摘要
+                      this.state.lastRoundSummary = null;
                       ccs.step();
                       this.state.notify();
                     }, 3000);

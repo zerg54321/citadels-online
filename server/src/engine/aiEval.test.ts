@@ -21,7 +21,7 @@ import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
-import { pickV1, pickV2 } from '../game/AutoplayPolicy';
+import { pickV1, pickV2, scoreCharacterPick } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
 
 // ─── 常量 ─────────────────────────────────────────────────────────
@@ -62,6 +62,8 @@ interface PerGameMetrics {
 	specialActions: { playerId: string; type: string }[];
 	/** 角色-收入匹配度（终局时统计各收入角色玩家的城区颜色数） */
 	incomeMatches: { playerId: string; character: number; colorCount: number }[];
+	/** 选角质量：选的角色的排名（1=最高分, 0=未知） */
+	pickQualityRecords: number[];
 	/** 终局数据 */
 	citySizes: number[];
 	scoreA: number;
@@ -134,6 +136,7 @@ function runGame(gameNum: number): PerGameMetrics {
 	const metrics: PerGameMetrics = {
 		picks: [], assassinations: [], thefts: [],
 		resourceDecisions: [], specialActions: [], incomeMatches: [],
+		pickQualityRecords: [],
 		citySizes: [], scoreA: 0, scoreB: 0, matchResult: undefined,
 		steps: 0, finished: false,
 	};
@@ -150,22 +153,33 @@ function runGame(gameNum: number): PerGameMetrics {
 			if (ccsType === 4 || ccsType === 5) { // CHOOSE_CHARACTER / PUT_ASIDE_FACE_DOWN_UP（玩家选择）
 				const actorId = gs.board?.getCurrentPlayerId();
 
+				// 记录选前的剩余角色和评分排序（用于选角质量统计）
+				const preChars: number[] = [];
+				for (let ch = 0; ch < 8; ch += 1) {
+					if (cm.characters[ch] === 1) preChars.push(ch); // NOT_CHOSEN = 1
+				}
+				const preScored = preChars
+					.map((ch) => ({ ch, score: scoreCharacterPick(gs, actorId ?? '', ch, preChars as CharacterType[]) }))
+					.sort((a, b) => b.score - a.score);
+
 				// 执行 AI 决策
 				const pi = teamPick(gs);
 				const move = pi ? pi(gs) : null;
 				if (move && move.type === 1) {
 					if (ccsType === 4) {
-						// CHOOSE_CHARACTER：通过 characters 数组找到刚被分配座位的角色
-						// 技巧：找 characters 中最后一个被设置到 PLAYER_1 以上位置的角色
+						// CHOOSE_CHARACTER：计算 AI 选的角色在评分中的排名
 						if (actorId) {
 							const actorSeat = gs.board?.playerOrder.indexOf(actorId);
-							const offset = 3; // CharacterPosition.PLAYER_1
+							const offset = 3;
 							for (let ch = 0; ch < 8; ch += 1) {
 								const pos = cm.characters[ch];
 								if (pos >= offset && (pos - offset) === actorSeat) {
 									if (!metrics.picks.some((p) => p.playerId === actorId && p.character === ch)) {
 										metrics.picks.push({ playerId: actorId, character: ch, seat: actorSeat });
 									}
+									// 记录选角质量排名
+									const rank = preScored.findIndex((s) => s.ch === ch) + 1;
+									metrics.pickQualityRecords.push(rank > 0 ? rank : 99);
 									break;
 								}
 							}
@@ -458,12 +472,19 @@ describe('AI 详细评估', () => {
 		const avgScoreB = all.reduce((s, m) => s + m.scoreB, 0) / BATTLE_GAMES;
 		const avgCityA = all.reduce((s, m) => s + [m.citySizes[0], m.citySizes[2], m.citySizes[4]].reduce((a, c) => a + c, 0), 0) / (BATTLE_GAMES * 3);
 		const avgCityB = all.reduce((s, m) => s + [m.citySizes[1], m.citySizes[3], m.citySizes[5]].reduce((a, c) => a + c, 0), 0) / (BATTLE_GAMES * 3);
+		// 选角质量统计
+		const allQual = all.flatMap((m) => m.pickQualityRecords);
+		const top1 = allQual.filter((r) => r === 1).length;
+		const top3 = allQual.filter((r) => r <= 3).length;
+		const top1Pct = allQual.length ? ((top1 / allQual.length) * 100).toFixed(1) : 'N/A';
+		const top3Pct = allQual.length ? ((top3 / allQual.length) * 100).toFixed(1) : 'N/A';
 		console.log(`\n======= 双策略对战报告 (${elapsed}s) =======`);
 		console.log(`局数: ${BATTLE_GAMES}  完成: ${all.filter((m) => m.finished).length}`);
 		console.log(`A队(V2)胜: ${aWins}  B队(V1)胜: ${bWins}  平: ${draws}`);
 		console.log(`胜负比: ${(aWins / Math.max(bWins, 1)).toFixed(2)}`);
 		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
 		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
+		console.log(`选角质量: Top-1 ${top1Pct}% (${top1}/${allQual.length})  Top-3 ${top3Pct}%`);
 		console.log('================================\n');
 		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
 	});

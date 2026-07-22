@@ -370,6 +370,13 @@ function scoreCharacterPick(
 		if (hasSmithy || hasLab) {
 			if (character === CharacterType.KING) score += 4;
 		}
+		// 图书馆+天文台双持：抽牌类角色的价值激增
+		const hasLib = city.includes('library');
+		const hasObs = city.includes('observatory');
+		if (hasLib && hasObs) {
+			if (character === CharacterType.ARCHITECT) score += 5;
+			if (character === CharacterType.MAGICIAN) score += 3;
+		}
 	}
 
 	return score;
@@ -499,7 +506,12 @@ function buildScore(
 	// 特殊建筑价值
 	if (card === 'keep') score += 3;
 	if (card === 'great_wall') score += 2;
-	if (card === 'school_of_magic') score += 4;
+	if (card === 'school_of_magic') {
+		// 魔法学校：仅缺 1 色时极高价值（凑五色 +3 分）
+		if (miss.size === 1) score += 16;
+		else if (miss.size === 0) score += 6; // 已有五色，学校本身高造价值
+		else score += 4; // 缺多色，早建不重要
+	}
 	if (card === 'laboratory' || card === 'smithy') score += 3; // 功能建筑值得早建
 	// 前期少建便宜货
 	if (c <= 1 && stashOf(gs, actorId) >= 5 && n < limit - 3) score -= 3;
@@ -920,6 +932,11 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 	// 手里有牌但建不起：仍然拿金
 	if (hc > 0 && stash >= 2) return false;
 
+	// 图书馆+天文台双持：抽牌极高价值（抽 3 张全保留）
+	const hasLib = hasDistrict(actorId, gs, 'library');
+	const hasObs = hasDistrict(actorId, gs, 'observatory');
+	if (hasLib && hasObs && hc < 5) return true; // 双持：必抽牌
+
 	// 手牌极少才抽牌
 	if (hc < 2) return true;
 
@@ -1224,3 +1241,6 @@ export function pickV1(gs: GameState): Move | null {
 export function pickV2(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v2');
 }
+
+/** 导出评分函数供评估脚本使用 */
+export { scoreCharacterPick, buildScore };

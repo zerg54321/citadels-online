@@ -55,6 +55,36 @@ export default class GameState implements Subject {
   emptySince: number | null;
   private flow: GameFlowController;
   private executor: ActionExecutor;
+
+  clone(): GameState {
+    const gs = Object.create(GameState.prototype) as GameState;
+    gs.progress = this.progress;
+    gs.gameMode = this.gameMode;
+    gs.players = new Map(Array.from(this.players.entries()).map(
+      ([id, p]) => [id, p.clone()],
+    ));
+    gs.board = this.board?.clone();
+    gs.completeCitySize = this.completeCitySize;
+    gs.actionTimeoutSeconds = this.actionTimeoutSeconds;
+    gs.turnDeadlineAt = this.turnDeadlineAt;
+    gs.observers = [];
+    gs.cityCompletedThisMatch = this.cityCompletedThisMatch;
+    gs.cityCompletedThisTurnPhase = this.cityCompletedThisTurnPhase;
+    gs.teamScores = { ...this.teamScores };
+    gs.matchResult = this.matchResult;
+    gs.startedAt = this.startedAt;
+    gs.hasAiPlayers = this.hasAiPlayers;
+    gs.matchPersisted = this.matchPersisted;
+    gs.lastRoundSummary = this.lastRoundSummary;
+    gs.lobbyPlayerOrder = [...this.lobbyPlayerOrder];
+    gs.actionFeed = [...this.actionFeed.map((a) => ({ ...a }))];
+    gs.emptySince = this.emptySince;
+    gs.fastMode = this.fastMode;
+    gs.syncMode = this.syncMode;
+    gs.flow = new GameFlowController(gs);
+    gs.executor = new ActionExecutor(gs);
+    return gs;
+  }
   fastMode = false;
   syncMode = false;
 

@@ -164,6 +164,24 @@ export default class CharacterManager {
     this.hasUsedSmithy = false;
   }
 
+  clone(): CharacterManager {
+    const c = new CharacterManager(this.playerCount);
+    c.characters = [...this.characters];
+    c.choosingState.stateNumber = this.choosingState.stateNumber;
+    c.turnState = this.turnState;
+    c.killedCharacter = this.killedCharacter;
+    c.robbedCharacter = this.robbedCharacter;
+    c.hasTakenResources = this.hasTakenResources;
+    c.goldFromResourcesThisTurn = this.goldFromResourcesThisTurn;
+    c.districtsToBuild = [...this.districtsToBuild];
+    c.canTakeEarnings = [...this.canTakeEarnings];
+    c.canDoSpecialAction = [...this.canDoSpecialAction];
+    c.isUsingLaboratory = this.isUsingLaboratory;
+    c.hasUsedLaboratory = this.hasUsedLaboratory;
+    c.hasUsedSmithy = this.hasUsedSmithy;
+    return c;
+  }
+
   jumpToCharacter(character: CharacterType) {
     this.turnState = [
       TurnState.ASSASSIN_ACTIONS,

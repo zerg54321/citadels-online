@@ -28,6 +28,19 @@ export default class PlayerBoardState {
     this.hauntedQuarterBuiltInFinalRound = false;
   }
 
+  clone(): PlayerBoardState {
+    const p = new PlayerBoardState(0, []);
+    p.stash = this.stash;
+    p.hand = [...this.hand];
+    p.city = [...this.city];
+    p.tmpHand = [...this.tmpHand];
+    p.score = { ...this.score };
+    p.firstToCompleteCity = this.firstToCompleteCity;
+    p.sameTurnCompleteCity = this.sameTurnCompleteCity;
+    p.hauntedQuarterBuiltInFinalRound = this.hauntedQuarterBuiltInFinalRound;
+    return p;
+  }
+
   hasCardInCity(card: DistrictId): boolean {
     return this.city.includes(card);
   }

@@ -36,4 +36,10 @@ export default class DistrictsDeck {
   discardCards(cards: DistrictId[]) {
     this.cards.unshift(...cards);
   }
+
+  clone(): DistrictsDeck {
+    const d = new DistrictsDeck();
+    d.cards = [...this.cards];
+    return d;
+  }
 }

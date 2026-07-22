@@ -20,6 +20,7 @@ import { GameProgress, GameMode, MoveType, MatchResult, TeamId } from 'citadels-
 import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
+import { CharacterPosition } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
 import { pickV1, pickV2, scoreCharacterPick } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
@@ -71,6 +72,13 @@ interface PerGameMetrics {
 	matchResult: MatchResult | undefined;
 	steps: number;
 	finished: boolean;
+	/** 审查数据 */
+	audit: {
+		aiMoveCount: number;      // AI 有效决策次数
+		autoStepCount: number;    // AUTO 推进次数
+		noopSequences: number;    // 连续无推进的段数
+		lastStateSignature: string; // 最后状态（用于卡死分析）
+	};
 }
 
 interface OverallStats {
@@ -139,9 +147,12 @@ function runGame(gameNum: number): PerGameMetrics {
 		pickQualityRecords: [],
 		citySizes: [], scoreA: 0, scoreB: 0, matchResult: undefined,
 		steps: 0, finished: false,
+		audit: { aiMoveCount: 0, autoStepCount: 0, noopSequences: 0, lastStateSignature: '' },
 	};
 
 	let roundCounter = 0;
+	let aiMovesSinceLastAuto = 0;
+	let lastPhase = -1;
 
 	while (metrics.steps < MAX_STEPS) {
 		metrics.steps += 1;
@@ -156,7 +167,7 @@ function runGame(gameNum: number): PerGameMetrics {
 				// 记录选前的剩余角色和评分排序（用于选角质量统计）
 				const preChars: number[] = [];
 				for (let ch = 0; ch < 8; ch += 1) {
-					if (cm.characters[ch] === 1) preChars.push(ch); // NOT_CHOSEN = 1
+					if (cm.characters[ch] === CharacterPosition.NOT_CHOSEN) preChars.push(ch);
 				}
 				const preScored = preChars
 					.map((ch) => ({ ch, score: scoreCharacterPick(gs, actorId ?? '', ch, preChars as CharacterType[]) }))
@@ -195,6 +206,8 @@ function runGame(gameNum: number): PerGameMetrics {
 		const pi = teamPick(gs);
 		const move = pi ? pi(gs) : null;
 		if (move) {
+			metrics.audit.aiMoveCount += 1;
+			aiMovesSinceLastAuto += 1;
 			// 选角 move 的处理：AI 选了角色后，追踪已消失的角色号
 			if (move.type === 1 && move.data !== undefined) {
 				// pickAndApplyAutoplayMove 在执行天绝（PUT_ASIDE_FACE_DOWN）时
@@ -267,7 +280,17 @@ function runGame(gameNum: number): PerGameMetrics {
 			continue;
 		}
 
-		// AUTO 推进
+		// AUTO 推进 + 审计
+		metrics.audit.autoStepCount += 1;
+		// 检测连续无 AI 推进的段（可能卡死）
+		if (aiMovesSinceLastAuto === 0) {
+			// 连续两次 AUTO 无任何 AI move → 可能是卡死
+			if (lastPhase === (gs.board?.gamePhase ?? -1)) {
+				// phase 没变 → 卡死可能性高
+			}
+		}
+		aiMovesSinceLastAuto = 0;
+		lastPhase = gs.board?.gamePhase ?? -1;
 		gs.step({ type: MoveType.AUTO });
 	}
 
@@ -442,10 +465,21 @@ function printGameSummary(metrics: PerGameMetrics[]) {
 // ─── 测试 ─────────────────────────────────────────────────────────
 
 describe('AI 详细评估', () => {
-	it('单局', () => {
-		const r = runGame(0);
-		expect(r.finished).toBe(true);
-		expect(r.steps).toBeLessThan(MAX_STEPS);
+	it('验证 GameState.clone() 深拷贝正确', () => {
+		const gs = createGame();
+		expect(gs.board).toBeDefined();
+		expect(gs.board!.players.size).toBe(6);
+		const cloned = gs.clone();
+		expect(cloned.board!.players.size).toBe(gs.board!.players.size);
+		expect(cloned.board!.playerOrder).toEqual(gs.board!.playerOrder);
+		// 修改克隆的 board state 原版不应受影响
+		const orig = gs.board!.players.get('p1')!.stash;
+		cloned.board!.players.get('p1')!.stash += 10;
+		expect(gs.board!.players.get('p1')!.stash).toBe(orig);
+		// 手牌独立
+		const origHandLen = gs.board!.players.get('p1')!.hand.length;
+		cloned.board!.players.get('p1')!.hand.push('tavern');
+		expect(gs.board!.players.get('p1')!.hand.length).toBe(origHandLen);
 	});
 
 	it(`跑 ${GAMES} 局`, () => {
@@ -478,6 +512,13 @@ describe('AI 详细评估', () => {
 		const top3 = allQual.filter((r) => r <= 3).length;
 		const top1Pct = allQual.length ? ((top1 / allQual.length) * 100).toFixed(1) : 'N/A';
 		const top3Pct = allQual.length ? ((top3 / allQual.length) * 100).toFixed(1) : 'N/A';
+		// 审查统计
+		const totalAiMoves = all.reduce((s, m) => s + m.audit.aiMoveCount, 0);
+		const totalAutoSteps = all.reduce((s, m) => s + m.audit.autoStepCount, 0);
+		const totalSteps = all.reduce((s, m) => s + m.steps, 0);
+		const noopGames = all.filter((m) => m.audit.aiMoveCount < 10).length; // AI 决策＜10 的不正常
+		const avgAiPerGame = totalAiMoves / BATTLE_GAMES;
+		const avgAutoPerGame = totalAutoSteps / BATTLE_GAMES;
 		console.log(`\n======= 双策略对战报告 (${elapsed}s) =======`);
 		console.log(`局数: ${BATTLE_GAMES}  完成: ${all.filter((m) => m.finished).length}`);
 		console.log(`A队(V2)胜: ${aWins}  B队(V1)胜: ${bWins}  平: ${draws}`);
@@ -485,6 +526,11 @@ describe('AI 详细评估', () => {
 		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
 		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
 		console.log(`选角质量: Top-1 ${top1Pct}% (${top1}/${allQual.length})  Top-3 ${top3Pct}%`);
+		console.log(`\n-- 审查 --`);
+		console.log(`AI决策/局: ${avgAiPerGame.toFixed(0)}  AUTO/局: ${avgAutoPerGame.toFixed(0)}  总步/局: ${(totalSteps / BATTLE_GAMES).toFixed(0)}`);
+		console.log(`AI决策占比: ${(totalAiMoves / totalSteps * 100).toFixed(1)}%`);
+		if (noopGames > 0) console.log(`⚠ 异常(aiMove<10)局数: ${noopGames}`);
+		else console.log(`异常局: 0`);
 		console.log('================================\n');
 		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
 	});

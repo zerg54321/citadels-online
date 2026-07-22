@@ -38,4 +38,12 @@ export default class Player {
   toString() {
     return `Player ${this.username}[${this.id}]`;
   }
+
+  clone(): Player {
+    const p = new Player(this.id, this.username, this.manager, this.online, this.role, this.userId, this.team);
+    p.isAi = this.isAi;
+    p.isAutoplay = this.isAutoplay;
+    p.hadEffectiveAiControl = this.hadEffectiveAiControl;
+    return p;
+  }
 }

@@ -118,4 +118,19 @@ export default class BoardState {
     }
     return this.playerOrder[pos];
   }
+
+  clone(): BoardState {
+    const b = Object.create(BoardState.prototype) as BoardState;
+    b.players = new Map(Array.from(this.players.entries()).map(
+      ([id, p]) => [id, p.clone()],
+    ));
+    b.playerOrder = [...this.playerOrder];
+    b.characterManager = this.characterManager.clone();
+    b.gamePhase = this.gamePhase;
+    b.districtsDeck = this.districtsDeck.clone();
+    b.graveyard = this.graveyard;
+    b.initialCardSelectionQueue = [...this.initialCardSelectionQueue];
+    b.initialCardSelectionIndex = this.initialCardSelectionIndex;
+    return b;
+  }
 }

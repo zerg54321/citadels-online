@@ -12,6 +12,7 @@ import { CharacterPosition, TurnState } from './CharacterManager';
 import {
   templateEarn, templateBuild, templateEarnManual, templateKill, templateRob,
   templateRobMove, templateRobMoveEmpty, templateDestroy,
+  templateMagicianExchange, templateMagicianDiscard,
 } from './actionLogTemplates';
 
 const debug = Debug('citadels-server');
@@ -446,6 +447,14 @@ export default class ActionExecutor {
     [player.hand, otherPlayer.hand] = [otherPlayer.hand, player.hand];
     cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
     cm.jumpToActionsState();
+    {
+      const actorId = this.state.board.getCurrentPlayerId();
+      const victimId = this.state.board.playerOrder[move.data];
+      this.state.pushAction(
+        templateMagicianExchange(this.state.players, actorId, victimId),
+        'magician',
+      );
+    }
     return true;
   }
 
@@ -476,6 +485,13 @@ export default class ActionExecutor {
 
     cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
     cm.jumpToActionsState();
+    {
+      const actorId = this.state.board.getCurrentPlayerId();
+      this.state.pushAction(
+        templateMagicianDiscard(this.state.players, actorId, cards.length, cards.length),
+        'magician',
+      );
+    }
     return true;
   }
 

@@ -46,3 +46,20 @@ export function templateDestroy(
 ): string {
   return `${playerName(players, actorId)} 拆毁了 ${playerName(players, victimId)} 的 ${districtLabelZh(district)}`;
 }
+
+export function templateMagicianExchange(
+  players: Map<string, { username: string }>,
+  actorId: string,
+  targetId: string,
+): string {
+  return `${playerName(players, actorId)} 与 ${playerName(players, targetId)} 交换了全部手牌`;
+}
+
+export function templateMagicianDiscard(
+  players: Map<string, { username: string }>,
+  actorId: string,
+  count: number,
+  drewCount: number,
+): string {
+  return `${playerName(players, actorId)} 弃 ${count} 张手牌，抽取 ${drewCount} 张新牌`;
+}

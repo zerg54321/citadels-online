@@ -21,24 +21,24 @@ import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
-import { pickV0, pickV1 } from '../game/AutoplayPolicy';
+import { pickV1, pickV2 } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
 
 // ─── 常量 ─────────────────────────────────────────────────────────
 
 const MAX_STEPS = 50000;
 const GAMES = 10;
+const BATTLE_GAMES = 100;
 
-/** 评估中 A 队用 V1(口诀版)，B 队用 V0(基础版) */
+/** 评估中 A 队用 V2(排除法推理+口诀)，B 队用 V1(仅口诀) */
 function teamPick(gs: GameState): ((gs: GameState) => Move | null) | null {
 	if (!gs.board) return null;
 	const actorId = gs.board.getCurrentPlayerId();
 	if (!actorId) return null;
 	const player = gs.players.get(actorId);
 	if (!player) return null;
-	return player.team === TeamId.A ? pickV1 : pickV0;
+	return player.team === TeamId.A ? pickV2 : pickV1;
 }
-const BATTLE_GAMES = 50;
 
 const CHAR_NAMES: Record<number, string> = {
 	[CharacterType.ASSASSIN]: '刺客', [CharacterType.THIEF]: '盗贼',
@@ -441,6 +441,30 @@ describe('AI 详细评估', () => {
 		}
 		printGameSummary(all);
 		print(aggregate(all));
+		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
+	});
+
+	it(`双策略对战 ${BATTLE_GAMES} 局 (A队V2排除法 vs B队V1口诀)`, () => {
+		const all: PerGameMetrics[] = [];
+		const start = Date.now();
+		for (let i = 0; i < BATTLE_GAMES; i += 1) {
+			all.push(runGame(i));
+		}
+		const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+		const aWins = all.filter((m) => m.matchResult === MatchResult.TEAM_A_WIN).length;
+		const bWins = all.filter((m) => m.matchResult === MatchResult.TEAM_B_WIN).length;
+		const draws = all.filter((m) => m.matchResult === MatchResult.DRAW).length;
+		const avgScoreA = all.reduce((s, m) => s + m.scoreA, 0) / BATTLE_GAMES;
+		const avgScoreB = all.reduce((s, m) => s + m.scoreB, 0) / BATTLE_GAMES;
+		const avgCityA = all.reduce((s, m) => s + [m.citySizes[0], m.citySizes[2], m.citySizes[4]].reduce((a, c) => a + c, 0), 0) / (BATTLE_GAMES * 3);
+		const avgCityB = all.reduce((s, m) => s + [m.citySizes[1], m.citySizes[3], m.citySizes[5]].reduce((a, c) => a + c, 0), 0) / (BATTLE_GAMES * 3);
+		console.log(`\n======= 双策略对战报告 (${elapsed}s) =======`);
+		console.log(`局数: ${BATTLE_GAMES}  完成: ${all.filter((m) => m.finished).length}`);
+		console.log(`A队(V2)胜: ${aWins}  B队(V1)胜: ${bWins}  平: ${draws}`);
+		console.log(`胜负比: ${(aWins / Math.max(bWins, 1)).toFixed(2)}`);
+		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
+		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
+		console.log('================================\n');
 		expect(all.filter((r) => r.finished).length).toBeGreaterThan(0);
 	});
 });

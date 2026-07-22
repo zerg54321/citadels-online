@@ -522,10 +522,73 @@ function sortBuildCandidates(
 // ---------------------------------------------------------------------------
 
 /**
- * 预测对手可能选的角色。
- * 仅输出最可能的 1-2 个预测，避免宽松条件叠加导致误判。
- * 注意：魔术师不再因"手牌≤1"而进入预测（触发太频繁导致误杀）
+ * V2：排除法角色预测
+ *
+ * 利用公开信息推理对手可能选的角色：
+ * 1. 所有角色 = 刺客(0)~军阀(7)
+ * 2. 从已知归属的角色中排除：已分配座位的 + 已亮面弃置的
+ * 3. 对剩余候选按 scoreCharacterPick 打分
+ * 4. 返回按分数降序排列的 Top-N
+ *
+ * 与 V1 的 predictLikelyRoles 相比：
+ * - V1 仅根据城市颜色/手牌/金币推测对手可能"想选"的角色
+ * - V2 额外排除"肯定不在池中"的角色（已选走的/已弃置的）
+ * - V2 对候选池中的每个角色实际评分，而非仅用启发式规则
  */
+function predictElimination(
+	gs: GameState,
+	targetId: string,
+	actorId: string, // 评估者 ID（决定信息可见性）
+	useSeatWeights: boolean,
+): CharacterType[] {
+	if (!gs.board) return [];
+	const cm = gs.board.characterManager;
+
+	// 收集所有已分配的角色（座位 ≥ PLAYER_1 或 ASIDE_* 状态）
+	const assigned: CharacterType[] = [];
+	for (let ch = 0; ch < 8; ch += 1) {
+		const pos = cm.characters[ch];
+		if (pos !== CharacterPosition.NOT_CHOSEN) {
+			assigned.push(ch as CharacterType);
+		}
+	}
+
+	// 候选角色 = 全部 8 个 - 已分配的
+	const candidates: CharacterType[] = [];
+	for (let ch = 0; ch < 8; ch += 1) {
+		if (!assigned.includes(ch as CharacterType)) {
+			candidates.push(ch as CharacterType);
+		}
+	}
+
+	if (candidates.length === 0) return candidates;
+
+	// 对候选角色用 scoreCharacterPick 打分，按分数降序排列
+	const scored = candidates.map((ch) => ({
+		ch,
+		score: scoreCharacterPick(gs, targetId, ch, candidates, useSeatWeights),
+	}));
+	scored.sort((a, b) => b.score - a.score);
+	return scored.map((s) => s.ch);
+}
+
+/**
+ * V2 版 predictLikelyRoles（排除法 + 原有启发式）
+ * 优先用排除法缩小范围，再用原有启发式做补充
+ */
+function predictLikelyRolesV2(
+	gs: GameState,
+	targetId: string,
+	actorId: string, // 评估者
+	useSeatWeights: boolean,
+): CharacterType[] {
+	// 先用排除法
+	const eliminated = predictElimination(gs, targetId, actorId, useSeatWeights);
+	if (eliminated.length <= 3) return eliminated;
+
+	// 候选池仍较大（>3），用原有启发式进一步排序取 Top-3
+	return eliminated.slice(0, 3);
+}
 function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
 	const stash = stashOf(gs, targetId);
 	const hc = handCount(gs, targetId);
@@ -569,7 +632,7 @@ function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
  * 已知归属：砍高城市/高资源/高威胁角色
  * 未知归属：通过 predictLikelyRoles 缩小范围
  */
-function assassinTargets(gs: GameState, actorId: string): number[] {
+function assassinTargets(gs: GameState, actorId: string, usePredictionV2 = false): number[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
 	const tempo = detectTempo(gs, actorId);
@@ -596,10 +659,13 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
 			if (citySize(gs, ownerId) >= limit - 2) score += 12;
 		} else {
 			// 未知归属：用 predictLikelyRoles 预测
+			const predFn = usePredictionV2
+				? (pid: string) => predictLikelyRolesV2(gs, pid, actorId, true)
+				: (pid: string) => predictLikelyRoles(gs, pid);
 			let pred = 1;
 			gs.board.playerOrder.forEach((pid) => {
 				if (!isEnemy(gs, actorId, pid)) return;
-				const roles = predictLikelyRoles(gs, pid);
+				const roles = predFn(pid);
 				const idx = roles.indexOf(ch);
 				if (idx >= 0) {
 					const threat = citySize(gs, pid) * 2 + stashOf(gs, pid) * 0.5;
@@ -640,7 +706,7 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
  * 已知归属：直接按金币量排序
  * 未知归属：预测高收入角色（商人/军阀）优先
  */
-function thiefTargets(gs: GameState, actorId: string): number[] {
+function thiefTargets(gs: GameState, actorId: string, usePredictionV2 = false): number[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
 	const scored: { clientId: number; score: number }[] = [];
@@ -660,8 +726,11 @@ function thiefTargets(gs: GameState, actorId: string): number[] {
 			if (ch === CharacterType.MERCHANT) score += 4; // 商人有钱
 		} else {
 			// 预测：优先偷可能选商人/军阀的富敌
+			const predFn = usePredictionV2
+				? (pid: string) => predictLikelyRolesV2(gs, pid, actorId, true)
+				: (pid: string) => predictLikelyRoles(gs, pid);
 			enemies.forEach((pid) => {
-				const roles = predictLikelyRoles(gs, pid);
+				const roles = predFn(pid);
 				const idx = roles.indexOf(ch);
 				if (idx >= 0) {
 					score += stashOf(gs, pid) * (1 - idx * 0.15);
@@ -867,7 +936,7 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' = 'v1'): Move | null {
+export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' = 'v2'): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -891,7 +960,9 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	// =====================================================================
 	// 选角阶段
 	// =====================================================================
-	const useSeatWeights = version === 'v1';
+	const useSeatWeights = version === 'v1' || version === 'v2';
+	const usePredV2 = version === 'v2';
+
 	if (board.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
 		const t = cm.choosingState.getState().type;
 		if (t === CCST.PUT_ASIDE_FACE_UP || t === CCST.PUT_ASIDE_FACE_DOWN) {
@@ -1012,11 +1083,11 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 
 		// 特殊能力
 		if (canSpecial && character === CharacterType.ASSASSIN) {
-			const t = assassinTargets(gameState, actorId);
+			const t = assassinTargets(gameState, actorId, usePredV2);
 			if (t.length) moves.push({ type: MoveType.ASSASSIN_KILL });
 		}
 		if (canSpecial && character === CharacterType.THIEF) {
-			const t = thiefTargets(gameState, actorId);
+			const t = thiefTargets(gameState, actorId, usePredV2);
 			if (t.length) moves.push({ type: MoveType.THIEF_ROB });
 		}
 		if (canSpecial && character === CharacterType.MAGICIAN) {
@@ -1064,7 +1135,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	// 特殊能力状态（刺杀/偷窃/交换/摧毁/墓地/实验室）
 	// -----------------------------------------------------------------------
 	case ClientTurnState.ASSASSIN_KILL: {
-		const targets = assassinTargets(gameState, actorId);
+		const targets = assassinTargets(gameState, actorId, usePredV2);
 		const moves = targets.map((id) => ({ type: MoveType.ASSASSIN_KILL, data: id } as Move));
 		for (let cid = 2; cid <= 8; cid += 1) if (!targets.includes(cid)) moves.push({ type: MoveType.ASSASSIN_KILL, data: cid });
 		moves.push({ type: MoveType.DECLINE });
@@ -1073,7 +1144,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 
 	case ClientTurnState.THIEF_ROB: {
 		const killedClientId = cm.killedCharacter >= 0 ? cm.killedCharacter + 1 : -1;
-		const targets = thiefTargets(gameState, actorId).filter((id) => id !== killedClientId);
+		const targets = thiefTargets(gameState, actorId, usePredV2).filter((id) => id !== killedClientId);
 		const moves = targets.map((id) => ({ type: MoveType.THIEF_ROB, data: id } as Move));
 		for (let cid = 3; cid <= 8; cid += 1) {
 			if (cid === killedClientId) continue;
@@ -1140,13 +1211,16 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 }
 
 export default { pickAndApplyAutoplayMove };
-
-/** V0 版本（无口诀座位权重），用于双策略对比评估 */
 export function pickV0(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v0');
 }
 
-/** V1 版本（含口诀座位权重+同色截断），默认策略 */
+/** V1 版本（含口诀座位权重+同色截断+墓地铁匠→国王） */
 export function pickV1(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v1');
+}
+
+/** V2 版本（V1 + 排除法推理 + 特殊建筑联动尚未加入），用于 AB 对比评估 */
+export function pickV2(gs: GameState): Move | null {
+	return pickAndApplyAutoplayMove(gs, 'v2');
 }

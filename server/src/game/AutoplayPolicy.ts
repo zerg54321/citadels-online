@@ -244,6 +244,7 @@ function scoreCharacterPick(
 	actorId: string,
 	character: CharacterType,
 	remaining: CharacterType[],
+	useSeatWeights = true, // V1: 启用座位权重/口诀策略
 ): number {
 	const city = cityOf(gs, actorId);
 	const hand = handOf(gs, actorId);
@@ -261,6 +262,7 @@ function scoreCharacterPick(
 	const hasSmithy = hasDistrict(actorId, gs, 'smithy');
 
 	let score = 0;
+	const tSeat = gs.board?.playerOrder.indexOf(actorId) ?? -1;
 
 	switch (character) {
 	case CharacterType.ASSASSIN: {
@@ -359,25 +361,104 @@ function scoreCharacterPick(
 
 	// 轻微随机扰动，避免评分相同时总选同一个
 	score += Math.random() * 0.3;
-	if (!remaining.includes(character)) score = -999;
+	if (!remaining.includes(character)) return -999;
+
+	// V1 专属：座位权重 + 同色截断 + 功能建筑联动
+	if (useSeatWeights) {
+		score += seatWeights(gs, actorId, character, tSeat, selfCity, stash, hc);
+		score += colorInterceptScore(gs, actorId, character, tSeat);
+		if (hasSmithy || hasLab) {
+			if (character === CharacterType.KING) score += 4;
+		}
+	}
+
 	return score;
 }
 
+/** V1 座位权重 */
+function seatWeights(
+	gs: GameState, actorId: string, character: CharacterType,
+	seat: number, selfCity: number, stash: number, hc: number,
+): number {
+	switch (seat) {
+	case 1: // P2：防守位，必拿 238（盗贼魔术师军阀）
+		if (character === CharacterType.THIEF) return 5;
+		if (character === CharacterType.MAGICIAN) return 4;
+		if (character === CharacterType.WARLORD) return 3;
+		if (character === CharacterType.MERCHANT) return -3;
+		if (character === CharacterType.ARCHITECT) return -3;
+		break;
+	case 2: // P3：中发，倾向发展/引擎角色
+		if (character === CharacterType.KING) return 3;
+		if (character === CharacterType.ARCHITECT) return 3;
+		break;
+	case 3: // P4：贱命拿官刀位（发育差时转为防守）
+		if (selfCity <= 3 && stash <= 4 && hc <= 2) {
+			if (character === CharacterType.WARLORD) return 6;
+			if (character === CharacterType.MAGICIAN) return 4;
+			if (character === CharacterType.THIEF) return 3;
+		} else {
+			if (character === CharacterType.MERCHANT) return 2;
+			if (character === CharacterType.ARCHITECT) return 2;
+		}
+		break;
+	case 4: case 5: // P5/P6：沉底，倾向经济/收尾
+		if (character === CharacterType.MERCHANT) return 4;
+		if (character === CharacterType.ARCHITECT) return 4;
+		if (character === CharacterType.WARLORD) return 2;
+		break;
+	default: break;
+	}
+	return 0;
+}
+
+/** V1 同色截断：对手有大量同色时截断对应收入角色 */
+function colorInterceptScore(
+	gs: GameState, actorId: string, character: CharacterType, seat: number,
+): number {
+	if (!gs.board) return 0;
+	const nextOpponents: string[] = [];
+	for (let offset = 1; offset <= 3; offset += 1) {
+		const idx = (seat + offset) % 6;
+		const pid = gs.board?.playerOrder[idx];
+		if (pid && isEnemy(gs, actorId, pid)) nextOpponents.push(pid);
+	}
+	if (nextOpponents.length === 0) return 0;
+
+	const colorCounts = [0, 0, 0, 0, 0];
+	nextOpponents.forEach((pid) => {
+		cityOf(gs, pid).forEach((card) => {
+			const t = typeOf(card);
+			if (t >= 1 && t <= 5) colorCounts[t - 1] += 1;
+		});
+	});
+
+	const charMap = [CharacterType.KING, CharacterType.BISHOP, CharacterType.MERCHANT, CharacterType.WARLORD];
+	for (let t = 0; t < 4; t += 1) {
+		if (colorCounts[t] >= 3 && character === charMap[t]) {
+			const dt = t + 1 as DistrictType;
+			const mySameColor = countColorIn(cityOf(gs, actorId), dt);
+			if (mySameColor > 0) return colorCounts[t] * 3;
+			return colorCounts[t] * 2;
+		}
+	}
+	return 0;
+}
+
 /** 选角入口：决定选哪个角色。AI 首发必拿刺客。 */
-function pickBestCharacterIndex(gs: GameState, actorId: string): number {
+function pickBestCharacterIndex(gs: GameState, actorId: string, useSeatWeights = true): number {
 	if (!gs.board) return 0;
 	const remaining = gs.board.characterManager.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 	if (!remaining.length) return 0;
 
 	// 首发：如果有刺客，必拿刺客
-	// 理由：不拿刺客则对手拿到后可砍中首发玩家概率 > 1/2（排除法），团队损失更大
 	const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
 	if (assassinIdx >= 0) return assassinIdx;
 
 	let bestIdx = 0;
 	let bestScore = -1e9;
 	remaining.forEach((ch, idx) => {
-		const s = scoreCharacterPick(gs, actorId, ch, remaining);
+		const s = scoreCharacterPick(gs, actorId, ch, remaining, useSeatWeights);
 		if (s > bestScore) { bestScore = s; bestIdx = idx; }
 	});
 	return bestIdx;
@@ -669,7 +750,8 @@ function warlordDestroyCandidates(gs: GameState, actorId: string): DestroyCandid
 			const cost = other.computeDestroyCost(card);
 			if (cost > spendable) return;
 
-			let score = 0;
+	let score = 0;
+	const tSeat = gs.board?.playerOrder.indexOf(actorId) ?? -1;
 
 			// ----- 1. 阻止建成（最高优先级） -----
 			if (other.city.length >= limit - 1) score += 50;
@@ -785,7 +867,7 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState): Move | null {
+export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' = 'v1'): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -809,13 +891,14 @@ export function pickAndApplyAutoplayMove(gameState: GameState): Move | null {
 	// =====================================================================
 	// 选角阶段
 	// =====================================================================
+	const useSeatWeights = version === 'v1';
 	if (board.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
 		const t = cm.choosingState.getState().type;
 		if (t === CCST.PUT_ASIDE_FACE_UP || t === CCST.PUT_ASIDE_FACE_DOWN) {
 			// 天绝/弃牌：把对自己最没用的牌丢掉
 			const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 			const scored = remaining.map((ch, idx) => ({
-				idx, score: scoreCharacterPick(gameState, actorId, ch, remaining),
+				idx, score: scoreCharacterPick(gameState, actorId, ch, remaining, useSeatWeights),
 			}));
 			scored.sort((a, b) => a.score - b.score);
 			const moves = scored.map((s) => ({ type: MoveType.CHOOSE_CHARACTER, data: s.idx } as Move));
@@ -826,12 +909,12 @@ export function pickAndApplyAutoplayMove(gameState: GameState): Move | null {
 			if (t === CCST.PUT_ASIDE_FACE_DOWN_UP) {
 				const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
 				const order = remaining
-					.map((ch, idx) => ({ idx, score: scoreCharacterPick(gameState, actorId, ch, remaining) }))
+					.map((ch, idx) => ({ idx, score: scoreCharacterPick(gameState, actorId, ch, remaining, useSeatWeights) }))
 					.sort((a, b) => a.score - b.score);
 				const moves = order.map((o) => ({ type: MoveType.CHOOSE_CHARACTER, data: o.idx } as Move));
 				return tryMoves(gameState, moves.length ? moves : [{ type: MoveType.CHOOSE_CHARACTER, data: 0 }]);
 			}
-			const best = pickBestCharacterIndex(gameState, actorId);
+			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
 			for (let i = 0; i < 8; i += 1) if (i !== best) moves.push({ type: MoveType.CHOOSE_CHARACTER, data: i });
 			return tryMoves(gameState, moves);
@@ -1057,3 +1140,13 @@ export function pickAndApplyAutoplayMove(gameState: GameState): Move | null {
 }
 
 export default { pickAndApplyAutoplayMove };
+
+/** V0 版本（无口诀座位权重），用于双策略对比评估 */
+export function pickV0(gs: GameState): Move | null {
+	return pickAndApplyAutoplayMove(gs, 'v0');
+}
+
+/** V1 版本（含口诀座位权重+同色截断），默认策略 */
+export function pickV1(gs: GameState): Move | null {
+	return pickAndApplyAutoplayMove(gs, 'v1');
+}

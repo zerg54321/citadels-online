@@ -21,12 +21,24 @@ import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
 import { CharacterType } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
-import { pickAndApplyAutoplayMove } from '../game/AutoplayPolicy';
+import { pickV0, pickV1 } from '../game/AutoplayPolicy';
+import type { Move, DistrictId } from 'citadels-common';
 
 // ─── 常量 ─────────────────────────────────────────────────────────
 
 const MAX_STEPS = 50000;
 const GAMES = 10;
+
+/** 评估中 A 队用 V1(口诀版)，B 队用 V0(基础版) */
+function teamPick(gs: GameState): ((gs: GameState) => Move | null) | null {
+	if (!gs.board) return null;
+	const actorId = gs.board.getCurrentPlayerId();
+	if (!actorId) return null;
+	const player = gs.players.get(actorId);
+	if (!player) return null;
+	return player.team === TeamId.A ? pickV1 : pickV0;
+}
+const BATTLE_GAMES = 50;
 
 const CHAR_NAMES: Record<number, string> = {
 	[CharacterType.ASSASSIN]: '刺客', [CharacterType.THIEF]: '盗贼',
@@ -139,7 +151,8 @@ function runGame(gameNum: number): PerGameMetrics {
 				const actorId = gs.board?.getCurrentPlayerId();
 
 				// 执行 AI 决策
-				const move = pickAndApplyAutoplayMove(gs);
+				const pi = teamPick(gs);
+				const move = pi ? pi(gs) : null;
 				if (move && move.type === 1) {
 					if (ccsType === 4) {
 						// CHOOSE_CHARACTER：通过 characters 数组找到刚被分配座位的角色
@@ -165,7 +178,8 @@ function runGame(gameNum: number): PerGameMetrics {
 		}
 
 		// 其他阶段：执行 AI 决策
-		const move = pickAndApplyAutoplayMove(gs);
+		const pi = teamPick(gs);
+		const move = pi ? pi(gs) : null;
 		if (move) {
 			// 选角 move 的处理：AI 选了角色后，追踪已消失的角色号
 			if (move.type === 1 && move.data !== undefined) {

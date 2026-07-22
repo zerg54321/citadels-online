@@ -571,25 +571,29 @@ describe('AI 详细评估', () => {
 					// 统计首发选刺客率（仅首轮）
 					if (move.type === 1 && gs.board && gs.board.gamePhase === 1) {
 						const st = cm.choosingState.getState();
+						// 统计首发选刺客率（仅首轮）
 						// stateNumber: 2=CHOOSE_CHARACTER_P1, 5=CHOOSE_CHARACTER_P4(6P)
-						// st.player 是 playerOrder 索引(0-5),不是 PlayerPosition 枚举值
-						const isP1 = st.type === 4 && st.player === 0; // playerOrder[0]
-						const isP4 = st.type === 4 && st.player === 3; // playerOrder[3]
+						// st.player 是 playerOrder 索引(0-5)
+						// 队伍首发: P1(索引0)=A队首, P2(索引1)=B队首
+						const isP1 = st.type === 4 && st.player === 0; // A队首发
+						const isP2 = st.type === 4 && st.player === 1; // B队首发
 						if (isP1 && roundNum === 0) {
 							const assassinAside = cm.characters[CharacterType.ASSASSIN] === CharacterPosition.ASIDE_FACE_DOWN;
 							if (!assassinAside) {
 								aTotalP1Picks += 1;
-								if (cm.characters[CharacterType.ASSASSIN] === CharacterPosition.PLAYER_1) {
+								if (cm.characters[CharacterType.ASSASSIN] === 3) { // PLAYER_1 = 3
 									aAssassinPicks += 1;
 								}
 							}
 						}
-						if (isP4 && roundNum === 0) {
+						if (isP2 && roundNum === 0) {
 							const assassinAside = cm.characters[CharacterType.ASSASSIN] === CharacterPosition.ASIDE_FACE_DOWN;
 							if (!assassinAside) {
+								if (bTotalP1Picks < 5) {
+									console.log(`  [P2pick] assassinAfter=${cm.characters[CharacterType.ASSASSIN]}`);
+								}
 								bTotalP1Picks += 1;
-								// PLAYER_1+3 = 6 (B队首发座位对应)
-								if (cm.characters[CharacterType.ASSASSIN] === 6) {
+								if (cm.characters[CharacterType.ASSASSIN] === 4) {
 									bAssassinPicks += 1;
 								}
 							}

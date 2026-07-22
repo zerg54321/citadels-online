@@ -1009,19 +1009,23 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights, forceAssassin);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
 
-			// V3(MCTS): forceAssassin=true 时，对队伍首发(P1/P4)硬编码刺客不走MCTS
+			// V3(MCTS): forceAssassin=true 时，硬编码选刺客不走MCTS
 			const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
+			if (forceAssassin) {
+				const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
+				if (assassinIdx >= 0) {
+					const move: Move = { type: MoveType.CHOOSE_CHARACTER, data: assassinIdx };
+					if (gameState.step(move)) {
+						gameState.step({ type: MoveType.AUTO });
+						return move;
+					}
+				}
+			}
 			if (useMCTS && remaining.length > 0) {
 				const meta = gameState.players.get(actorId);
-				const assassinInPool = remaining.includes(CharacterType.ASSASSIN);
-				const isTeamLead = actorId === board.playerOrder[0] || actorId === board.playerOrder[3];
-				if (forceAssassin && assassinInPool && isTeamLead) {
-					// 队伍首发且刺客在池中 → 保持硬编码
-				} else {
-					const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
-					if (mctsMove) {
-						return tryMoves(gameState, [mctsMove]);
-					}
+				const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
+				if (mctsMove) {
+					return tryMoves(gameState, [mctsMove]);
 				}
 			}
 

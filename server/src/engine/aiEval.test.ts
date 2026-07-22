@@ -19,8 +19,7 @@ import { describe, it, expect } from 'vitest';
 import { GameProgress, GameMode, MoveType, MatchResult, TeamId } from 'citadels-common';
 import GameState from '../game/GameState';
 import GameSetupData from '../game/GameSetupData';
-import { CharacterType } from '../game/CharacterManager';
-import { CharacterPosition } from '../game/CharacterManager';
+import { CharacterType, CharacterPosition } from '../game/CharacterManager';
 import DistrictCard from '../game/DistrictCard';
 import { pickV1, pickV2, pickV3, pickV3Unforced, scoreCharacterPick } from '../game/AutoplayPolicy';
 import type { Move, DistrictId } from 'citadels-common';
@@ -537,8 +536,15 @@ describe('AI 详细评估', () => {
 
 	it('首发硬编码测试 10 局 (A队V3Unforced无硬编码 vs B队V3硬编码)', { timeout: 120000 }, () => {
 		const all: PerGameMetrics[] = [];
+		let aAssassinPicks = 0; // A队P1选刺客次数
+		let aTotalP1Picks = 0;  // A队P1选角总次数(仅第一轮)
+		let bAssassinPicks = 0;
+		let bTotalP1Picks = 0;
 		for (let i = 0; i < 10; i += 1) {
 			const gs = createGame();
+			const cm = gs.board!.characterManager;
+			let roundNum = 0;
+			let lastCCSType = -1;
 			const metrics: PerGameMetrics = {
 				picks: [], assassinations: [], thefts: [],
 				resourceDecisions: [], specialActions: [], incomeMatches: [],
@@ -552,9 +558,35 @@ describe('AI 详细评估', () => {
 				if (gs.progress === GameProgress.FINISHED) break;
 				const actorId = gs.board?.getCurrentPlayerId();
 				const actor = actorId ? gs.players.get(actorId) : undefined;
+				// 检测新一轮选角开始
+				if (gs.board?.gamePhase === 1) { // CHOOSE_CHARACTERS
+					const ccsType = cm.choosingState.getState().type;
+					if (ccsType === 6 && lastCCSType !== 6) roundNum += 1; // DONE → 轮数加1
+					lastCCSType = ccsType;
+				}
 				const pickFn = actor?.team === TeamId.A ? pickV3Unforced : pickV3;
 				const move = pickFn(gs);
-				if (move) { metrics.audit.aiMoveCount += 1; continue; }
+				if (move) {
+					metrics.audit.aiMoveCount += 1;
+					// 统计首发选刺客率（仅首轮）
+					if (move.type === 1 && gs.board && roundNum <= 1) {
+						const p1Id = gs.board.playerOrder[0];
+						if (actorId === p1Id) {
+							if (actor?.team === TeamId.A) {
+								aTotalP1Picks += 1;
+								if (cm.characters[CharacterType.ASSASSIN] === CharacterPosition.PLAYER_1) {
+									aAssassinPicks += 1;
+								}
+							} else {
+								bTotalP1Picks += 1;
+								if (cm.characters[CharacterType.ASSASSIN] === CharacterPosition.PLAYER_1) {
+									bAssassinPicks += 1;
+								}
+							}
+						}
+					}
+					continue;
+				}
 				gs.step({ type: MoveType.AUTO });
 				metrics.audit.autoStepCount += 1;
 			}
@@ -581,6 +613,9 @@ describe('AI 详细评估', () => {
 		console.log(`A队(V3Unforced无硬编码)胜: ${aWins}  B队(V3硬编码)胜: ${bWins}  平: ${draws}`);
 		console.log(`平均城市: A队 ${avgCityA.toFixed(2)}  B队 ${avgCityB.toFixed(2)}`);
 		console.log(`平均总分: A队 ${avgScoreA.toFixed(1)}  B队 ${avgScoreB.toFixed(1)}`);
+		console.log(`\n首发选刺客率:`);
+		console.log(`  A队(V3Unforced无硬编码): ${aAssassinPicks}/${aTotalP1Picks} = ${aTotalP1Picks ? ((aAssassinPicks / aTotalP1Picks) * 100).toFixed(1) : 'N/A'}%`);
+		console.log(`  B队(V3硬编码): ${bAssassinPicks}/${bTotalP1Picks} = ${bTotalP1Picks ? ((bAssassinPicks / bTotalP1Picks) * 100).toFixed(1) : 'N/A'}%`);
 		console.log('================================\n');
 		expect(finished).toBeGreaterThan(0);
 	});

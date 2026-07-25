@@ -37,6 +37,13 @@ export default function ActionPanel({
   onToggleAutoplay,
 }: ActionPanelProps) {
   const { t } = useTranslation();
+  // finish_turn (end turn) is split out of the main action list and rendered
+  // in a separate bottom region together with the autoplay toggle. Keeping
+  // these two "leave/control" actions physically separated from the primary
+  // gameplay actions (take gold / draw / build / confirm) reduces the risk of
+  // misclicking end-turn while performing a turn action.
+  const primaryActions = actions.filter((a) => a.title !== 'finish_turn');
+  const finishTurnAction = actions.find((a) => a.title === 'finish_turn');
   return (
     <div className="board-table__self-actions">
       <div className="board-table__actions-title">{t('ui.game.action_panel')}</div>
@@ -45,28 +52,37 @@ export default function ActionPanel({
           {countdownText}
         </div>
       )}
-      {actions.map((action, i) => (
+      {primaryActions.map((action, i) => (
         <button
           key={i}
           type="button"
-          className={`board-table__action-btn${isPrimaryAction(action.title) ? ' board-table__action-btn--primary' : ''}${action.title === 'finish_turn' || action.title === 'cancel' ? ' board-table__action-btn--danger' : ''}`}
+          className={`board-table__action-btn${isPrimaryAction(action.title) ? ' board-table__action-btn--primary' : ''}${action.title === 'cancel' ? ' board-table__action-btn--danger' : ''}`}
           onClick={(e) => onAction?.(action.move, e.currentTarget)}
         >
           {t(`ui.game.actions.${action.title}`, action.args ?? {})}
         </button>
       ))}
-      {gameProgress === 'IN_GAME' && (
-        <button
-          type="button"
-          className="board-table__action-btn"
-          disabled={autoplayBusy}
-          onClick={onToggleAutoplay}
-        >
-          {isAutoplay ? t('ui.game.autoplay_cancel') : t('ui.game.autoplay_enable')}
-        </button>
-      )}
-      <div className="board-table__meta">
-        {isAutoplay && <div>{t('ui.game.autoplay_on')}</div>}
+      <div className="board-table__actions-secondary">
+        {finishTurnAction && (
+          <button
+            type="button"
+            className="board-table__action-btn board-table__action-btn--danger"
+            onClick={(e) => onAction?.(finishTurnAction.move, e.currentTarget)}
+          >
+            {t(`ui.game.actions.${finishTurnAction.title}`, finishTurnAction.args ?? {})}
+          </button>
+        )}
+        {gameProgress === 'IN_GAME' && (
+          <button
+            type="button"
+            className="board-table__action-btn"
+            disabled={autoplayBusy}
+            onClick={onToggleAutoplay}
+          >
+            {isAutoplay ? t('ui.game.autoplay_cancel') : t('ui.game.autoplay_enable')}
+          </button>
+        )}
+        {isAutoplay && <div className="board-table__meta-line">{t('ui.game.autoplay_on')}</div>}
       </div>
     </div>
   );

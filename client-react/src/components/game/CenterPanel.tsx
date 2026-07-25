@@ -5,6 +5,7 @@ import {
   DistrictId,
 } from 'citadels-common';
 import { useStatusBarData } from '@/data/useStatusBarData';
+import { useSeenCharacterIds } from '@/store';
 import DistrictCard from './elements/DistrictCard';
 import CharacterCard from './elements/CharacterCard';
 
@@ -55,6 +56,15 @@ export default function CenterPanel({
 }: CenterPanelProps) {
   const { t } = useTranslation();
   const statusBar = useStatusBarData(gameState);
+  // Character ids the local player saw face-up during their own pick this
+  // round. In the assassin/thief target grid, cards NOT in this set get a grey
+  // veil — they are the 天绝 card and characters chosen by earlier pickers,
+  // i.e. cards the player never observed and thus cannot be sure about.
+  const seenCharacterIds = useSeenCharacterIds();
+  const seenSet = useMemo(() => new Set(seenCharacterIds), [seenCharacterIds]);
+  // Only meaningful while picking a kill/rob target: outside those modes we
+  // never veil cards (e.g. the normal DONE grid shows every role to everyone).
+  const veilEnabled = killMode || robMode;
 
   const centerTitle = useMemo(() => {
     if (gameProgress !== 'IN_GAME') return t('ui.game.messages.end');
@@ -126,6 +136,7 @@ export default function CenterPanel({
                 robbed={ch.robbed}
                 faceUpMark={ch.faceUp}
                 current={ch.current}
+                unseen={veilEnabled && ch.id > 0 && !seenSet.has(ch.id)}
                 size="large"
                 onSelect={() => onSelectCharacter?.(ch, i)}
               />

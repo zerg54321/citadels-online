@@ -198,4 +198,20 @@
   &--killed .char-card__inner {
     filter: grayscale(0.65) brightness(0.85);
   }
+
+  // Card the local player never saw in their own pick pool (天绝 or picked by
+  // an earlier picker). A translucent grey veil is layered over the art via a
+  // ::after pseudo-element so the card stays recognizable (not B/W) but is
+  // clearly distinguished from cards the player actually observed. Only
+  // applied in the assassin/thief target grid. pointer-events:none so the
+  // veil never blocks the underlying click target.
+  &--unseen .char-card__inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(110, 110, 120, 0.42);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 4;
+  }
 }

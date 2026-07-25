@@ -38,6 +38,8 @@ export const useGameState = () => useAppStore((s) => s.gameState);
 
 export const useIsConnected = () => useAppStore((s) => s.isConnected);
 
+export const useSeenCharacterIds = () => useAppStore((s) => s.seenCharacterIds);
+
 // --- Pure selectors (operate on gameState, no subscription) ---
 // Components call these inside useMemo with the gameState from useGameState().
 

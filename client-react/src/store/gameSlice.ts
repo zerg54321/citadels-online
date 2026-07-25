@@ -13,6 +13,15 @@ export interface GameSlice {
   selectedCards: DistrictId[];
   currentRoomId: RoomId | null;
   isConnected: boolean;
+  /**
+   * Character ids (1-based, matching server `callable[].id`) the local player
+   * has seen face-up during their own CHOOSE_CHARACTER pick this round. Used
+   * by the assassin/thief target grid to grey out cards the player never saw
+   * in their pick pool (the 天绝 card + characters chosen by earlier pickers),
+   * so they can tell those apart from cards they actually observed. Reset at
+   * each new round (when gamePhase returns to CHOOSE_CHARACTERS).
+   */
+  seenCharacterIds: number[];
 
   // mutations
   setGameState: (gameState: ClientGameState) => void;
@@ -24,6 +33,8 @@ export interface GameSlice {
   setPlayerOnline: (online: boolean, playerId?: PlayerId) => void;
   prepareGameSetupConfirmation: (cfg: { completeCitySize?: number; actionTimeoutSeconds?: number }) => void;
   setSelectedCards: (cards: DistrictId[]) => void;
+  setSeenCharacterIds: (updater: number[] | ((prev: number[]) => number[])) => void;
+  resetSeenCharacterIds: () => void;
 
   // actions
   createRoom: () => Promise<RoomId>;
@@ -51,6 +62,7 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
   selectedCards: [],
   currentRoomId: null,
   isConnected: socket.connected,
+  seenCharacterIds: [],
 
   setGameState: (gs) => set({ gameState: gs }),
   setCurrentRoomId: (roomId) => set({ currentRoomId: roomId }),
@@ -102,6 +114,10 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
     };
   }),
   setSelectedCards: (cards) => set({ selectedCards: cards }),
+  setSeenCharacterIds: (updater) => set((state) => ({
+    seenCharacterIds: typeof updater === 'function' ? updater(state.seenCharacterIds) : updater,
+  })),
+  resetSeenCharacterIds: () => set({ seenCharacterIds: [] }),
 
   async createRoom() {
     if (!get().authToken) throw new Error('login required');

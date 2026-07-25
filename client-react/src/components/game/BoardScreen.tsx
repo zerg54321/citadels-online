@@ -24,6 +24,7 @@ import {
   selectPlayerFromId,
 } from '@/store';
 import { useTeamScores } from '@/hooks/useTeamScores';
+import { playTurnSound } from '@/utils/sound';
 import SeatPanel from './elements/SeatPanel';
 import PlayerHand from './elements/PlayerHand';
 import DistrictCard from './elements/DistrictCard';
@@ -48,6 +49,8 @@ export default function BoardScreen() {
   const sendMoveStore = useAppStore((s) => s.sendMove);
   const leaveRoomStore = useAppStore((s) => s.leaveRoom);
   const setAutoplayStore = useAppStore((s) => s.setAutoplay);
+  const setSeenCharacterIdsStore = useAppStore((s) => s.setSeenCharacterIds);
+  const resetSeenCharacterIdsStore = useAppStore((s) => s.resetSeenCharacterIds);
 
   // --- local UI state (was Vue data()) ---
   const [nowMs, setNowMs] = useState(Date.now());
@@ -76,6 +79,61 @@ export default function BoardScreen() {
     const id = setInterval(() => setNowMs(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
+
+  // --- seen-character snapshot for assassin/thief target veiling ---
+  // While the local player is on their own CHOOSE_CHARACTER pick, the server
+  // reveals the real ids of the cards still in their pool. We snapshot those
+  // ids; later, in the kill/rob target grid, any card NOT in this set is
+  // veiled grey — it is the 天绝 card or a card an earlier picker took, i.e.
+  // one the player never observed. Merge as a sorted union so repeated state
+  // pushes during the same pick are idempotent.
+  useEffect(() => {
+    if (!isCurrentPlayerSelf) return;
+    const board = gameState?.board;
+    if (!board || board.gamePhase !== GamePhase.CHOOSE_CHARACTERS) return;
+    if (board.characters?.state?.type !== CCST.CHOOSE_CHARACTER) return;
+    const callable = board.characters?.callable ?? [];
+    const seen = callable
+      .map((c) => c.id)
+      .filter((id): id is number => typeof id === 'number' && id > 0);
+    if (seen.length === 0) return;
+    setSeenCharacterIdsStore((prev) => {
+      const merged = Array.from(new Set([...prev, ...seen])).sort((a, b) => a - b);
+      if (prev.length === merged.length && prev.every((v, i) => v === merged[i])) {
+        return prev;
+      }
+      return merged;
+    });
+  }, [gameState, isCurrentPlayerSelf, setSeenCharacterIdsStore]);
+
+  // --- reset seen-character snapshot when a new round's pick begins ---
+  // gamePhase transitions from non-CHOOSE_CHARACTERS back to CHOOSE_CHARACTERS
+  // at each new round; clear the previous round's snapshot so veiling reflects
+  // the current round's 天绝 / pick order only.
+  const prevPhaseRef = useRef<GamePhase | undefined>(undefined);
+  useEffect(() => {
+    const cur = gameState?.board?.gamePhase;
+    const prev = prevPhaseRef.current;
+    if (prev !== GamePhase.CHOOSE_CHARACTERS && cur === GamePhase.CHOOSE_CHARACTERS) {
+      resetSeenCharacterIdsStore();
+    }
+    prevPhaseRef.current = cur;
+  }, [gameState?.board?.gamePhase, resetSeenCharacterIdsStore]);
+
+  // --- "your turn" sound during the action phase ---
+  // Plays a short ding the moment it becomes the local player's turn to act
+  // in DO_ACTIONS. Scoped to DO_ACTIONS (not CHOOSE_CHARACTERS) so the system-
+  // auto 天绝 step — which briefly sets currentPlayer to PLAYER_1 — does not
+  // false-fire. Each false→true edge fires exactly once per turn.
+  const prevSelfTurnRef = useRef(false);
+  useEffect(() => {
+    const inActions = gameState?.board?.gamePhase === GamePhase.DO_ACTIONS;
+    const selfTurn = inActions && isCurrentPlayerSelf;
+    if (selfTurn && !prevSelfTurnRef.current) {
+      playTurnSound();
+    }
+    prevSelfTurnRef.current = selfTurn;
+  }, [gameState?.board?.gamePhase, isCurrentPlayerSelf]);
 
   // --- cleanup event banner timer on unmount (was Vue beforeUnmount) ---
   useEffect(() => () => {

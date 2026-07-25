@@ -34,6 +34,11 @@ interface CharacterCardProps {
   robbed?: boolean;
   faceUpMark?: boolean;
   current?: boolean;
+  /** Card the local player never saw in their own pick pool (天绝 / picked by
+   *  earlier pickers). Rendered with a translucent grey veil in the assassin
+   *  / thief target grid so the player can tell those apart from cards they
+   *  actually observed. */
+  unseen?: boolean;
   onSelect?: () => void;
 }
 
@@ -51,6 +56,7 @@ export default function CharacterCard({
   robbed = false,
   faceUpMark = false,
   current = false,
+  unseen = false,
   onSelect,
 }: CharacterCardProps) {
   const { t } = useTranslation();
@@ -79,6 +85,7 @@ export default function CharacterCard({
           'char-card--robbed': robbed,
           'char-card--face-up-mark': faceUpMark,
           'char-card--current': current,
+          'char-card--unseen': unseen,
         },
       )}
       onClick={handleClick}

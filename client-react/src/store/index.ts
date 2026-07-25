@@ -26,4 +26,5 @@ export {
   getDistrictData,
   selectDistrictDestroyPrice,
   selectPlayerPosition,
+  useSeenCharacterIds,
 } from './selectors';

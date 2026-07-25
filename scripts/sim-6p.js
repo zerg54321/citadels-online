@@ -12,11 +12,11 @@
 /* eslint-disable no-console */
 const path = require('path');
 const http = require('http');
-const { io } = require(path.join(__dirname, '../client/node_modules/socket.io-client'));
+const { io } = require(path.join(__dirname, '../client-react/node_modules/socket.io-client'));
 const { districts } = require(path.join(__dirname, '../common/dist/index.js'));
 
 const BASE = process.env.CITADELS_URL || 'http://127.0.0.1:8081';
-const WEB = process.env.CITADELS_WEB || 'http://127.0.0.1:3000';
+const WEB = process.env.CITADELS_WEB || 'http://127.0.0.1:3010';
 const WATCH = process.argv.includes('--watch');
 const MAX_STEPS = Number((process.argv.find((a) => a.startsWith('--max-steps=')) || '').split('=')[1]
   || (process.argv.includes('--max-steps') ? process.argv[process.argv.indexOf('--max-steps') + 1] : (WATCH ? 4000 : 4000)));

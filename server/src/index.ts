@@ -1,6 +1,5 @@
 import express from 'express';
 import { createServer } from 'http';
-import path from 'path';
 import { Server } from 'socket.io';
 import history from 'connect-history-api-fallback';
 import { initSocket } from './socket/server';
@@ -16,9 +15,12 @@ const port = process.env.PORT || 8081;
 app.enable('trust proxy');
 app.use(express.json());
 
-// redirect to https (skip local and API)
+// Redirect to https. Only active when ENFORCE_HTTPS=1; behind a reverse proxy
+// (Nginx/Caddy) TLS termination and the 80->443 redirect should be handled by
+// the proxy, so this stays off by default to allow IP-only HTTP deploys.
+const enforceHttps = process.env.ENFORCE_HTTPS === '1';
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (!enforceHttps || req.path.startsWith('/api')) {
     next();
     return;
   }
@@ -37,15 +39,12 @@ app.use('/api/auth', createAuthRouter());
 app.use('/api/stats', createStatsRouter());
 app.use('/api/rooms', createRoomsRouter());
 
-// offline replay JSON (generate-replay.cmd → server/replays/)
-app.use('/replays', express.static(path.resolve(__dirname, '../replays')));
-
 const io = new Server(http, {
   path: '/s/',
   cors: {
     origin: process.env.NODE_ENV === 'production'
       ? (process.env.CORS_ORIGIN || 'http://localhost:8081')
-      : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3010', 'http://127.0.0.1:3010'],
+      : ['http://localhost:3010', 'http://127.0.0.1:3010'],
     credentials: true,
   },
 });

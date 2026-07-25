@@ -5,16 +5,16 @@ cd /d "%~dp0.."
 set "ROOT=%CD%"
 set "PID_DIR=%ROOT%\.dev-pids"
 set "SERVER_PORT=8081"
-set "CLIENT_PORT=3000"
+set "REACT_PORT=3010"
 
 echo [dev-stop] root: %ROOT%
 
 call :stop_pid_file "%PID_DIR%\server.pid" "server"
-call :stop_pid_file "%PID_DIR%\client.pid" "client"
+call :stop_pid_file "%PID_DIR%\client-react.pid" "client-react"
 
-echo [dev-stop] free ports %SERVER_PORT% and %CLIENT_PORT% if still in use...
+echo [dev-stop] free ports %SERVER_PORT% and %REACT_PORT% if still in use...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ports = @(%SERVER_PORT%, %CLIENT_PORT%); foreach ($port in $ports) { Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $procId = $_.OwningProcess; if ($procId -and $procId -ne 0) { try { Stop-Process -Id $procId -Force -ErrorAction Stop; Write-Host ('[dev-stop] killed pid ' + $procId + ' on port ' + $port) } catch { Write-Host ('[dev-stop] could not kill pid ' + $procId + ' on port ' + $port) } } } }"
+  "$ports = @(%SERVER_PORT%, %REACT_PORT%); foreach ($port in $ports) { Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $procId = $_.OwningProcess; if ($procId -and $procId -ne 0) { try { Stop-Process -Id $procId -Force -ErrorAction Stop; Write-Host ('[dev-stop] killed pid ' + $procId + ' on port ' + $port) } catch { Write-Host ('[dev-stop] could not kill pid ' + $procId + ' on port ' + $port) } } } }"
 
 if exist "%PID_DIR%" (
   del /q "%PID_DIR%\*.pid" >nul 2>&1

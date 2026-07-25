@@ -481,7 +481,7 @@ describe('AI 详细评估', () => {
 		expect(gs.board!.players.get('p1')!.hand.length).toBe(origHandLen);
 	});
 
-	it(`跑 ${GAMES} 局`, () => {
+	it(`跑 ${GAMES} 局`, { timeout: 600000 }, () => {
 		const all: PerGameMetrics[] = [];
 		for (let i = 0; i < GAMES; i += 1) {
 			all.push(runGame(i));

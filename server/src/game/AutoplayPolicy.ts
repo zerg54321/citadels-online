@@ -233,12 +233,145 @@ function taxRoleScore(city: string[], hand: string[], character: CharacterType):
 }
 
 /**
- * 选角评分：综合自身发展 + 团队保护 + 阻止对手
+ * 选角 EV 上下文：把选角时用到的公开信息一次性算好，避免 estimatePickEV 内重复计算
+ */
+interface PickEVContext {
+	city: string[]; hand: string[]; stash: number; hc: number;
+	selfCity: number; limit: number; tempo: TempoMode;
+	enemyMax: number; allyHasCrown: boolean; hasLab: boolean; hasSmithy: boolean;
+}
+
+/**
+ * 估算选择某角色本回合的预期收益（Expected Value，单位 GE = 金币当量）。
+ *
+ * 设计原则：
+ *   - 只用公开信息（城市/手牌数/金库/已公开角色归属），不窥探手牌内容或对手暗选角色。
+ *   - 确定性计算、不采样——富饶之城一回合收益大部分当回合兑现（收租/建造/偷抢），可直算。
+ *   - 刺客首发由 forceAssassin 硬编码保证（见 pickBestCharacterIndex），此处刺客 EV 仅衡量
+ *     "阻止对手高收益角色"的期望，用于非首发位或刺客已被天绝弃置时的选角。
+ *
+ * GE 换算：1 金 = 1 GE，1 张手牌 ≈ 2 GE（抽牌机会成本，见 GE_GOLD/GE_CARD）。
+ */
+function estimatePickEV(
+	gs: GameState, actorId: string, character: CharacterType, ctx: PickEVContext,
+): number {
+	const {
+		city, hand, stash, hc, selfCity, limit, tempo, enemyMax, allyHasCrown, hasLab, hasSmithy,
+	} = ctx;
+	const allyNearWin = maxAllyCity(gs, actorId) >= limit - 2;
+	const enemyNearWin = enemyMax >= limit - 2;
+
+	switch (character) {
+	case CharacterType.ASSASSIN: {
+		// 刺客无直接收入，EV = 阻止对手高收益角色的期望收益
+		// 取每个对手"最可能角色"的估算收入，取最大威胁 × 命中权重
+		let bestDenied = 0;
+		gs.board?.playerOrder.forEach((pid) => {
+			if (!isEnemy(gs, actorId, pid)) return;
+			const roles = predictLikelyRoles(gs, pid);
+			const top = roles[0];
+			if (top === undefined) return;
+			const income = taxRoleScore(cityOf(gs, pid), handOf(gs, pid), top);
+			// 高资源对手被刺损失更大（含本回合建造/收租潜力）
+			const threat = income + stashOf(gs, pid) * 0.2 + citySize(gs, pid) * 0.2;
+			bestDenied = Math.max(bestDenied, threat);
+		});
+		let ev = Math.min(6, bestDenied * 0.5);
+		if (allyNearWin) ev += 2; // 队友濒临建成 → 刺军阀/盗贼保护
+		if (enemyNearWin || tempo === 'deny') ev += 2; // 对手濒临建成 → 阻止价值上升
+		return ev;
+	}
+	case CharacterType.THIEF: {
+		// 盗贼 EV = 偷到对手金库的期望。取富敌前两名金库之和 × 命中概率
+		let topStash = 0;
+		let secondStash = 0;
+		gs.board?.playerOrder.forEach((pid) => {
+			if (!isEnemy(gs, actorId, pid)) return;
+			const s = stashOf(gs, pid);
+			if (s > topStash) { secondStash = topStash; topStash = s; }
+			else if (s > secondStash) secondStash = s;
+		});
+		// 命中概率 ≈ 0.6（目标角色未被刺且猜对富敌持有角色）
+		let ev = Math.min(8, (topStash + secondStash) * 0.5 * 0.6);
+		if (topStash >= 5) ev += 1; // 富敌越多越值
+		return ev;
+	}
+	case CharacterType.MAGICIAN: {
+		// 魔术师 EV = 换手牌收益（对手多出的手牌 × GE_CARD）或弃劣牌收益
+		let maxEnemyHand = 0;
+		gs.board?.playerOrder.forEach((pid) => {
+			if (isEnemy(gs, actorId, pid)) maxEnemyHand = Math.max(maxEnemyHand, handCount(gs, pid));
+		});
+		const delta = Math.max(0, maxEnemyHand - hc);
+		let ev = delta * GE_CARD * 0.5; // 换牌收益打折（不确定对手手牌质量）
+		// 自己手牌极差（无牌可建）时弃牌也有价值
+		const buildable = hand.filter((c) => costOf(c) <= stash && !city.includes(c));
+		if (buildable.length === 0 && hc >= 2) ev += 1.5;
+		return ev;
+	}
+	case CharacterType.KING: {
+		// 国王 EV = 黄色税收 + 王冠（下轮选角优先）+ 王冠转移价值
+		let ev = taxRoleScore(city, hand, CharacterType.KING) * GE_GOLD;
+		ev += allyHasCrown ? 0 : 1.5; // 王冠 ≈ 1.5 GE；队友已有王冠则不抢
+		if (tempo === 'sprint' || tempo === 'deny') ev += 1; // 接近建成时王冠决定收尾顺序
+		return ev;
+	}
+	case CharacterType.BISHOP: {
+		// 主教 EV = 蓝色税收 + 防军阀摧毁的保护价值
+		let ev = taxRoleScore(city, hand, CharacterType.BISHOP) * GE_GOLD;
+		if (selfCity >= limit - 3) ev += 2; // 城市大 → 被军阀威胁，主教免疫价值上升
+		if (tempo === 'sprint' || tempo === 'deny') ev += 1.5;
+		return ev;
+	}
+	case CharacterType.MERCHANT: {
+		// 商人 EV = 绿色税收 + 被动 +1 金（确定 GE）+ 缺钱/功能建筑联动
+		let ev = taxRoleScore(city, hand, CharacterType.MERCHANT) * GE_GOLD + 1;
+		if (stash < 6) ev += 1; // 缺钱时经济引擎更值
+		if (hasSmithy) ev += 1.5; // 有铁匠铺需金币启动
+		if (hasLab) ev += 1;
+		if (tempo === 'sprint') ev += 2;
+		return ev;
+	}
+	case CharacterType.ARCHITECT: {
+		// 建筑师 EV = 2 张手牌(×GE_CARD=4) + 可建造牌的建造收益期望
+		const buildable = hand.filter((c) => costOf(c) <= stash + 2 && !city.includes(c));
+		let ev = 2 * GE_CARD + buildable.length * 1.5;
+		if (hc >= 2 && stash >= 4) ev += 2; // 资源充足时建造兑现率高
+		if (selfCity >= limit - 2) ev += 2; // 冲刺收尾
+		if (hasLab && hc >= 2) ev += 1.5;
+		return ev;
+	}
+	case CharacterType.WARLORD: {
+		// 军阀 EV = 红色税收 + 摧毁对手高价值建筑的期望收益
+		let ev = taxRoleScore(city, hand, CharacterType.WARLORD) * GE_GOLD;
+		// 摧毁价值：取对手最贵可拆建筑（公开）× 可负担概率
+		let bestDestroy = 0;
+		gs.board?.playerOrder.forEach((pid) => {
+			if (!isEnemy(gs, actorId, pid)) return;
+			cityOf(gs, pid).forEach((card) => {
+				if (card === 'keep') return; // 城堡不可拆
+				bestDestroy = Math.max(bestDestroy, costOf(card));
+			});
+		});
+		// 摧毁花费 = cost-1；stash 够则兑现率高
+		const affordable = stash >= bestDestroy - 1 ? 0.6 : 0.2;
+		ev += bestDestroy * 0.4 * affordable;
+		if (enemyNearWin) ev += 3; // 阻止建成
+		if (tempo === 'deny') ev += 2;
+		return ev;
+	}
+	default:
+		return 1;
+	}
+}
+
+/**
+ * 选角评分：以 EV（预期收益，GE）为基础分，叠加人类口诀先验（座位权重/同色截断/特殊建筑联动）。
  *
  * 核心思想：
- * - 首发拿刺客可以防止对手拿到刺客后砍我/队友
- * - 高收益角色（建筑师/商人/军阀）在后期价值暴增
- * - 拿克制角色（刺客克高收益、主教克军阀、盗贼克商人）也有战略加分
+ * - 基础分 = estimatePickEV，确定性公开信息计算，可解释、零方差
+ * - 首发拿刺客由 forceAssassin 硬编码保证（不依赖本评分）
+ * - 口诀先验（seatWeights/colorIntercept/双持）叠在 EV 之上，保证 AI 像人预期那样选
  */
 function scoreCharacterPick(
 	gs: GameState,
@@ -247,6 +380,8 @@ function scoreCharacterPick(
 	remaining: CharacterType[],
 	useSeatWeights = true, // V1: 启用座位权重/口诀策略
 ): number {
+	if (!remaining.includes(character)) return -999;
+
 	const city = cityOf(gs, actorId);
 	const hand = handOf(gs, actorId);
 	const stash = stashOf(gs, actorId);
@@ -257,114 +392,19 @@ function scoreCharacterPick(
 	const enemyMax = maxEnemyCity(gs, actorId);
 	const crownId = crownPlayerId(gs);
 	const allyHasCrown = crownId != null && crownId !== actorId && isAlly(gs, actorId, crownId);
-
-	// 检查特殊建筑
 	const hasLab = hasDistrict(actorId, gs, 'laboratory');
 	const hasSmithy = hasDistrict(actorId, gs, 'smithy');
-
-	let score = 0;
 	const tSeat = gs.board?.playerOrder.indexOf(actorId) ?? -1;
 
-	switch (character) {
-	case CharacterType.ASSASSIN: {
-		// 基础分 5，刺客的战略价值在于阻止对手高收益角色
-		score = 5;
-		// 中后期价值暴增——阻止对手冲刺
-		if (tempo === 'deny' || tempo === 'sprint') score += 8;
-		if (enemyMax >= limit - 2) score += 6;
-		// 保护队友资源：队友有大量金币时刺盗贼保护，有大量手牌时刺魔术师
-		let maxAllyGold = 0;
-		let maxAllyHand = 0;
-		gs.board?.playerOrder.forEach((pid) => {
-			if (isAlly(gs, actorId, pid)) {
-				maxAllyGold = Math.max(maxAllyGold, stashOf(gs, pid));
-				maxAllyHand = Math.max(maxAllyHand, handCount(gs, pid));
-			}
-		});
-		if (maxAllyGold >= 6) score += 5; // 队友有大量金币 → 选刺客保护
-		if (maxAllyHand >= 4) score += 4; // 队友有大量手牌 → 选刺客保护
-		if (maxAllyCity(gs, actorId) >= limit - 2) score += 5;
-		break;
-	}
-	case CharacterType.THIEF: {
-		// 对手金币多时有价值
-		score = 3;
-		let maxEnemyGold = 0;
-		gs.board?.playerOrder.forEach((pid) => {
-			if (isEnemy(gs, actorId, pid)) maxEnemyGold = Math.max(maxEnemyGold, stashOf(gs, pid));
-		});
-		score += Math.min(8, maxEnemyGold * 0.8);
-		break;
-	}
-	case CharacterType.MAGICIAN: {
-		// 手牌少时魔术师价值高（换对手的手牌）
-		score = 3;
-		if (hc === 0) score += 8;
-		else if (hc <= 2) score += 4;
-		// 对手手牌多时可以交换获益
-		let maxEnemyHand = 0;
-		gs.board?.playerOrder.forEach((pid) => {
-			if (isEnemy(gs, actorId, pid)) maxEnemyHand = Math.max(maxEnemyHand, handCount(gs, pid));
-		});
-		if (maxEnemyHand > hc + 2) score += (maxEnemyHand - hc) * 1.2;
-		break;
-	}
-	case CharacterType.KING: {
-		// 国王：收入 + 王冠转移（决定下轮选角顺序）
-		score = 3 + taxRoleScore(city, hand, CharacterType.KING) * 2;
-		score += 2; // 王冠附加分
-		if (allyHasCrown) score -= 6; // 队友已经有王冠了，不抢
-		break;
-	}
-	case CharacterType.BISHOP: {
-		// 主教：收入 + 防军阀
-		score = 3 + taxRoleScore(city, hand, CharacterType.BISHOP) * 2;
-		if (selfCity >= limit - 3) score += 5;
-		if (tempo === 'sprint' || tempo === 'deny') score += 3;
-		break;
-	}
-	case CharacterType.MERCHANT: {
-		// 商人：收入 + 被动+1金 + 经济引擎
-		score = 4 + taxRoleScore(city, hand, CharacterType.MERCHANT) * 2;
-		if (stash < 6) score += 2; // 缺钱时商人价值高
-		if (tempo === 'sprint') score += 4;
-		// 有铁匠铺时商人价值更高（需要金币启动铁匠铺）
-		if (hasSmithy) score += 3;
-		// 有实验室时商人价值更高
-		if (hasLab) score += 2;
-		break;
-	}
-	case CharacterType.ARCHITECT: {
-		// 建筑师：多建2房 + 3建造权，冲刺阶段的绝对核心
-		score = 3;
-		// 足够资源时建筑师非常强
-		if (hc >= 2 && stash >= 4) score += 12;
-		else if (hc >= 1 && stash >= 5) score += 8;
-		else if (stash >= 7) score += 7;
-		else score += Math.min(5, stash * 0.4 + hc * 0.5);
-		if (tempo === 'sprint' && selfCity >= limit - 3) score += 10;
-		if (selfCity >= limit - 2) score += 8;
-		// 有实验室时建筑师价值更高：二选一2金 + 被动2牌 + 实验室卖1无用牌 = 3金1牌
-		if (hasLab && hc >= 2) score += 4;
-		break;
-	}
-	case CharacterType.WARLORD: {
-		// 军阀：收入 + 拆建筑
-		score = 3 + taxRoleScore(city, hand, CharacterType.WARLORD) * 2;
-		if (enemyMax >= limit - 2) score += 12; // 对手接近完成，拆他！
-		if (enemyMax >= limit - 1) score += 8;
-		if (tempo === 'deny') score += 6;
-		if (stash >= 2) score += 1; // 攒够了首付
-		break;
-	}
-	default: score = 1;
-	}
+	// 基础分 = 该角色本回合的预期收益（EV，单位 GE）
+	let score = estimatePickEV(gs, actorId, character, {
+		city, hand, stash, hc, selfCity, limit, tempo, enemyMax, allyHasCrown, hasLab, hasSmithy,
+	});
 
 	// 轻微随机扰动，避免评分相同时总选同一个
 	score += Math.random() * 0.3;
-	if (!remaining.includes(character)) return -999;
 
-	// V1 专属：座位权重 + 同色截断 + 功能建筑联动
+	// V1 专属：座位权重 + 同色截断 + 功能建筑联动（人类口诀先验，叠在 EV 之上）
 	if (useSeatWeights) {
 		score += seatWeights(gs, actorId, character, tSeat, selfCity, stash, hc);
 		score += colorInterceptScore(gs, actorId, character, tSeat);
@@ -956,7 +996,7 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v3', forceAssassin = true): Move | null {
+export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v2', forceAssassin = true): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -1006,22 +1046,15 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 				const moves = order.map((o) => ({ type: MoveType.CHOOSE_CHARACTER, data: o.idx } as Move));
 				return tryMoves(gameState, moves.length ? moves : [{ type: MoveType.CHOOSE_CHARACTER, data: 0 }]);
 			}
+			// pickBestCharacterIndex 在 forceAssassin=true 且刺客可用时硬编码返回刺客索引（首发必拿刺客）
 			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights, forceAssassin);
 			const moves: Move[] = [{ type: MoveType.CHOOSE_CHARACTER, data: best }];
 
-			// V3(MCTS): forceAssassin=true 时，硬编码选刺客不走MCTS
+			// V3 MCTS 选角：仅当未硬编码刺客（forceAssassin=false 或刺客不在池中）时才走 MCTS，
+			// 避免 MCTS 覆盖首发必拿刺客的硬编码规则
 			const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
-			if (forceAssassin) {
-				const assassinIdx = remaining.indexOf(CharacterType.ASSASSIN);
-				if (assassinIdx >= 0) {
-					const move: Move = { type: MoveType.CHOOSE_CHARACTER, data: assassinIdx };
-					if (gameState.step(move)) {
-						gameState.step({ type: MoveType.AUTO });
-						return move;
-					}
-				}
-			}
-			if (useMCTS && remaining.length > 0) {
+			const assassinAvailable = remaining.includes(CharacterType.ASSASSIN);
+			if (useMCTS && !(forceAssassin && assassinAvailable)) {
 				const meta = gameState.players.get(actorId);
 				const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
 				if (mctsMove) {
@@ -1267,7 +1300,7 @@ export function pickV2(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v2');
 }
 
-/** V3 版本（V2 + MCTS 选角）—— 默认策略 */
+/** V3 版本（V2 + MCTS 选角）—— 仅评估使用，非生产默认（生产默认 V2，见 docs/AI_ROADMAP.md 0.2） */
 export function pickV3(gs: GameState): Move | null {
 	return pickAndApplyAutoplayMove(gs, 'v3');
 }

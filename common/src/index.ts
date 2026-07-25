@@ -1,5 +1,6 @@
 import districtsJson from './districts.json';
 import type { DistrictId } from './districts';
+import type { ActionFeedLine } from './view/actionFeed';
 
 export const districts = districtsJson;
 
@@ -32,6 +33,10 @@ export type {
   StatusBarMessageType,
   GetStatusBarDataOptions,
 } from './view/statusBar';
+// eslint-disable-next-line import/no-cycle
+export { formatActionFeedLine } from './view/actionFeed';
+// eslint-disable-next-line import/no-cycle
+export type { ActionFeedLine, ActionFeedTFunc } from './view/actionFeed';
 
 export type PlayerId = string;
 export type RoomId = string;
@@ -162,6 +167,12 @@ export type TeamScores = {
   [TeamId.B]?: number
 };
 
+// Avatar: type='preset' → ref is a preset id (e.g. '01'), rendered by the
+// client as /avatars/{ref}.png; type='upload' → ref is the userId, served
+// from the server's /api/avatar/{userId} route. Optional because AI players
+// and anonymous spectators have no user record / avatar.
+export type Avatar = { type: string; ref: string };
+
 export type ClientGameState = {
   progress: GameProgress
   gameMode: GameMode
@@ -177,6 +188,7 @@ export type ClientGameState = {
     /** player is in autoplay / hosted mode */
     isAutoplay?: boolean
     hadEffectiveAiControl?: boolean
+    avatar?: Avatar
   }>
   self: PlayerId
   board: {
@@ -215,10 +227,15 @@ export type ClientGameState = {
   matchResult?: MatchResult
   /** last completed action-round summary (kill/rob/city snapshot) */
   lastRoundSummary?: string | null
+  /** current round number (1-based) */
+  roundNumber?: number
   /** lobby seat order for 3v3 team preview */
   lobbyPlayerOrder?: PlayerId[]
-  /** recent human-readable action feed for UI log */
-  actionFeed?: Array<{ text: string; kind?: string }>
+  /** recent action feed for UI log. The server pushes structured
+   *  { kind, params } entries (no localized text); the client renders them
+   *  via formatActionFeedLine() with the current i18n language. `text` is an
+   *  optional fallback only. */
+  actionFeed?: ActionFeedLine[]
 };
 
 export type GameSetupData = {

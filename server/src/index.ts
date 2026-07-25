@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import history from 'connect-history-api-fallback';
 import { initSocket } from './socket/server';
 import { createAuthRouter } from './auth/routes';
+import { createAvatarRouter } from './auth/avatarRoutes';
 import { createStatsRouter } from './stats/routes';
 import { createRoomsRouter } from './rooms/routes';
 import { dbPath } from './db/database';
@@ -36,6 +37,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', createAuthRouter());
+app.use('/api/avatar', createAvatarRouter());
 app.use('/api/stats', createStatsRouter());
 app.use('/api/rooms', createRoomsRouter());
 

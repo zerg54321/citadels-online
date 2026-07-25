@@ -5,6 +5,7 @@ import {
 } from 'citadels-common';
 import Modal from '@/components/common/Modal';
 import { cn } from '@/utils/cn';
+import { avatarUrl } from '@/utils/avatarUrl';
 import {
   useAppStore,
   useGameProgress,
@@ -26,6 +27,7 @@ interface SeatPanelProps {
   exchangeHandMode?: boolean;
   stash?: number;
   relation?: 'self' | 'ally' | 'enemy';
+  isSpectator?: boolean;
 }
 
 // Mirrors Vue elements/SeatPanel.vue. mapGetters → hooks + selectors.
@@ -38,6 +40,7 @@ export default function SeatPanel({
   exchangeHandMode = false,
   stash = 0,
   relation = 'enemy',
+  isSpectator = false,
 }: SeatPanelProps) {
   const { t } = useTranslation();
   const gameState = useAppStore((s) => s.gameState);
@@ -47,7 +50,9 @@ export default function SeatPanel({
   const [pendingDestroy, setPendingDestroy] = useState<DistrictId | null>(null);
 
   const getPlayer = selectPlayerFromId(gameState);
-  const username = getPlayer(playerId)?.username || playerId;
+  const player = getPlayer(playerId);
+  const username = player?.username || playerId;
+  const avatarSrc = player?.avatar ? avatarUrl(player.avatar) : '';
   const isCurrentPlayer = currentPlayerId === playerId;
   const isActingNow = isCurrentPlayer && gameProgress === 'IN_GAME';
 
@@ -128,34 +133,28 @@ export default function SeatPanel({
       <div className="seat-panel__main">
         <div className="seat-panel__banner">
           <span className="seat-panel__pick-no" title={t('ui.game.pick_order_tip')}>{pickOrder}</span>
+          {avatarSrc && <img src={avatarSrc} alt="" className="seat-panel__avatar" />}
           <span className="text-truncate flex-fill seat-panel__name">{username}</span>
-          {board.crown && <span className="seat-panel__crown" title={t('ui.game.crown_holder')}>👑</span>}
-          {relation === 'self' && <span className="seat-panel__tag">{t('ui.lobby.you')}</span>}
-          {relation === 'ally' && <span className="seat-panel__tag">{t('ui.team.ally')}</span>}
-          {relation === 'enemy' && <span className="seat-panel__tag">{t('ui.team.enemy_short')}</span>}
-        </div>
-
-        <div className="seat-panel__stats">
-          <div className="seat-panel__stat" title={t('ui.game.stat_gold')}>
-            <span className="seat-panel__stat-icon">🪙</span>
-            <span className="seat-panel__stat-val">{board.stash ?? 0}</span>
-          </div>
-          <div
-            className={cn('seat-panel__stat', { 'seat-panel__stat--click': exchangeHandMode })}
+          <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
+            <span className="seat-panel__chip-icon">🪙</span>
+            <span className="seat-panel__chip-val">{board.stash ?? 0}</span>
+          </span>
+          <span
+            className={cn('seat-panel__chip seat-panel__chip--hand', { 'seat-panel__chip--click': exchangeHandMode })}
             title={t('ui.game.stat_hand')}
             onClick={exchangeHand}
           >
-            <span className="seat-panel__stat-icon">🃏</span>
-            <span className="seat-panel__stat-val">{(board.hand || []).length}</span>
-          </div>
-          <div className="seat-panel__stat seat-panel__stat--score" title={t('ui.game.stat_score')}>
-            <span className="seat-panel__stat-icon">⭐</span>
-            <span className="seat-panel__stat-val">{board.score?.total ?? 0}</span>
-          </div>
-          <div className="seat-panel__stat" title={t('ui.game.stat_city')}>
-            <span className="seat-panel__stat-icon">🏛</span>
-            <span className="seat-panel__stat-val">{(board.city || []).length}</span>
-          </div>
+            <span className="seat-panel__chip-icon">🃏</span>
+            <span className="seat-panel__chip-val">{(board.hand || []).length}</span>
+          </span>
+          <span className="seat-panel__chip seat-panel__chip--score" title={t('ui.game.stat_score')}>
+            <span className="seat-panel__chip-icon">⭐</span>
+            <span className="seat-panel__chip-val">{board.score?.total ?? 0}</span>
+          </span>
+          {board.crown && <span className="seat-panel__crown" title={t('ui.game.crown_holder')}>👑</span>}
+          {relation === 'self' && <span className="seat-panel__tag">{t('ui.lobby.you')}</span>}
+          {relation === 'ally' && <span className="seat-panel__tag">{isSpectator ? t('ui.team.a') : t('ui.team.ally')}</span>}
+          {relation === 'enemy' && <span className="seat-panel__tag">{isSpectator ? t('ui.team.b') : t('ui.team.enemy_short')}</span>}
         </div>
 
         <div className="seat-panel__body">

@@ -1,18 +1,16 @@
 import {
-  useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   CharacterChoosingStateType as CCST,
   ClientTurnState,
-  computeTeamScores,
-  getMyTeam as getMyTeamOf,
   getTableSlots,
   isSpectator as isSpectatorOf,
+  GamePhase,
   Move,
   MoveType,
-  TeamId,
   type TableSlot,
   type DistrictId,
 } from 'citadels-common';
@@ -25,11 +23,11 @@ import {
   useCharactersList,
   selectPlayerFromId,
 } from '@/store';
+import { useTeamScores } from '@/hooks/useTeamScores';
 import SeatPanel from './elements/SeatPanel';
 import PlayerHand from './elements/PlayerHand';
 import DistrictCard from './elements/DistrictCard';
 import CharacterCard from './elements/CharacterCard';
-import TurnOrderBar from './TurnOrderBar';
 import ActionLog from './ActionLog';
 import ActionPanel from './ActionPanel';
 import CenterPanel from './CenterPanel';
@@ -57,6 +55,21 @@ export default function BoardScreen() {
   const [eventBanner, setEventBanner] = useState('');
   const [showEndModal, setShowEndModal] = useState(true);
   const eventBannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // --- crown holder snapshot ---
+  // The 👑 marks the round's first picker. The server rotates `playerOrder`
+  // mid-round when the King is called, which would flip the crown instantly.
+  // We snapshot `playerOrder[0]` while in CHOOSE_CHARACTERS (the round-start
+  // drafting phase, where it already holds the correct player) and freeze
+  // that value through DO_ACTIONS, so the crown only moves to the new King at
+  // the start of the next round.
+  const [crownHolderId, setCrownHolderId] = useState<string | null>(null);
+  const crownOrder0 = gameState?.board?.playerOrder?.[0] ?? null;
+  if (gameState?.board?.gamePhase === GamePhase.CHOOSE_CHARACTERS
+      && crownOrder0 && crownOrder0 !== crownHolderId) {
+    setCrownHolderId(crownOrder0);
+  }
+  const effectiveCrownId = crownHolderId ?? crownOrder0;
 
   // --- countdown timer (was Vue mounted()) ---
   useEffect(() => {
@@ -100,9 +113,16 @@ export default function BoardScreen() {
   const countdownUrgent = countdownSecondsLeft !== null && countdownSecondsLeft <= 15;
 
   const isSpectator = useMemo(() => (gameState ? isSpectatorOf(gameState) : true), [gameState]);
-  const myTeam = useMemo(() => (gameState ? getMyTeamOf(gameState, isSpectator) : null), [gameState, isSpectator]);
 
-  const tableSlots = useMemo<TableSlot[]>(() => (gameState ? getTableSlots(gameState, isSpectator) : []), [gameState, isSpectator]);
+  const tableSlots = useMemo<TableSlot[]>(() => {
+    if (!gameState) return [];
+    const slots = getTableSlots(gameState, isSpectator);
+    if (!effectiveCrownId) return slots;
+    return slots.map((s) => ({
+      ...s,
+      board: { ...s.board, crown: s.playerId === effectiveCrownId },
+    }));
+  }, [gameState, isSpectator, effectiveCrownId]);
 
   const selfBoard = useMemo(() => {
     if (isSpectator || !gameState) {
@@ -119,9 +139,9 @@ export default function BoardScreen() {
       score: {},
       characters: [],
       ...(board || {}),
-      crown: gameState.board.playerOrder[0] === self,
+      crown: effectiveCrownId === self,
     };
-  }, [gameState, isSpectator, self]);
+  }, [gameState, isSpectator, self, effectiveCrownId]);
 
   const selfName = self ? (getPlayer(self)?.username || 'You') : 'You';
   const selfPickOrder = useMemo(() => {
@@ -188,54 +208,30 @@ export default function BoardScreen() {
     };
   }, [gameState, isSpectator, isCurrentPlayerSelf]);
 
-  const showTeamScores = useMemo(() => {
-    if (!gameState?.board?.playerOrder) return false;
-    return Object.values(gameState.players).some(
-      (p) => p.team === TeamId.A || p.team === TeamId.B,
-    );
-  }, [gameState]);
-
-  const liveTeamScores = useMemo(() => {
-    if (!gameState) {
-      return {
-        A: 0, B: 0, myLabel: 'A', enemyLabel: 'B',
-      };
-    }
-    const { A, B } = computeTeamScores(gameState);
-    if (!isSpectator && myTeam === TeamId.B) {
-      return {
-        A: B, B: A, myLabel: 'B', enemyLabel: 'A',
-      };
-    }
-    return {
-      A, B, myLabel: 'A', enemyLabel: 'B',
-    };
-  }, [gameState, isSpectator, myTeam]);
-
-  const turnOrderChips = useMemo(() => {
-    const list = (charactersList?.callable || []) as Array<{ id: number; killed?: boolean; faceUp?: boolean; discardedFaceUp?: boolean }>;
-    const current = charactersList?.current || 0;
-    if (list.length) {
-      return list.map((c, idx) => ({
-        idx,
-        id: c.id || 0,
-        current: c.id === current && current !== 0,
-        killed: Boolean(c.killed),
-        faceUp: Boolean(c.faceUp || c.discardedFaceUp),
-        tip: c.id ? t(`characters.${c.id}.name`) : t('ui.game.character_unknown'),
-      }));
-    }
-    return [1, 2, 3, 4, 5, 6, 7, 8].map((id, idx) => ({
-      idx, id, current: id === current, killed: false, faceUp: false, tip: '',
-    }));
-  }, [charactersList, t]);
+  const showTeamScores = useTeamScores();
 
   // --- handlers (was Vue methods) ---
-  const showEvent = (text: string) => {
+  // Stable identity so ActionLog's effect doesn't re-fire on every render
+  // (which would keep resetting the auto-clear timer).
+  const showEvent = useCallback((text: string) => {
     setEventBanner(text);
     if (eventBannerTimer.current) clearTimeout(eventBannerTimer.current);
     eventBannerTimer.current = setTimeout(() => setEventBanner(''), 3500);
-  };
+  }, []);
+
+  // --- clear the transient event banner when a new round begins ---
+  // Kill/rob banners (e.g. "军阀被刺杀不能行动") used to leak into the next
+  // round's drafting phase. Clear them at the round boundary (gamePhase
+  // returns to CHOOSE_CHARACTERS) and cancel any pending auto-clear timer.
+  useEffect(() => {
+    if (gameState?.board?.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
+      setEventBanner('');
+      if (eventBannerTimer.current) {
+        clearTimeout(eventBannerTimer.current);
+        eventBannerTimer.current = undefined;
+      }
+    }
+  }, [gameState?.board?.gamePhase]);
 
   const onCenterCharacterClick = async (ch: { selectable?: boolean; id: number }, index: number) => {
     if (!ch.selectable) return;
@@ -285,15 +281,6 @@ export default function BoardScreen() {
     navigate('/');
   };
 
-  const leaveRoom = async () => {
-    try {
-      await leaveRoomStore();
-      navigate('/');
-    } catch (e) {
-      console.error('leave room failed', e);
-    }
-  };
-
   if (!gameState) return null;
 
   const selfCity = (selfBoard.city || []) as Array<DistrictId | null>;
@@ -301,24 +288,6 @@ export default function BoardScreen() {
   return (
     <div className="board-table">
       <div className="board-table__bg" />
-
-      <div className="board-table__top">
-        {showTeamScores && (
-          <div className="board-table__score-bar">
-            <span className="board-table__team-a">
-              {isSpectator ? t('ui.team.a') : t('ui.team.mine')} {liveTeamScores.A}
-            </span>
-            <span className="opacity-50">VS</span>
-            <span className="board-table__team-b">
-              {isSpectator ? t('ui.team.b') : t('ui.team.enemy')} {liveTeamScores.B}
-            </span>
-          </div>
-        )}
-        <TurnOrderBar turnOrderChips={turnOrderChips} gameProgress={gameProgress} />
-        <button type="button" className="board-table__leave-btn" onClick={leaveRoom}>
-          {t('ui.score.leave_room')}
-        </button>
-      </div>
 
       <div className={`board-table__stage${isSpectator ? ' board-table__stage--spectate' : ''}`}>
         {tableSlots.map((slot) => (
@@ -331,6 +300,7 @@ export default function BoardScreen() {
               exchangeHandMode={modeFlags.exchangeHand}
               stash={(selfBoard.stash as number) || 0}
               relation={slot.relation}
+              isSpectator={isSpectator}
             />
           </div>
         ))}
@@ -353,7 +323,18 @@ export default function BoardScreen() {
                 <div className="board-table__self-banner">
                   <span className="board-table__self-pick">{selfPickOrder}</span>
                   <span className="text-truncate flex-fill">{selfName}</span>
-                  <span className="board-table__self-vp">⭐ {(selfBoard.score as { total?: number } | undefined)?.total ?? 0}</span>
+                  <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
+                    <span className="seat-panel__chip-icon">🪙</span>
+                    <span className="seat-panel__chip-val">{(selfBoard.stash as number) ?? 0}</span>
+                  </span>
+                  <span className="seat-panel__chip seat-panel__chip--hand" title={t('ui.game.stat_hand')}>
+                    <span className="seat-panel__chip-icon">🃏</span>
+                    <span className="seat-panel__chip-val">{(selfBoard.hand || []).length}</span>
+                  </span>
+                  <span className="seat-panel__chip seat-panel__chip--score" title={t('ui.game.stat_score')}>
+                    <span className="seat-panel__chip-icon">⭐</span>
+                    <span className="seat-panel__chip-val">{(selfBoard.score as { total?: number } | undefined)?.total ?? 0}</span>
+                  </span>
                   {(selfBoard as { crown?: boolean }).crown && (
                     <span className="seat-panel__crown" title={t('ui.game.crown_holder')}>👑</span>
                   )}
@@ -410,7 +391,7 @@ export default function BoardScreen() {
         )}
 
         <ActionLog
-          displayActionFeed={displayActionFeed as { text: string; kind: string }[]}
+          displayActionFeed={displayActionFeed}
           onShowEvent={showEvent}
         />
       </div>

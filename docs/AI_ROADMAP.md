@@ -130,7 +130,7 @@
 
 1. **生产默认回退 V2**（✅ 已做）——`pickAndApplyAutoplayMove` 默认 `version='v2'`，`TurnTimer` 即用 V2。
 2. **MCTS 降级评估专用**（✅ 已做）——仅 `aiEval`/`mctsEval` A 队使用 `pickV3`。
-3. **`diag.test.ts` 升级为 forceAssassin 回归守卫**（⬜ 待做）——跑 N 局断言每局 P1/P4 首轮选角 == 刺客（刺客在池中时），防止再次 silently regress。
+3. ~~**`diag.test.ts` 升级为 forceAssassin 回归守卫**~~（❌ 取消，2026-07-25）——原文件是一次性诊断脚本（跑 1 局断言能跑完），`forceAssassin` 硬编码 bug 已修复，诊断使命完成，文件已删除。回归守卫需求改由 `aiEval.test.ts` 的「首发硬编码测试」用例覆盖（跑 N 局断言 P1/P4 首轮选角 == 刺客）。
 4. **MCTS 技术债清单**（⬜ 待做）：
    - `MCTS_ROLLOUTS=10` 太少 → ≥200 才有统计意义（当前高方差噪声主导）。
    - rollout 跑到终局（`MCTS_MAX_STEPS=6000`）太慢，生产选角会阻塞 → 改为 2-3 轮中期评分（3.2 已写但代码未实现）。
@@ -173,7 +173,7 @@
 |------|------|---------|:----:|
 | 0.2 | 生产默认回退 V2、MCTS 降级评估专用 | — | ✅ 已做 |
 | 0.1 轨C | 对人类复盘一致性评估（复用 ReplayRecorder） | 1-2 天 | ⬜ 待做 |
-| 3.1 | `diag.test.ts` 升级为 forceAssassin 回归守卫 | 0.5 天 | ⬜ 待做 |
+| ~~3.1~~ | ~~`diag.test.ts` 升级为 forceAssassin 回归守卫~~（已删文件，需求并入 aiEval） | — | ❌ 取消 |
 | 2.4b | 修复选角质量 Top-1 统计 bug | 0.5 天 | ⬜ 待做 |
 | 2.4b | 扩展决策质量到资源/建造/刺杀维度 | 0.5 天 | ⬜ 待做 |
 | 2.5 | 口诀链式选角（色房判断/三七同甩/国王博弈，第二/五/八条）—— 人类 edge，优先于 MCTS | 2-3 天 | ⬜ 待做 |

@@ -10,6 +10,8 @@ import {
   GamePhase,
   CharacterChoosingStateType as CCST,
   PlayerId,
+  ActionFeedLine,
+  Avatar,
 } from 'citadels-common';
 import { Observer, Subject } from '../utils/observerPattern';
 import BoardState from './BoardState';
@@ -47,10 +49,13 @@ export default class GameState implements Subject {
   matchPersisted: boolean;
   /** brief summary of last completed character-action round (for UI) */
   lastRoundSummary: string | null;
+  /** current round number (1-based); increments when a new round begins */
+  roundNumber: number;
   /** lobby seat order for 3v3 team preview (even=A, odd=B) */
   lobbyPlayerOrder: PlayerId[];
-  /** rolling action log for clients */
-  actionFeed: Array<{ text: string; kind?: string }>;
+  /** rolling action log for clients; structured { kind, params } entries
+   *  localized client-side via formatActionFeedLine() */
+  actionFeed: ActionFeedLine[];
   /** epoch ms when this room became empty of human players */
   emptySince: number | null;
   private flow: GameFlowController;
@@ -76,6 +81,7 @@ export default class GameState implements Subject {
     gs.hasAiPlayers = this.hasAiPlayers;
     gs.matchPersisted = this.matchPersisted;
     gs.lastRoundSummary = this.lastRoundSummary;
+    gs.roundNumber = this.roundNumber;
     gs.lobbyPlayerOrder = [...this.lobbyPlayerOrder];
     gs.actionFeed = [...this.actionFeed.map((a) => ({ ...a }))];
     gs.emptySince = this.emptySince;
@@ -106,6 +112,7 @@ export default class GameState implements Subject {
     this.hasAiPlayers = false;
     this.matchPersisted = false;
     this.lastRoundSummary = null;
+    this.roundNumber = 0;
     this.lobbyPlayerOrder = [];
     this.actionFeed = [];
     this.emptySince = null;
@@ -124,8 +131,19 @@ export default class GameState implements Subject {
     setTimeout(fn, delay);
   }
 
-  pushAction(text: string, kind = '') {
-    this.actionFeed.push({ text, kind });
+  /** Append a structured action-feed entry (kind + params). The client
+   *  localizes it via formatActionFeedLine(); the server never bakes in
+   *  localized text. */
+  pushAction(entry: ActionFeedLine) {
+    this.actionFeed.push(entry);
+    if (this.actionFeed.length > ACTION_FEED_MAX_LENGTH) {
+      this.actionFeed.splice(0, this.actionFeed.length - ACTION_FEED_MAX_LENGTH);
+    }
+  }
+
+  /** Push a "round N starts" separator into the action feed. */
+  pushRoundMarker(round: number) {
+    this.actionFeed.push({ kind: 'round', round });
     if (this.actionFeed.length > ACTION_FEED_MAX_LENGTH) {
       this.actionFeed.splice(0, this.actionFeed.length - ACTION_FEED_MAX_LENGTH);
     }
@@ -148,8 +166,9 @@ export default class GameState implements Subject {
     online = true,
     role = PlayerRole.PLAYER,
     userId?: string,
+    avatar?: Avatar,
   ) {
-    const player = new Player(id, username, manager, online, role, userId);
+    const player = new Player(id, username, manager, online, role, userId, TeamId.NONE, avatar);
     this.players.set(id, player);
     if (role === PlayerRole.PLAYER) {
       if (!this.lobbyPlayerOrder.includes(id)) this.lobbyPlayerOrder.push(id);
@@ -317,6 +336,7 @@ export default class GameState implements Subject {
           isAi: player.isAi,
           isAutoplay: player.isAutoplay,
           hadEffectiveAiControl: player.hadEffectiveAiControl,
+          avatar: player.avatar,
         }]),
       ),
       self: playerId,
@@ -329,6 +349,7 @@ export default class GameState implements Subject {
       teamScores: this.teamScores,
       matchResult: this.matchResult,
       lastRoundSummary: this.lastRoundSummary,
+      roundNumber: this.roundNumber,
       lobbyPlayerOrder: [...this.lobbyPlayerOrder],
       actionFeed: this.actionFeed.slice(-ACTION_FEED_EXPORT_LIMIT),
     };
@@ -408,6 +429,7 @@ export default class GameState implements Subject {
     this.matchResult = MatchResult.NONE;
     this.startedAt = new Date().toISOString();
     this.matchPersisted = false;
+    this.roundNumber = 1;
     players.forEach((id) => {
       const p = this.players.get(id);
       if (p) {

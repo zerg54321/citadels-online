@@ -113,6 +113,7 @@ export default class GameFlowController {
                     this.state.schedulePhase(() => {
                       // 新轮选角开始，清除上一轮的回合摘要
                       this.state.lastRoundSummary = null;
+                      this.state.pushRoundMarker(this.state.roundNumber);
                       ccs.step();
                       this.state.notify();
                     }, 3000);
@@ -288,6 +289,7 @@ export default class GameFlowController {
       this.state.progress = GameProgress.FINISHED;
     } else {
       this.state.cityCompletedThisTurnPhase = false;
+      this.state.roundNumber += 1;
       this.state.board.gamePhase = GamePhase.CHOOSE_CHARACTERS;
       cm.reset();
     }

@@ -44,6 +44,7 @@ export function parseClientGameState(data: unknown): ClientGameState {
     teamScores: d.teamScores,
     matchResult: d.matchResult,
     lastRoundSummary: d.lastRoundSummary ?? null,
+    roundNumber: typeof d.roundNumber === 'number' ? d.roundNumber : 1,
     lobbyPlayerOrder: d.lobbyPlayerOrder || [],
     actionFeed: d.actionFeed || [],
   };

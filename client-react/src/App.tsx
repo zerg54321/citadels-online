@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Outlet, useLocation, Link } from 'react-router-dom';
+import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
+import GameTopBar from './components/game/GameTopBar';
+import { useAppStore, useGameProgress } from './store';
 
 // Mirrors Vue App.vue. The About modal (Vue Bootstrap data-toggle) becomes a
 // createPortal + local state. Vue computed inGame ($route.name === 'room') →
@@ -13,20 +15,38 @@ import LocaleSelector from './components/common/LocaleSelector';
 export default function App() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [showAbout, setShowAbout] = useState(false);
+  const leaveRoomStore = useAppStore((s) => s.leaveRoom);
+  const gameProgress = useGameProgress();
 
   const inGame = location.pathname.startsWith('/room');
 
+  const leaveRoom = async () => {
+    try {
+      await leaveRoomStore();
+    } catch (e) {
+      console.error('leave room failed', e);
+    }
+    navigate('/');
+  };
+
   return (
     <div className="d-flex flex-column h-100">
-      <header>
+      <header className={inGame ? 'header--game' : undefined}>
         <div className="container-fluid">
           <div className="header-row">
             <div className="header-brand">
               <h1><a href="/" className="text-reset">{t('ui.title')}</a></h1>
               <h6 className={inGame ? 'header-subtitle--hidden' : ''}>{t('ui.subtitle2')}</h6>
             </div>
+            {inGame && <GameTopBar />}
             <div className="header-actions">
+              {inGame && gameProgress === 'IN_GAME' && (
+                <button type="button" className="header-leave-btn" onClick={leaveRoom}>
+                  {t('ui.score.leave_room')}
+                </button>
+              )}
               <div className={`header-extra${inGame ? ' header-extra--hidden' : ''}`}>
                 <Link className="hdr-link" to="/stats">
                   {t('ui.stats.title')}

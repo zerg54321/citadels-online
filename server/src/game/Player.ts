@@ -1,4 +1,9 @@
-import { PlayerId, PlayerRole, TeamId } from 'citadels-common';
+import {
+  Avatar,
+  PlayerId,
+  PlayerRole,
+  TeamId,
+} from 'citadels-common';
 
 export default class Player {
   id: PlayerId;
@@ -13,6 +18,8 @@ export default class Player {
   isAutoplay: boolean;
   /** P4: AI actually took at least one action for this player */
   hadEffectiveAiControl: boolean;
+  /** Avatar from the user record; undefined for AI / anonymous spectators. */
+  avatar?: Avatar;
 
   constructor(
     id: PlayerId,
@@ -22,6 +29,7 @@ export default class Player {
     role: PlayerRole,
     userId?: string,
     team: TeamId = TeamId.NONE,
+    avatar?: Avatar,
   ) {
     this.id = id;
     this.username = username;
@@ -33,6 +41,7 @@ export default class Player {
     this.isAi = false;
     this.isAutoplay = false;
     this.hadEffectiveAiControl = false;
+    this.avatar = avatar;
   }
 
   toString() {
@@ -40,7 +49,10 @@ export default class Player {
   }
 
   clone(): Player {
-    const p = new Player(this.id, this.username, this.manager, this.online, this.role, this.userId, this.team);
+    const p = new Player(
+      this.id, this.username, this.manager, this.online,
+      this.role, this.userId, this.team, this.avatar,
+    );
     p.isAi = this.isAi;
     p.isAutoplay = this.isAutoplay;
     p.hadEffectiveAiControl = this.hadEffectiveAiControl;

@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import {
-  computeTeamScores, MatchResult, TeamId, ClientGameState, PlayerId,
+  computeTeamScores, MatchResult, TeamId, ClientGameState, PlayerId, Avatar,
 } from 'citadels-common';
+import { avatarUrl } from '@/utils/avatarUrl';
 
 // Player meta is an inline type inside ClientGameState['players']; extract it
 // rather than inventing a name that common doesn't export.
@@ -16,6 +17,7 @@ interface EndScoreRow {
   isAi: boolean;
   team: string;
   total: number;
+  avatar?: Avatar;
 }
 
 interface EndGameModalProps {
@@ -108,6 +110,7 @@ export default function EndGameModal({
         isAi: Boolean(meta?.isAi),
         team,
         total: board?.score?.total ?? 0,
+        avatar: meta?.avatar,
       };
     }).sort((a, b) => b.total - a.total);
   }, [gameState, selfId, getPlayerFromId]);
@@ -150,6 +153,7 @@ export default function EndGameModal({
                 {endScoreRows.map((row) => (
                   <tr key={row.id}>
                     <td>
+                      {row.avatar && <img src={avatarUrl(row.avatar)} alt="" className="endgame-avatar" />}
                       {row.name}
                       {row.isSelf && <span className="badge badge-info ml-1">{t('ui.lobby.you')}</span>}
                       {row.isAi && <span className="badge badge-dark ml-1">AI</span>}

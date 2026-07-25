@@ -2,15 +2,16 @@ import {
   Router, Request, Response, NextFunction,
 } from 'express';
 import {
+  changePassword,
   createUser,
   getPublicUser,
   updateDisplayName,
   verifyLogin,
 } from '../db/users';
 import {
+  authenticateToken,
   extractBearerToken,
   signAuthToken,
-  verifyAuthToken,
 } from './jwt';
 
 export type AuthedRequest = Request & {
@@ -23,12 +24,12 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     res.status(401).json({ status: 'error', message: 'authentication required' });
     return;
   }
-  const payload = verifyAuthToken(token);
-  if (!payload) {
+  const user = authenticateToken(token);
+  if (!user) {
     res.status(401).json({ status: 'error', message: 'invalid or expired token' });
     return;
   }
-  req.userId = payload.sub;
+  req.userId = user.id;
   next();
 }
 
@@ -89,6 +90,22 @@ export function createAuthRouter(): Router {
       res.status(400).json({ status: 'error', message: result.error || 'update failed' });
       return;
     }
+    const token = signAuthToken(result.user);
+    res.json({ status: 'ok', token, user: result.user });
+  });
+
+  router.post('/password', requireAuth, (req: AuthedRequest, res: Response) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      res.status(400).json({ status: 'error', message: 'currentPassword and newPassword are required' });
+      return;
+    }
+    const result = changePassword(req.userId!, currentPassword, newPassword);
+    if (result.error || !result.user) {
+      res.status(400).json({ status: 'error', message: result.error || 'password change failed' });
+      return;
+    }
+    // Re-issue a fresh token (mirrors PATCH /me) so the client persists it.
     const token = signAuthToken(result.user);
     res.json({ status: 'ok', token, user: result.user });
   });

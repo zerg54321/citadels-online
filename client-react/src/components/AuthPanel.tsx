@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { useAppStore } from '@/store';
+import authApi from '@/api/auth';
+import { userAvatarUrl } from '@/utils/avatarUrl';
 
 // Mirrors Vue AuthPanel.vue. The two modals (auth + profile) use createPortal.
 // The Vue `mounted` window 'open-auth' listener becomes useEffect. Vue data()
@@ -15,6 +17,8 @@ export default function AuthPanel() {
   const register = useAppStore((s) => s.register);
   const logout = useAppStore((s) => s.logout);
   const updateDisplayName = useAppStore((s) => s.updateDisplayName);
+  const changePassword = useAppStore((s) => s.changePassword);
+  const setAvatar = useAppStore((s) => s.setAvatar);
 
   const isLoggedIn = Boolean(authToken && authUser);
 
@@ -23,12 +27,20 @@ export default function AuthPanel() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordOk, setPasswordOk] = useState(false);
   const [error, setError] = useState('');
   const [profileError, setProfileError] = useState('');
   const [profileOk, setProfileOk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [avatarPresets, setAvatarPresets] = useState<string[]>([]);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   // Vue watch showProfileModal → reset profile fields. Mirror via effect.
   useEffect(() => {
@@ -36,8 +48,50 @@ export default function AuthPanel() {
       setProfileDisplayName(authUser?.displayName || '');
       setProfileError('');
       setProfileOk(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordOk(false);
+      setAvatarError('');
     }
   }, [showProfileModal, authUser]);
+
+  // Fetch the preset avatar id list once when the profile modal first opens.
+  // The list is static (matches client-react/public/avatars/*.png), but we
+  // ask the server so the picker stays in sync if presets are added later.
+  useEffect(() => {
+    if (!showProfileModal || avatarPresets.length) return;
+    authApi.getAvatarPresets().then((res) => {
+      if (res.status === 'ok' && res.presets) setAvatarPresets(res.presets);
+    }).catch(() => { /* non-fatal: preset grid just stays empty */ });
+  }, [showProfileModal, avatarPresets.length]);
+
+  const pickPreset = async (ref: string) => {
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      await setAvatar('preset', ref);
+    } catch (e) {
+      setAvatarError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const onUploadFile = async () => {
+    const file = avatarFileRef.current?.files?.[0];
+    if (!file) return;
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      await setAvatar('upload', '', file);
+    } catch (e) {
+      setAvatarError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAvatarBusy(false);
+      if (avatarFileRef.current) avatarFileRef.current.value = '';
+    }
+  };
 
   // Vue mounted: window 'open-auth' listener. Mirror via effect.
   useEffect(() => {
@@ -82,6 +136,27 @@ export default function AuthPanel() {
     try {
       await updateDisplayName(profileDisplayName.trim());
       setProfileOk(true);
+    } catch (e) {
+      setProfileError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (!newPassword || newPassword !== confirmPassword) {
+      setProfileError(t('ui.auth.password_mismatch') as string);
+      return;
+    }
+    setBusy(true);
+    setProfileError('');
+    setPasswordOk(false);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setPasswordOk(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (e) {
       setProfileError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -170,14 +245,91 @@ export default function AuthPanel() {
               <strong>{t('ui.auth.username')}:</strong>
               <span>{authUser?.username}</span>
             </p>
+
+            <div className="form-group mb-0">
+              <label className="app-modal__label">{t('ui.auth.avatar')}</label>
+              {avatarError && <div className="alert alert-danger py-2">{avatarError}</div>}
+              <div className="avatar-picker">
+                <div className="avatar-picker__current">
+                  <img src={userAvatarUrl(authUser)} alt="" className="avatar-picker__preview" />
+                </div>
+                <div className="avatar-picker__grid">
+                  {avatarPresets.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`avatar-picker__cell${authUser?.avatar?.type === 'preset' && authUser?.avatar?.ref === id ? ' is-selected' : ''}`}
+                      disabled={avatarBusy}
+                      onClick={() => pickPreset(id)}
+                    >
+                      <img src={`/avatars/${id}.png`} alt="" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="avatar-picker__upload">
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="avatar-picker__file"
+                  onChange={onUploadFile}
+                  disabled={avatarBusy}
+                />
+                <span className="avatar-picker__hint">{t('ui.auth.avatar_upload_hint') as string}</span>
+              </div>
+            </div>
+
             <div className="form-group mb-0">
               <label className="app-modal__label">{t('ui.auth.display_name')}</label>
               <input className="form-control app-modal__input" value={profileDisplayName} onChange={(e) => setProfileDisplayName(e.target.value)} />
+            </div>
+
+            <hr className="app-modal__divider" />
+            <h6 className="app-modal__label">{t('ui.auth.change_password')}</h6>
+            {passwordOk && <div className="alert app-modal__ok py-2">{t('ui.auth.password_changed')}</div>}
+            <div className="form-group">
+              <label className="app-modal__label">{t('ui.auth.current_password')}</label>
+              <input
+                className="form-control app-modal__input"
+                type="password"
+                value={currentPassword}
+                autoComplete="current-password"
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="app-modal__label">{t('ui.auth.new_password')}</label>
+              <input
+                className="form-control app-modal__input"
+                type="password"
+                value={newPassword}
+                autoComplete="new-password"
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="form-group mb-0">
+              <label className="app-modal__label">{t('ui.auth.confirm_new_password')}</label>
+              <input
+                className="form-control app-modal__input"
+                type="password"
+                value={confirmPassword}
+                autoComplete="new-password"
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
           </div>
           <div className="modal-footer border-0">
             <button type="button" className="btn btn-outline-gold" onClick={() => setShowProfileModal(false)}>
               {t('ui.close')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-gold"
+              disabled={busy || !currentPassword || !newPassword}
+              onClick={savePassword}
+            >
+              {t('ui.auth.change_password')}
             </button>
             <button type="button" className="btn btn-gold" disabled={busy} onClick={saveProfile}>
               {t('ui.confirm')}
@@ -203,6 +355,7 @@ export default function AuthPanel() {
     return (
       <div className="auth-panel auth-panel--in">
         <span className="auth-panel__who">
+          <img src={userAvatarUrl(authUser)} alt="" className="auth-panel__avatar" />
           <span className="auth-panel__who-name text-truncate">{authUser.displayName}</span>
           <span className="auth-panel__dot" title={t('ui.auth.logged_in') as string} />
         </span>

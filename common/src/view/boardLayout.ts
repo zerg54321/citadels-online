@@ -38,27 +38,35 @@ export function getMyTeam(gs: ClientGameState, spectator: boolean): TeamId | nul
 /**
  * Relationship of `playerId` to the current viewer.
  *
- * - `'self'`  when spectating (everyone is "self"-ish from a neutral view) OR
- *             when `playerId` is the viewer.
+ * - `'self'`  when `playerId` is the viewer (never for a true spectator,
+ *             since spectators have no seat in `playerOrder` and thus are
+ *             never passed as `playerId`).
  * - `'ally'`  when both share the same team (and neither is `NONE`).
  * - `'enemy'` otherwise.
  *
- * Spectator fallback: when no team info is available, seat index parity
- * (even = ally, odd = enemy) is used so the board still gets a visual split.
+ * Spectator view: a spectator has no team of their own, so for the purposes
+ * of visual team coloring we treat Team A as the viewer's "side" (→ ally /
+ * blue) and Team B as the opposing side (→ enemy / red). This mirrors how
+ * the score bar and end-game modal label A/B for spectators. When no team
+ * info is available at all (e.g. lobby before teams assigned), seat-index
+ * parity (even = ally, odd = enemy) keeps a visual split.
  */
 export function getRelation(
   gs: ClientGameState,
   playerId: PlayerId,
   spectator: boolean,
 ): Relation {
-  if (spectator || playerId === gs.self) return 'self';
+  if (playerId === gs.self) return 'self';
   const t = gs.players?.[playerId]?.team;
-  const mine = getMyTeam(gs, spectator);
-  if (mine == null || t == null || t === TeamId.NONE || mine === TeamId.NONE) {
-    if (spectator) {
+  if (spectator) {
+    if (t == null || t === TeamId.NONE) {
       const idx = (gs.board?.playerOrder || []).indexOf(playerId);
       return idx % 2 === 0 ? 'ally' : 'enemy';
     }
+    return t === TeamId.A ? 'ally' : 'enemy';
+  }
+  const mine = getMyTeam(gs, spectator);
+  if (mine == null || t == null || t === TeamId.NONE || mine === TeamId.NONE) {
     return 'enemy';
   }
   return t === mine ? 'ally' : 'enemy';

@@ -1,6 +1,12 @@
-import { DistrictId } from 'citadels-common';
+import { type ActionFeedLine } from 'citadels-common';
 import { ALL_DISTRICTS } from './DistrictCard';
 
+// NOTE: CHARACTER_NAMES_ZH / DISTRICT_NAMES_ZH / roleNameZh / districtLabelZh
+// are used only by buildRoundSummary(), which feeds lastRoundSummary — a
+// server-internal/debug string NOT shown in the client UI (no client-react
+// reference exists). The action feed itself is now i18n-driven: logCharacterCall
+// pushes structured { kind, params } entries that the client localizes via
+// formatActionFeedLine(). Do not add new UI-facing Chinese here.
 const CHARACTER_NAMES_ZH = ['刺客', '盗贼', '魔术师', '国王', '主教', '商人', '建筑师', '军阀'];
 
 const DISTRICT_NAMES_ZH: Record<string, string> = {
@@ -91,22 +97,21 @@ export function logCharacterCall(
     };
   },
   character: number,
-  actionFeed: { text: string; kind?: string }[],
+  actionFeed: ActionFeedLine[],
 ) {
   if (character < 0) return;
   const cm = board.characterManager;
-  const role = roleNameZh(character);
   const pos = cm.characters[character];
   const seat = pos - 3; // CharacterPosition.PLAYER_1 = 3
   const ownerId = board.playerOrder[seat] ?? null;
   if (ownerId == null) {
-    actionFeed.push({ text: `本轮无人选择${role}`, kind: 'info' });
+    actionFeed.push({ kind: 'call_empty', params: { role: character } });
     return;
   }
   const name = playerName(players, ownerId);
   if (character === cm.killedCharacter) {
-    actionFeed.push({ text: `${name} 的${role}被刺杀，本轮不能行动`, kind: 'kill' });
+    actionFeed.push({ kind: 'call_killed', params: { player: name, role: character } });
     return;
   }
-  actionFeed.push({ text: `${name} 的${role}开始行动` });
+  actionFeed.push({ kind: 'call', params: { player: name, role: character } });
 }

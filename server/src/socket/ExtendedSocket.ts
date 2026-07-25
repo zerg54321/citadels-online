@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { PlayerId, RoomId } from 'citadels-common';
+import { Avatar, PlayerId, RoomId } from 'citadels-common';
 
 export default interface ExtendedSocket extends Socket {
   roomId?: RoomId;
@@ -7,4 +7,5 @@ export default interface ExtendedSocket extends Socket {
   userId?: string;
   displayName?: string;
   accountUsername?: string;
+  avatar?: Avatar;
 }

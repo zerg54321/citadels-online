@@ -10,8 +10,7 @@ import Room from '../gameManager/Room';
 import { genPlayerId, genRoomId } from '../utils/idGenerator';
 import ExtendedSocket from './ExtendedSocket';
 import GameSetupData from '../game/GameSetupData';
-import { verifyAuthToken } from '../auth/jwt';
-import { getPublicUser } from '../db/users';
+import { authenticateToken } from '../auth/jwt';
 import { disposeTurnTimer, getTurnTimer } from '../gameManager/TurnTimer';
 import { validateMove } from '../game/moveValidator';
 
@@ -43,13 +42,15 @@ function attachAuth(socket: ExtendedSocket) {
   const token = socket.handshake.auth?.token
     || socket.handshake.headers?.authorization?.toString().replace(/^Bearer\s+/i, '');
   if (!token || typeof token !== 'string') return;
-  const payload = verifyAuthToken(token);
-  if (!payload) return;
-  const user = getPublicUser(payload.sub);
+  // authenticateToken enforces the password-change invalidation check, so a
+  // reconnect with a token whose password was changed since issuance is
+  // treated as anonymous (no userId) rather than authenticated.
+  const user = authenticateToken(token);
   if (!user) return;
   socket.userId = user.id;
   socket.displayName = user.displayName;
   socket.accountUsername = user.username;
+  socket.avatar = user.avatar;
 }
 
 function leaveRoomForPlayer(room: Room, playerId: PlayerId) {
@@ -242,6 +243,7 @@ export function initSocket(io: Server) {
           if (socket.displayName) {
             player.username = socket.displayName;
           }
+          player.avatar = socket.avatar;
           socket.to(roomId).emit('joined room', socket.playerId);
         } else if (socket.userId) {
           const existing = room.gameState.findPlayerByUserId(socket.userId);
@@ -251,6 +253,7 @@ export function initSocket(io: Server) {
             if (socket.displayName) {
               existing.username = socket.displayName;
             }
+            existing.avatar = socket.avatar;
             player = existing;
             socket.to(roomId).emit('joined room', socket.playerId);
           }
@@ -283,6 +286,7 @@ export function initSocket(io: Server) {
                 true,
                 PlayerRole.SPECTATOR,
                 socket.userId,
+                socket.avatar,
               );
             }
             socket.to(roomId).emit('add player', {
@@ -292,6 +296,7 @@ export function initSocket(io: Server) {
               online: player.online,
               role: player.role,
               userId: player.userId,
+              avatar: player.avatar,
             });
           } else {
             // join as player — login required
@@ -309,6 +314,7 @@ export function initSocket(io: Server) {
               true,
               PlayerRole.PLAYER,
               socket.userId,
+              socket.avatar,
             );
             socket.to(roomId).emit('add player', {
               id: player.id,
@@ -317,6 +323,7 @@ export function initSocket(io: Server) {
               online: player.online,
               role: player.role,
               userId: player.userId,
+              avatar: player.avatar,
             });
             debug('added player', player.id);
           }

@@ -1,23 +1,41 @@
-import { roleNameZh, districtLabelZh, playerName } from './ActionLogger';
+import type { ActionFeedLine } from 'citadels-common';
+import { playerName } from './ActionLogger';
 
-export function templateEarn(players: Map<string, { username: string }>, actorId: string, amount: number): string {
-  return `${playerName(players, actorId)} 自动收租 +${amount} 金`;
+// Each template returns a structured ActionFeedLine (kind + params) instead of
+// a baked-in localized string, so the client can render the action log in its
+// own language via formatActionFeedLine(). Player names are usernames (not
+// localized); role ids and district ids are resolved to names client-side.
+
+export function templateEarn(
+  players: Map<string, { username: string }>,
+  actorId: string,
+  amount: number,
+): ActionFeedLine {
+  return { kind: 'earn', params: { player: playerName(players, actorId), amount } };
 }
 
-export function templateBuild(players: Map<string, { username: string }>, actorId: string, district: string): string {
-  return `${playerName(players, actorId)} 建造了 ${districtLabelZh(district)}`;
+export function templateBuild(
+  players: Map<string, { username: string }>,
+  actorId: string,
+  district: string,
+): ActionFeedLine {
+  return { kind: 'build', params: { player: playerName(players, actorId), district } };
 }
 
-export function templateEarnManual(players: Map<string, { username: string }>, actorId: string, amount: number): string {
-  return `${playerName(players, actorId)} 收租 +${amount} 金`;
+export function templateEarnManual(
+  players: Map<string, { username: string }>,
+  actorId: string,
+  amount: number,
+): ActionFeedLine {
+  return { kind: 'earn', params: { player: playerName(players, actorId), amount } };
 }
 
-export function templateKill(character: number): string {
-  return `刺杀标记：${roleNameZh(character)}（持有者到其顺位再揭示）`;
+export function templateKill(character: number): ActionFeedLine {
+  return { kind: 'kill', params: { role: character } };
 }
 
-export function templateRob(character: number): string {
-  return `偷窃标记：${roleNameZh(character)}（行动时夺金）`;
+export function templateRob(character: number): ActionFeedLine {
+  return { kind: 'rob', params: { role: character } };
 }
 
 export function templateRobMove(
@@ -26,16 +44,27 @@ export function templateRobMove(
   robbedRole: number,
   amount: number,
   thiefId: string,
-): string {
-  return `${playerName(players, robbedPlayerId)} 的${roleNameZh(robbedRole)}被偷窃，${amount} 金币转移到 ${playerName(players, thiefId)}`;
+): ActionFeedLine {
+  return {
+    kind: 'rob_move',
+    params: {
+      player: playerName(players, robbedPlayerId),
+      role: robbedRole,
+      amount,
+      thief: playerName(players, thiefId),
+    },
+  };
 }
 
 export function templateRobMoveEmpty(
   players: Map<string, { username: string }>,
   robbedPlayerId: string,
   robbedRole: number,
-): string {
-  return `${playerName(players, robbedPlayerId)} 的${roleNameZh(robbedRole)}被偷窃，但没有金币`;
+): ActionFeedLine {
+  return {
+    kind: 'rob_move_empty',
+    params: { player: playerName(players, robbedPlayerId), role: robbedRole },
+  };
 }
 
 export function templateDestroy(
@@ -43,16 +72,26 @@ export function templateDestroy(
   actorId: string,
   victimId: string,
   district: string,
-): string {
-  return `${playerName(players, actorId)} 拆毁了 ${playerName(players, victimId)} 的 ${districtLabelZh(district)}`;
+): ActionFeedLine {
+  return {
+    kind: 'destroy',
+    params: {
+      player: playerName(players, actorId),
+      victim: playerName(players, victimId),
+      district,
+    },
+  };
 }
 
 export function templateMagicianExchange(
   players: Map<string, { username: string }>,
   actorId: string,
   targetId: string,
-): string {
-  return `${playerName(players, actorId)} 与 ${playerName(players, targetId)} 交换了全部手牌`;
+): ActionFeedLine {
+  return {
+    kind: 'magician_exchange',
+    params: { player: playerName(players, actorId), target: playerName(players, targetId) },
+  };
 }
 
 export function templateMagicianDiscard(
@@ -60,6 +99,9 @@ export function templateMagicianDiscard(
   actorId: string,
   count: number,
   drewCount: number,
-): string {
-  return `${playerName(players, actorId)} 弃 ${count} 张手牌，抽取 ${drewCount} 张新牌`;
+): ActionFeedLine {
+  return {
+    kind: 'magician_discard',
+    params: { player: playerName(players, actorId), count, drew: drewCount },
+  };
 }

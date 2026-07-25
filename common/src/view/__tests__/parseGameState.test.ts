@@ -69,13 +69,13 @@ describe('parseClientGameState', () => {
     data.turnDeadlineAt = 1234567890;
     data.lastRoundSummary = 'assassin killed king';
     data.lobbyPlayerOrder = ['p1', 'p2'];
-    data.actionFeed = [{ text: 'p1 took gold', kind: 'gold' }];
+    data.actionFeed = [{ kind: 'earn', params: { player: 'p1', amount: 2 } }];
     data.teamScores = { A: 3, B: 5 };
     const gs = parseClientGameState(data);
     expect(gs.turnDeadlineAt).toBe(1234567890);
     expect(gs.lastRoundSummary).toBe('assassin killed king');
     expect(gs.lobbyPlayerOrder).toEqual(['p1', 'p2']);
-    expect(gs.actionFeed).toEqual([{ text: 'p1 took gold', kind: 'gold' }]);
+    expect(gs.actionFeed).toEqual([{ kind: 'earn', params: { player: 'p1', amount: 2 } }]);
     expect(gs.teamScores).toEqual({ A: 3, B: 5 });
   });
 

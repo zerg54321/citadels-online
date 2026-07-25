@@ -36,6 +36,9 @@ db.exec(`
     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash TEXT NOT NULL,
     display_name TEXT NOT NULL,
+    pwd_changed_at TEXT NOT NULL DEFAULT '',
+    avatar_type TEXT NOT NULL DEFAULT 'preset',
+    avatar_ref TEXT NOT NULL DEFAULT '01',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -76,6 +79,40 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_match_players_user ON match_players(user_id);
   CREATE INDEX IF NOT EXISTS idx_match_players_match ON match_players(match_id);
 `);
+
+// pwd_changed_at backfill for DBs created before the column existed.
+// SQLite has no ADD COLUMN IF NOT EXISTS, so guard against the duplicate
+// column error (runs only once per pre-existing DB; a no-op error on the
+// second boot and on brand-new DBs where CREATE TABLE already added it).
+try {
+  db.exec('ALTER TABLE users ADD COLUMN pwd_changed_at TEXT NOT NULL DEFAULT \'\'');
+} catch (err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!msg.includes('duplicate column')) throw err;
+}
+
+// Backfill empty pwd_changed_at (rows that predate the column) to created_at
+// so the strict token check applies to every user immediately. Tokens issued
+// before this deploy lack the pwdChangedAt claim and will be rejected,
+// forcing a one-time re-login. Matches 0 rows after the first run.
+db.exec('UPDATE users SET pwd_changed_at = created_at WHERE pwd_changed_at = \'\'');
+
+// avatar_type / avatar_ref backfill for DBs created before the columns
+// existed. Same duplicate-column guard pattern as pwd_changed_at. Existing
+// users default to preset avatar '01' so every account has a visible avatar
+// immediately; they can change it from the profile modal.
+const avatarCols = [
+  'avatar_type TEXT NOT NULL DEFAULT \'preset\'',
+  'avatar_ref TEXT NOT NULL DEFAULT \'01\'',
+];
+avatarCols.forEach((col) => {
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${col}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes('duplicate column')) throw err;
+  }
+});
 
 export default db;
 export { dbPath };

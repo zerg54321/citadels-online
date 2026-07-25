@@ -147,7 +147,7 @@ describe('getRelation', () => {
     expect(getRelation(gs, 'p2', false)).toBe('enemy');
   });
 
-  it('returns "self" for everyone when spectator', () => {
+  it('spectator: A-team → ally, B-team → enemy (visual team coloring)', () => {
     const gs = makeBaseState({
       self: 'sp1',
       players: {
@@ -157,8 +157,23 @@ describe('getRelation', () => {
       },
       board: { ...makeBaseState().board, playerOrder: ['p1', 'p2'] },
     });
-    expect(getRelation(gs, 'p1', true)).toBe('self');
-    expect(getRelation(gs, 'p2', true)).toBe('self');
+    expect(getRelation(gs, 'p1', true)).toBe('ally');
+    expect(getRelation(gs, 'p2', true)).toBe('enemy');
+  });
+
+  it('spectator: falls back to index parity when team is NONE', () => {
+    const gs = makeBaseState({
+      self: 'sp1',
+      players: {
+        sp1: makePlayer('sp1', TeamId.NONE, PlayerRole.SPECTATOR),
+        p1: makePlayer('p1', TeamId.NONE),
+        p2: makePlayer('p2', TeamId.NONE),
+      },
+      board: { ...makeBaseState().board, playerOrder: ['p1', 'p2'] },
+    });
+    // p1 at index 0 (even) → ally; p2 at index 1 (odd) → enemy.
+    expect(getRelation(gs, 'p1', true)).toBe('ally');
+    expect(getRelation(gs, 'p2', true)).toBe('enemy');
   });
 });
 
@@ -287,11 +302,18 @@ describe('getTableSlots', () => {
     expect(positions).toEqual(['l1', 'l2', 'l3', 'r1', 'r2', 'r3']);
   });
 
-  it('spectator layout: all relations are "self"', () => {
+  it('spectator layout: relations follow team (A→ally, B→enemy)', () => {
     const gs = makeSixPlayerState('sp1');
     gs.players.sp1 = makePlayer('sp1', TeamId.NONE, PlayerRole.SPECTATOR);
     const slots = getTableSlots(gs, true);
-    expect(slots.every((s) => s.relation === 'self')).toBe(true);
+    // p1,p3,p5 are Team A → ally; p2,p4,p6 are Team B → enemy.
+    const byId = Object.fromEntries(slots.map((s) => [s.playerId, s.relation]));
+    expect(byId.p1).toBe('ally');
+    expect(byId.p2).toBe('enemy');
+    expect(byId.p3).toBe('ally');
+    expect(byId.p4).toBe('enemy');
+    expect(byId.p5).toBe('ally');
+    expect(byId.p6).toBe('enemy');
   });
 
   it('uses EMPTY_BOARD fallback for missing player board', () => {

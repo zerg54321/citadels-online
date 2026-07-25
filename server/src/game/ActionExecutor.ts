@@ -184,7 +184,6 @@ export default class ActionExecutor {
       if (actorId) {
         this.state.pushAction(
           templateEarn(this.state.players, actorId, amount),
-          'earn',
         );
       }
     }
@@ -234,7 +233,6 @@ export default class ActionExecutor {
       const actorId = this.state.board.getCurrentPlayerId();
       this.state.pushAction(
         templateBuild(this.state.players, actorId, String(move.data)),
-        'build',
       );
     }
 
@@ -311,7 +309,6 @@ export default class ActionExecutor {
           if (amount > 0) {
             this.state.pushAction(
               templateEarnManual(this.state.players, this.state.board.getCurrentPlayerId(), amount),
-              'earn',
             );
           }
         }
@@ -349,7 +346,7 @@ export default class ActionExecutor {
         if (cm.robbedCharacter === character) {
           cm.robbedCharacter = CharacterType.NONE;
         }
-        this.state.pushAction(templateKill(character), 'kill');
+        this.state.pushAction(templateKill(character));
         cm.canDoSpecialAction[CharacterType.ASSASSIN] = false;
         cm.jumpToActionsState();
         return true;
@@ -380,7 +377,7 @@ export default class ActionExecutor {
       case CharacterType.ARCHITECT:
       case CharacterType.WARLORD:
         cm.robbedCharacter = character;
-        this.state.pushAction(templateRob(character), 'rob');
+        this.state.pushAction(templateRob(character));
         cm.canDoSpecialAction[CharacterType.THIEF] = false;
         cm.jumpToActionsState();
         return true;
@@ -420,12 +417,10 @@ export default class ActionExecutor {
         robbedPlayer.stash = 0;
         this.state.pushAction(
           templateRobMove(this.state.players, robbedPlayerId, robbedRole, amount, thiefId),
-          'rob',
         );
       } else {
         this.state.pushAction(
           templateRobMoveEmpty(this.state.players, robbedPlayerId, robbedRole),
-          'rob',
         );
       }
     }
@@ -452,7 +447,6 @@ export default class ActionExecutor {
       const victimId = this.state.board.playerOrder[move.data];
       this.state.pushAction(
         templateMagicianExchange(this.state.players, actorId, victimId),
-        'magician',
       );
     }
     return true;
@@ -489,7 +483,6 @@ export default class ActionExecutor {
       const actorId = this.state.board.getCurrentPlayerId();
       this.state.pushAction(
         templateMagicianDiscard(this.state.players, actorId, cards.length, cards.length),
-        'magician',
       );
     }
     return true;
@@ -579,7 +572,6 @@ export default class ActionExecutor {
       const victimId = this.state.board.playerOrder[data.player];
       this.state.pushAction(
         templateDestroy(this.state.players, actorId, victimId, data.card),
-        'destroy',
       );
     }
 

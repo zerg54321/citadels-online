@@ -4,10 +4,12 @@ import {
   CharacterType,
   ClientGameState,
   ClientTurnState,
+  DistrictId,
   GameMode,
   GamePhase,
   GameProgress,
   MoveType,
+  PlayerBoard,
   PlayerPosition,
   PlayerRole,
   TeamId,
@@ -64,7 +66,7 @@ function makeBaseState(overrides: Partial<ClientGameState> = {}): ClientGameStat
   } as ClientGameState;
 }
 
-function makeSelfBoard(city: string[] = [], hand: (string | null)[] = []) {
+function makeSelfBoard(city: DistrictId[] = [], hand: (DistrictId | null)[] = []): PlayerBoard {
   return {
     stash: 5,
     hand,
@@ -95,10 +97,15 @@ describe('getStatusBarData — progress fallbacks', () => {
 
 describe('getStatusBarData — INITIAL game phase', () => {
   it('gamePhase INITIAL → welcome message', () => {
+    // The welcome branch is reached only when currentPlayer is out of
+    // bounds (no active seat yet). makeBaseState defaults currentPlayer to
+    // PLAYER_1 (0), which is valid and would hit the choose_card branch
+    // instead — so override to SPECTATOR (-1) to reach the welcome path.
     const gs = makeBaseState({
       board: {
         ...makeBaseState().board,
         gamePhase: GamePhase.INITIAL,
+        currentPlayer: PlayerPosition.SPECTATOR,
       },
     });
     const r = getStatusBarData(gs);
@@ -179,7 +186,7 @@ describe('getStatusBarData — DO_ACTIONS, other player is current', () => {
         currentPlayerExtraData: { ...EXTRA_BASE },
         characters: {
           state: { type: CCST.DONE, player: PlayerPosition.SPECTATOR },
-          current: CharacterType.GRAVEYARD_RECOVER_DISTRICT as unknown as CharacterType,
+          current: CharacterType.NONE,
           callable: [],
           aside: [],
         },
@@ -527,7 +534,7 @@ describe('getStatusBarData — actions: confirm/cancel branches', () => {
   });
 
   it('MAGICIAN_DISCARD_CARDS → confirm (with injected selectedCards) + cancel', () => {
-    const selected = ['manor', 'temple'];
+    const selected: DistrictId[] = ['manor', 'temple'];
     const r = getStatusBarData(makeTurn(ClientTurnState.MAGICIAN_DISCARD_CARDS), { selectedCards: selected });
     expect(r.actions).toEqual([
       { title: 'confirm', move: { type: MoveType.MAGICIAN_DISCARD_CARDS, data: selected } },

@@ -2,11 +2,13 @@ import { StateCreator } from 'zustand';
 import socket from '../socket';
 import authApi from '../api/auth';
 import type { GameSlice } from './gameSlice';
+import type { Avatar } from '../utils/avatarUrl';
 
 export interface AuthUser {
   id: string;
   username: string;
   displayName: string;
+  avatar: Avatar;
 }
 
 export interface AuthSlice {
@@ -21,6 +23,8 @@ export interface AuthSlice {
   register: (params: { username: string; password: string; displayName?: string }) => Promise<AuthUser>;
   logout: () => Promise<void>;
   updateDisplayName: (displayName: string) => Promise<AuthUser>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<AuthUser>;
+  setAvatar: (type: 'preset' | 'upload', ref: string, file?: File) => Promise<AuthUser>;
 
   // Socket lifecycle — lives here because connect() needs authToken.
   connect: () => Promise<void>;
@@ -101,6 +105,30 @@ export const createAuthSlice: StateCreator<AuthSlice & GameSlice, [], [], AuthSl
     const res = await authApi.updateDisplayName(authToken, displayName);
     if (res.status !== 'ok' || !res.token || !res.user) {
       throw new Error(res.message || 'update failed');
+    }
+    get().setAuth(res.token, res.user);
+    return res.user;
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const { authToken } = get();
+    if (!authToken) throw new Error('not logged in');
+    const res = await authApi.changePassword(authToken, currentPassword, newPassword);
+    if (res.status !== 'ok' || !res.token || !res.user) {
+      throw new Error(res.message || 'password change failed');
+    }
+    get().setAuth(res.token, res.user);
+    return res.user;
+  },
+
+  async setAvatar(type, ref, file) {
+    const { authToken } = get();
+    if (!authToken) throw new Error('not logged in');
+    const res = type === 'preset'
+      ? await authApi.setAvatarPreset(authToken, ref)
+      : await authApi.uploadAvatar(authToken, file!);
+    if (res.status !== 'ok' || !res.token || !res.user) {
+      throw new Error(res.message || 'avatar update failed');
     }
     get().setAuth(res.token, res.user);
     return res.user;

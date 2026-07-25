@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GameProgress, PlayerRole } from 'citadels-common';
+import { Avatar, GameProgress, PlayerRole } from 'citadels-common';
 import { useAppStore } from '@/store';
+import { avatarUrl } from '@/utils/avatarUrl';
 
 // Mirrors Vue elements/PlayersList.vue. The Vue computed (self/inLobby/
 // seatedOrder/teamARows/teamBRows/spectators/counts/canManageAi/canAddAi) →
@@ -103,14 +104,23 @@ export default function PlayersList() {
     }
   };
 
-  const renderRow = (row: { id: string; username: string; isAi?: boolean; manager?: boolean; seatNo: number }, teamClass: string) => (
+  type SeatRow = {
+    id: string;
+    username: string;
+    isAi?: boolean;
+    manager?: boolean;
+    seatNo: number;
+    avatar?: Avatar;
+  };
+
+  const renderRow = (row: SeatRow, teamClass: string) => (
     <li
       key={row.id}
       className={`seat-card${row.id === self?.id ? ' seat-card--self' : ''}${row.isAi ? ' seat-card--ai' : ''}`}
     >
       <span className={`seat-card__no ${teamClass}`}>{row.seatNo}</span>
       <span className="seat-card__avatar" aria-hidden>
-        {row.isAi ? '🤖' : row.username.charAt(0).toUpperCase()}
+        {row.isAi ? '🤖' : (row.avatar ? <img src={avatarUrl(row.avatar)} alt="" /> : row.username.charAt(0).toUpperCase())}
       </span>
       <span className="seat-card__name">
         <span className="seat-card__name-text text-truncate">{row.username}</span>
@@ -162,7 +172,9 @@ export default function PlayersList() {
           <ul className="players-list__seats players-list__seats--spec">
             {spectators.map((p) => (
               <li key={p.id} className="seat-card seat-card--spec">
-                <span className="seat-card__avatar" aria-hidden>{p.username.charAt(0).toUpperCase()}</span>
+                <span className="seat-card__avatar" aria-hidden>
+                  {p.avatar ? <img src={avatarUrl(p.avatar)} alt="" /> : p.username.charAt(0).toUpperCase()}
+                </span>
                 <span className="seat-card__name">
                   <span className="seat-card__name-text text-truncate">{p.username}</span>
                   {p.id === self?.id && <span className="tag tag--you">{t('ui.lobby.you')}</span>}

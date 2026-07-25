@@ -81,23 +81,23 @@ export default function DistrictCard({
           title={hasDesc ? t(descKey) : ''}
           data-placement={small ? 'right' : 'top'}
         >
-          <div className={cn(
-            `flex-fill card-picture card-picture--${districtId} d-flex flex-column`,
-            { 'opacity-3': disabled },
-          )}>
-            <div className={cn({
-              'gradient-black-transparent p-1': small,
-              'gradient-transparent-black rotated-cost pt-3': !small,
-            })}>
-              <div className="d-flex">
-                {Array.from({ length: cost }, (_, i) => (
-                  <Emoji key={`c${i}`} emoji="🪙" />
-                ))}
-                {Array.from({ length: extraPoints }, (_, i) => (
-                  <Emoji key={`e${i}`} emoji="🪙" />
-                ))}
+            <div className={cn(
+              `flex-fill card-picture card-picture--${districtId} d-flex flex-column`,
+              { 'opacity-3': disabled },
+            )}>
+              <div className={cn('district-card__cost', {
+                'gradient-black-transparent p-1': small,
+                'gradient-transparent-black rotated-cost pt-3': !small,
+              })}>
+                <div className="d-flex district-card__cost-row">
+                  {Array.from({ length: cost }, (_, i) => (
+                    <Emoji key={`c${i}`} emoji="🪙" />
+                  ))}
+                  {Array.from({ length: extraPoints }, (_, i) => (
+                    <Emoji key={`e${i}`} emoji="🪙" />
+                  ))}
+                </div>
               </div>
-            </div>
 
             <div className="flex-fill" />
             {!small && (

@@ -24,15 +24,32 @@ const WARN_STYLE_KINDS = new Set(['rob', 'rob_move', 'rob_move_empty', 'warn']);
 export default function ActionLog({ displayActionFeed, onShowEvent }: ActionLogProps) {
   const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
+  // Track whether the user is parked at the bottom of the log ("sticky").
+  // We only auto-scroll to newly appended entries while sticky, so a user
+  // who scrolled up to read earlier history isn't yanked back to the bottom
+  // on the next server state push.
+  const stickyRef = useRef(true);
   // Track the signature of the last-seen feed item rather than its length.
-  // The server caps the exported feed at ACTION_FEED_EXPORT_LIMIT (40), so
-  // once the feed fills up `list.length` plateaus and a length-based guard
-  // (`list.length > lastLen`) is never true again — kill/rob banners would
-  // silently stop firing. A signature of `length|kind|params|round` still
-  // changes when a new item is appended at the cap (the last item's
-  // kind/params/round changes even though length does not), so the banner
-  // keeps firing for the whole game.
+  // The server retains the full feed for the current game, so once a game
+  // has been running a while `list.length` keeps growing — but a new round
+  // of the same length (impossible here, but defensively) or a re-push of
+  // unchanged state could fool a length-based guard. A signature of
+  // `length|kind|params|round` still changes when a genuinely new item is
+  // appended, so the banner keeps firing for the whole game.
   const lastSigRef = useRef<string | null>(null);
+
+  // Park a one-time scroll listener that updates stickyRef as the user
+  // scrolls. Threshold in px from the bottom still counts as "at bottom"
+  // so fractional/rounding differences don't flip sticky off spuriously.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      stickyRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const list = displayActionFeed;
@@ -49,8 +66,10 @@ export default function ActionLog({ displayActionFeed, onShowEvent }: ActionLogP
         onShowEvent?.(formatActionFeedLine(last, t));
       }
     }
+    // Only auto-scroll when the user is already at the bottom. If they
+    // scrolled up to read history, leave their position alone.
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickyRef.current) el.scrollTop = el.scrollHeight;
   }, [displayActionFeed, onShowEvent, t]);
 
   return (

@@ -1079,8 +1079,15 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	const tempo = detectTempo(gameState, actorId);
 	const character = cm.getCurrentCharacter();
 	const canSpecial = cm.canDoSpecialAction[character] === true;
-	const affordable = hand.filter((c) => costOf(c) <= player.stash && !player.city.includes(c));
-	const buildOrder = sortBuildCandidates(gameState, actorId, affordable, tempo);
+	// A player whose city already reached the completion threshold cannot build
+	// any more this round (see ActionExecutor.buildDistrict guard). Filter such
+	// cases out of the build candidates so the AI does not waste a move slot on
+	// a build that the executor will reject.
+	const cityFull = player.city.length >= completeSize(gameState);
+	const affordable = cityFull
+		? []
+		: hand.filter((c) => costOf(c) <= player.stash && !player.city.includes(c));
+	const buildOrder = cityFull ? [] : sortBuildCandidates(gameState, actorId, affordable, tempo);
 	const hasLab = hasDistrict(actorId, gameState, 'laboratory');
 	const hasSmithy = hasDistrict(actorId, gameState, 'smithy');
 
@@ -1099,7 +1106,11 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 		}
 
 		// 高优先级：如果可以建造，先建造（建筑会影响收租额）
-		if (cm.districtsToBuild[character] > 0 && buildOrder.length) {
+		// Magician 例外：魔术师没有色系收租，先建会触发 buildDistrict 的
+		// "盖房即放弃技能" 规则，导致本回合无法再使用交换/弃牌技能。让魔术师
+		// 把建造推迟到 CHOOSE_ACTION（那里 1175-1179 已优先推技能再推建造）。
+		if (cm.districtsToBuild[character] > 0 && buildOrder.length
+		    && character !== CharacterType.MAGICIAN) {
 			moves.push({ type: MoveType.BUILD_DISTRICT });
 		}
 

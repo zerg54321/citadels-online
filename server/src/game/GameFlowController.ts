@@ -307,10 +307,13 @@ export default class GameFlowController {
     if (ch === cm.robbedCharacter) {
       this.state.moveRobbedGold();
     }
-    if (ch === CharacterType.KING
-        && cm.killedCharacter !== CharacterType.KING) {
-      this.giveCrownToKing();
-    }
+    // Note: the crown (playerOrder rotation) is NOT transferred here when the
+    // King is revealed. Rotation happens in finishTurnPhase() at the end of
+    // the action round, so the crown + every seat's pickOrder only move at
+    // the next round boundary. Revealing the King mid-round must not perturb
+    // the displayed seat order. currentPlayer stays correct without rotation
+    // because characters[KING] still points at the picking player's original
+    // seat index into the un-rotated playerOrder.
     this.applyCharacterTurnStartPassives();
   }
 

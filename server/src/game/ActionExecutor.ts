@@ -225,6 +225,16 @@ export default class ActionExecutor {
       return false;
     }
 
+    // A player whose city has already reached the completion threshold may not
+    // build any more districts this round. Without this guard, a player on 7
+    // districts who holds the Architect (3 builds/turn) could build past the
+    // threshold (e.g. to 9) in a single turn. The completion check below fires
+    // the first/finisher bonus when the city reaches completeCitySize; this
+    // guard ensures the threshold is a hard cap, not just a bonus trigger.
+    if (player.city.length >= this.state.completeCitySize) {
+      return false;
+    }
+
     if (!player.buildDistrict(move.data)) {
       return false;
     }
@@ -237,6 +247,14 @@ export default class ActionExecutor {
     }
 
     cm.districtsToBuild[cm.getCurrentCharacter()] -= 1;
+
+    // Magician's hand-exchange/discard special must happen BEFORE building.
+    // Otherwise a player could build their whole hand away and then steal an
+    // opponent's hand — too exploitative. Once the Magician builds, the
+    // special is forfeit for the rest of this turn.
+    if (cm.getCurrentCharacter() === CharacterType.MAGICIAN) {
+      cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
+    }
 
     if (move.data === 'haunted_quarter' && this.state.cityCompletedThisMatch) {
       player.hauntedQuarterBuiltInFinalRound = true;
@@ -436,6 +454,15 @@ export default class ActionExecutor {
     const cm = this.state.board.characterManager;
     const player = this.state.board.players.get(this.state.board.getCurrentPlayerId());
     if (player === undefined) return false;
+
+    // Defense-in-depth: the Magician forfeits the special action once they
+    // build (see buildDistrict). discardCards already guards this; the
+    // exchange path must too, so a late/malicious mode-switch can't bypass
+    // the forfeit by skipping the canDoSpecialAction-gated UI button.
+    if (!cm.canDoSpecialAction[CharacterType.MAGICIAN]) {
+      return false;
+    }
+
     const otherPlayer = this.state.board.players.get(this.state.board.playerOrder[move.data]);
     if (otherPlayer === undefined) return false;
 

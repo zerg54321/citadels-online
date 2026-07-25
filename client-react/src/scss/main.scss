@@ -14,7 +14,7 @@
 @import './stats-screen';
 @import './admin-screen';
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
 
 :root {
   --bg-void: #0d0b08;
@@ -25,8 +25,17 @@
   --gold-dim: #9c7c2e;
   --parchment: #e8dcc0;
   --text-muted: #b9a888;
-  --font-display: 'Cinzel', 'Times New Roman', serif;
-  --font-body: 'EB Garamond', 'Georgia', serif;
+  // Display/headings: Cinzel (English caps) + Noto Serif SC (clean Chinese
+  // serif). Refined but not calligraphic — keeps the medieval flavor
+  // without resorting to brush/handwriting faces.
+  --font-display: 'Cinzel', 'Noto Serif SC', 'Times New Roman', serif;
+  // Body text: EB Garamond (English) + Noto Sans SC (Chinese). A clean,
+  // highly-legible sans for the action log, status tips and chat so small
+  // text stays readable on dark backgrounds.
+  --font-body: 'EB Garamond', 'Noto Sans SC', 'Georgia', serif;
+  // Readable UI text (log entries, tips, chat): drop the display face in
+  // favor of a humanist sans for both scripts.
+  --font-readable: 'Noto Sans SC', 'EB Garamond', 'Segoe UI', sans-serif;
 }
 
 // Ensure the dark theme covers the whole document, not just #app, so any

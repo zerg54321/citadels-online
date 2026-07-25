@@ -59,20 +59,12 @@ export default function BoardScreen() {
   const [showEndModal, setShowEndModal] = useState(true);
   const eventBannerTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // --- crown holder snapshot ---
-  // The 👑 marks the round's first picker. The server rotates `playerOrder`
-  // mid-round when the King is called, which would flip the crown instantly.
-  // We snapshot `playerOrder[0]` while in CHOOSE_CHARACTERS (the round-start
-  // drafting phase, where it already holds the correct player) and freeze
-  // that value through DO_ACTIONS, so the crown only moves to the new King at
-  // the start of the next round.
-  const [crownHolderId, setCrownHolderId] = useState<string | null>(null);
-  const crownOrder0 = gameState?.board?.playerOrder?.[0] ?? null;
-  if (gameState?.board?.gamePhase === GamePhase.CHOOSE_CHARACTERS
-      && crownOrder0 && crownOrder0 !== crownHolderId) {
-    setCrownHolderId(crownOrder0);
-  }
-  const effectiveCrownId = crownHolderId ?? crownOrder0;
+  // --- crown + pickOrder come straight from the live playerOrder ---
+  // The server no longer rotates playerOrder when the King is revealed
+  // (rotation now happens at finishTurnPhase, i.e. the next round boundary),
+  // so during DO_ACTIONS playerOrder is stable and the crown (playerOrder[0])
+  // and each seat's pickOrder need no client-side freezing/snapshot.
+
 
   // --- countdown timer (was Vue mounted()) ---
   useEffect(() => {
@@ -174,13 +166,8 @@ export default function BoardScreen() {
 
   const tableSlots = useMemo<TableSlot[]>(() => {
     if (!gameState) return [];
-    const slots = getTableSlots(gameState, isSpectator);
-    if (!effectiveCrownId) return slots;
-    return slots.map((s) => ({
-      ...s,
-      board: { ...s.board, crown: s.playerId === effectiveCrownId },
-    }));
-  }, [gameState, isSpectator, effectiveCrownId]);
+    return getTableSlots(gameState, isSpectator);
+  }, [gameState, isSpectator]);
 
   const selfBoard = useMemo(() => {
     if (isSpectator || !gameState) {
@@ -197,9 +184,9 @@ export default function BoardScreen() {
       score: {},
       characters: [],
       ...(board || {}),
-      crown: effectiveCrownId === self,
+      crown: (gameState?.board?.playerOrder?.[0] ?? '') === self,
     };
-  }, [gameState, isSpectator, self, effectiveCrownId]);
+  }, [gameState, isSpectator, self]);
 
   const selfName = self ? (getPlayer(self)?.username || 'You') : 'You';
   const selfPickOrder = useMemo(() => {
@@ -380,13 +367,13 @@ export default function BoardScreen() {
               <div className="board-table__self-panel">
                 <div className="board-table__self-banner">
                   <span className="board-table__self-pick">{selfPickOrder}</span>
-                  <span className="text-truncate flex-fill">{selfName}</span>
+                  <span className="text-truncate flex-fill board-table__self-name">{selfName}</span>
                   <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
                     <span className="seat-panel__chip-icon">🪙</span>
                     <span className="seat-panel__chip-val">{(selfBoard.stash as number) ?? 0}</span>
                   </span>
                   <span className="seat-panel__chip seat-panel__chip--hand" title={t('ui.game.stat_hand')}>
-                    <span className="seat-panel__chip-icon">🃏</span>
+                    <span className="card-back-icon" />
                     <span className="seat-panel__chip-val">{(selfBoard.hand || []).length}</span>
                   </span>
                   <span className="seat-panel__chip seat-panel__chip--score" title={t('ui.game.stat_score')}>

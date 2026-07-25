@@ -24,8 +24,12 @@ import GameFlowController from './GameFlowController';
 import ActionExecutor from './ActionExecutor';
 import { MAX_CHARACTER_SKIP_ATTEMPTS } from '../utils/schedule';
 
-const ACTION_FEED_MAX_LENGTH = 60;
-const ACTION_FEED_EXPORT_LIMIT = 40;
+// The action feed is retained in full (bounded by ACTION_FEED_MAX_LENGTH)
+// and exported in full to clients so the right-hand log panel can scroll
+// back through the entire current game. A full 6-player Citadels game
+// produces ~600-800 feed entries; 2000 comfortably covers that with margin
+// while bounding memory/payload for abandoned games.
+const ACTION_FEED_MAX_LENGTH = 2000;
 
 export default class GameState implements Subject {
   progress: GameProgress;
@@ -351,7 +355,7 @@ export default class GameState implements Subject {
       lastRoundSummary: this.lastRoundSummary,
       roundNumber: this.roundNumber,
       lobbyPlayerOrder: [...this.lobbyPlayerOrder],
-      actionFeed: this.actionFeed.slice(-ACTION_FEED_EXPORT_LIMIT),
+      actionFeed: this.actionFeed,
     };
   }
 

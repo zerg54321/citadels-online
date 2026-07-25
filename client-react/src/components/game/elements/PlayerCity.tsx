@@ -150,7 +150,7 @@ export default function PlayerCity({
               onClick={exchangeHand}
               title={exchangeHandMode ? t('ui.game.actions.choose_hand') : ''}
             >
-              {board.hand.length} <Emoji emoji="🃏" />
+              {board.hand.length} <span className="card-back-icon" />
             </span>
             <span className="badge badge-pill badge-warning p-2 ml-2" title="实时总分">
               {board.score?.total ?? 0} 分

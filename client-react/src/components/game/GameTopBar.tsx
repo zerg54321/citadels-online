@@ -65,7 +65,7 @@ export default function GameTopBar() {
           <span className="board-table__team-a">
             {isSpectator ? t('ui.team.a') : t('ui.team.mine')} {liveTeamScores.A}
           </span>
-          <span className="opacity-50">VS</span>
+          <span className="board-table__score-vs opacity-50">VS</span>
           <span className="board-table__team-b">
             {isSpectator ? t('ui.team.b') : t('ui.team.enemy')} {liveTeamScores.B}
           </span>

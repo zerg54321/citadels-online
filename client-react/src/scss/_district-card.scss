@@ -72,9 +72,11 @@ $cards: laboratory smithy library observatory graveyard haunted_quarter
   }
 
   .title {
-    font-size: 75%;
+    font-family: var(--font-display);
+    font-size: 80%;
     font-weight: 700;
-    line-height: 1;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
     text-shadow: 0 1px 3px black, 0 0 6px black;
   }
 
@@ -102,5 +104,24 @@ $cards: laboratory smithy library observatory graveyard haunted_quarter
 
   .bg-black-alpha {
     background-color: #0006;
+  }
+
+  // Built-district tiles render with the `--small` variant (height 4rem). The
+  // cost row there shows one 🪙 per gold of the card's price; high-cost cards
+  // (6-gold dragon_gate / university / great_wall / school_of_magic) used to
+  // overflow because the emoji inherited the default ~1em size and 6 of them
+  // did not fit the ~7rem tile width. Shrink the twemoji <img> (sized in em
+  // via font-size) and tighten spacing so all 6 coins stay on one line. The
+  // large hand-tile variant keeps its bigger rotated-cost coins untouched.
+  &--small .district-card__cost-row {
+    flex-wrap: wrap;
+    line-height: 0.85;
+
+    img {
+      font-size: 0.8rem;
+      width: 0.92rem;
+      height: 0.92rem;
+      margin: 0;
+    }
   }
 }

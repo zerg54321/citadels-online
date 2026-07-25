@@ -21,6 +21,12 @@ header {
     color: var(--gold);
     text-decoration: none;
     text-shadow: 0 1px 6px rgba(212, 175, 55, 0.25);
+    transition: color 0.18s ease, text-shadow 0.18s ease;
+    &:hover {
+      color: var(--gold-bright);
+      text-decoration: none;
+      text-shadow: 0 1px 10px rgba(212, 175, 55, 0.5);
+    }
   }
 
   h6 {

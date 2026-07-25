@@ -144,7 +144,7 @@ export default function SeatPanel({
             title={t('ui.game.stat_hand')}
             onClick={exchangeHand}
           >
-            <span className="seat-panel__chip-icon">🃏</span>
+            <span className="card-back-icon" />
             <span className="seat-panel__chip-val">{(board.hand || []).length}</span>
           </span>
           <span className="seat-panel__chip seat-panel__chip--score" title={t('ui.game.stat_score')}>

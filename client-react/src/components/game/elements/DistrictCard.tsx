@@ -55,7 +55,6 @@ export default function DistrictCard({
 
   const data = districts[districtId as keyof typeof districts] as DistrictData | undefined;
   const cost = data?.cost ?? 0;
-  const extraPoints = data?.extra_points ?? 0;
   const icon = (data && ICON_BY_TYPE[data.type]) || '❔';
   const color = (data && COLOR_BY_TYPE[data.type]) || 'white';
   const nameKey = `districts.${districtId}.name`;
@@ -93,15 +92,12 @@ export default function DistrictCard({
                   {Array.from({ length: cost }, (_, i) => (
                     <Emoji key={`c${i}`} emoji="🪙" />
                   ))}
-                  {Array.from({ length: extraPoints }, (_, i) => (
-                    <Emoji key={`e${i}`} emoji="🪙" />
-                  ))}
                 </div>
               </div>
 
             <div className="flex-fill" />
             {!small && (
-              <div className={cn('px-1', { 'pl-3': extraPoints > 0 })}>
+              <div className="px-1">
                 {hasDesc && (
                   <div
                     className="badge badge-light p-1 w-100 text-truncate opacity-4"

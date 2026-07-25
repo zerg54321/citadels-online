@@ -104,14 +104,19 @@ export function logCharacterCall(
   const pos = cm.characters[character];
   const seat = pos - 3; // CharacterPosition.PLAYER_1 = 3
   const ownerId = board.playerOrder[seat] ?? null;
+  // role is a 1-based client id (characters i18n array is 1-indexed, matching
+  // CharacterManager's face-up card ids); the raw `character` enum value is
+  // 0-based, so add 1 for the param. The killedCharacter comparison above/below
+  // uses the raw 0-based enum value and must NOT be shifted.
+  const clientRole = character + 1;
   if (ownerId == null) {
-    actionFeed.push({ kind: 'call_empty', params: { role: character } });
+    actionFeed.push({ kind: 'call_empty', params: { role: clientRole } });
     return;
   }
   const name = playerName(players, ownerId);
   if (character === cm.killedCharacter) {
-    actionFeed.push({ kind: 'call_killed', params: { player: name, role: character } });
+    actionFeed.push({ kind: 'call_killed', params: { player: name, role: clientRole } });
     return;
   }
-  actionFeed.push({ kind: 'call', params: { player: name, role: character } });
+  actionFeed.push({ kind: 'call', params: { player: name, role: clientRole } });
 }

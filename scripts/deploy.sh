@@ -146,6 +146,8 @@ ensure_env() {
   fi
   local jwt_secret
   jwt_secret="$(openssl rand -hex 32)"
+  local admin_token
+  admin_token="$(openssl rand -hex 32)"
   local origin="http://localhost:${APP_PORT}"
   [ -n "$DOMAIN" ] && origin="https://${DOMAIN}"
   log "生成 .env: $env_file"
@@ -156,9 +158,13 @@ DATABASE_PATH=${DB_PATH}
 JWT_SECRET=${jwt_secret}
 CORS_ORIGIN=${origin}
 ENFORCE_HTTPS=0
+# Admin management API (access via SSH tunnel to 127.0.0.1:8081)
+ADMIN_TOKEN=${admin_token}
+ADMIN_ALLOW_IPS=127.0.0.1,::1
 EOF
   chmod 600 "$env_file"
-  log "已生成随机 JWT_SECRET（请勿提交 .env）"
+  log "已生成随机 JWT_SECRET 与 ADMIN_TOKEN（请勿提交 .env）"
+  log "管理面访问: ssh -L 8081:127.0.0.1:8081 root@<vps> 然后本地打开 http://127.0.0.1:8081/admin"
 }
 
 write_systemd_unit() {
@@ -194,6 +200,14 @@ server {
     server_name ${server_name};
 
     client_max_body_size 10m;
+
+    # Block the admin management API from the public internet entirely.
+    # Admin is only reachable via an SSH tunnel to 127.0.0.1:8081, which
+    # bypasses Nginx. This is a third independent gate on top of the
+    # IP-allowlist + token checks enforced inside Node.
+    location /api/admin {
+        return 404;
+    }
 
     # Socket.IO WebSocket endpoint
     location /s/ {

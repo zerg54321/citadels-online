@@ -7,6 +7,7 @@ import { createAuthRouter } from './auth/routes';
 import { createAvatarRouter } from './auth/avatarRoutes';
 import { createStatsRouter } from './stats/routes';
 import { createRoomsRouter } from './rooms/routes';
+import { createAdminRouter } from './admin/routes';
 import { dbPath } from './db/database';
 
 const app = express();
@@ -41,6 +42,13 @@ app.use('/api/avatar', createAvatarRouter());
 app.use('/api/stats', createStatsRouter());
 app.use('/api/rooms', createRoomsRouter());
 
+// Admin surface: always mounted; the router's requireAdmin gate is
+// fail-closed (404 for every path) when ADMIN_TOKEN/ADMIN_ALLOW_IPS are
+// unset, so a default deployment exposes nothing here. Mounting
+// unconditionally also prevents the SPA history() fallback below from
+// serving index.html for /api/admin/* paths.
+app.use('/api/admin', createAdminRouter());
+
 const io = new Server(http, {
   path: '/s/',
   cors: {
@@ -52,8 +60,8 @@ const io = new Server(http, {
 });
 initSocket(io);
 
-app.use(express.static('../client-react/dist'));
 app.use(history());
+app.use(express.static('../client-react/dist'));
 
 http.listen(port, () => {
   console.log(`Citadels game server listening on http://localhost:${port}`);

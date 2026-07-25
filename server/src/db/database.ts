@@ -78,6 +78,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_matches_ranked ON matches(ranked, ended_at DESC);
   CREATE INDEX IF NOT EXISTS idx_match_players_user ON match_players(user_id);
   CREATE INDEX IF NOT EXISTS idx_match_players_match ON match_players(match_id);
+
+  CREATE TABLE IF NOT EXISTS admin_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    ip TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target_id TEXT,
+    before_json TEXT,
+    after_json TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_admin_audit_ts ON admin_audit(ts DESC);
 `);
 
 // pwd_changed_at backfill for DBs created before the column existed.

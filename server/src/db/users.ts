@@ -227,3 +227,155 @@ export function updateAvatar(
   if (!updated) return { error: 'user not found' };
   return { user: toAuthPublic(updated) };
 }
+
+// ── Admin-only operations ───────────────────────────────────────────────
+// These bypass the "current password" checks because an admin resetting a
+// forgotten password cannot know it. They still reuse the same bcrypt hashing
+// and bump pwd_changed_at so all of the user's existing sessions are kicked.
+
+// Escape a username prefix for use in a LIKE ... ESCAPE '\' clause. Username
+// chars are [a-zA-Z0-9_], but '_' and '%' are LIKE wildcards, so both (and the
+// escape char itself) must be escaped to match them literally.
+function escapeLikePrefix(prefix: string): string {
+  return prefix.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+export function adminListUsers(limit: number, offset: number, prefix?: string): AdminUserRow[] {
+  if (prefix && prefix.trim()) {
+    const like = `${escapeLikePrefix(prefix.trim())}%`;
+    return db.prepare(`
+      SELECT id, username, display_name, avatar_type, avatar_ref,
+             pwd_changed_at, created_at, updated_at
+      FROM users
+      WHERE username LIKE ? ESCAPE '\\'
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `).all(like, limit, offset) as AdminUserRow[];
+  }
+  const rows = db.prepare(`
+    SELECT id, username, display_name, avatar_type, avatar_ref,
+           pwd_changed_at, created_at, updated_at
+    FROM users
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(limit, offset) as AdminUserRow[];
+  return rows;
+}
+
+export function adminCountUsers(prefix?: string): number {
+  if (prefix && prefix.trim()) {
+    const like = `${escapeLikePrefix(prefix.trim())}%`;
+    const r = db.prepare('SELECT COUNT(*) n FROM users WHERE username LIKE ? ESCAPE \'\\\'').get(like) as { n: number };
+    return r.n;
+  }
+  const r = db.prepare('SELECT COUNT(*) n FROM users').get() as { n: number };
+  return r.n;
+}
+
+export function adminGetUser(id: string): AdminUserRow | undefined {
+  return db.prepare(`
+    SELECT id, username, display_name, avatar_type, avatar_ref,
+           pwd_changed_at, created_at, updated_at
+    FROM users WHERE id = ?
+  `).get(id) as AdminUserRow | undefined;
+}
+
+// Reset a user's password to a known value (admin-supplied) or, when
+// newPassword is null, to a fresh random temp password. Always bumps
+// pwd_changed_at so existing JWTs are invalidated. Returns the plaintext
+// password exactly once so the admin can hand it to the user; it is never
+// stored in plaintext anywhere.
+function genTempPassword(): string {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(12);
+  let out = '';
+  for (let i = 0; i < 12; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return out;
+}
+
+export function adminResetPassword(
+  userId: string,
+  newPassword: string | null,
+): { user?: AuthPublicUser; password?: string; error?: string } {
+  const user = findUserById(userId);
+  if (!user) return { error: 'user not found' };
+
+  const password = newPassword ?? genTempPassword();
+  const passwordError = validatePassword(password);
+  if (passwordError) return { error: passwordError };
+
+  const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+  const ts = nowIso();
+  db.prepare('UPDATE users SET password_hash = ?, pwd_changed_at = ?, updated_at = ? WHERE id = ?')
+    .run(passwordHash, ts, ts, userId);
+
+  const updated = findUserById(userId);
+  if (!updated) return { error: 'user not found' };
+  return { user: toAuthPublic(updated), password };
+}
+
+// Admin update of display name and/or avatar. Each field is optional; only
+// provided fields are written. Validates display name via the shared helper.
+export function adminUpdateUser(
+  userId: string,
+  patch: { displayName?: string; avatarType?: string; avatarRef?: string },
+): { user?: AuthPublicUser; error?: string } {
+  const user = findUserById(userId);
+  if (!user) return { error: 'user not found' };
+
+  if (patch.displayName !== undefined) {
+    const displayError = validateDisplayName(patch.displayName);
+    if (displayError) return { error: displayError };
+  }
+  if (patch.avatarType !== undefined && !['preset', 'upload'].includes(patch.avatarType)) {
+    return { error: 'invalid avatar_type' };
+  }
+
+  const ts = nowIso();
+  db.prepare(`
+    UPDATE users
+      SET display_name = COALESCE(?, display_name),
+          avatar_type  = COALESCE(?, avatar_type),
+          avatar_ref   = COALESCE(?, avatar_ref),
+          updated_at   = ?
+      WHERE id = ?
+  `).run(
+    patch.displayName !== undefined ? patch.displayName.trim() : null,
+    patch.avatarType ?? null,
+    patch.avatarRef ?? null,
+    ts,
+    userId,
+  );
+
+  const updated = findUserById(userId);
+  if (!updated) return { error: 'user not found' };
+  return { user: toAuthPublic(updated) };
+}
+
+export type AdminUserRow = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_type: string;
+  avatar_ref: string;
+  pwd_changed_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Delete one or more users by id in a single transaction. Returns the number
+// of rows actually removed. match_players.user_id has NO foreign key to users
+// (only match_id cascades), so historical match rows are preserved with their
+// stored display_name/score intact — the user_id reference simply becomes
+// orphaned, which is acceptable for archival integrity. Avatar upload files
+// (data/avatars/{id}.webp) are cleaned up by the caller (route layer), not
+// here, to keep the DB module free of filesystem dependencies.
+export function adminDeleteUsers(ids: string[]): number {
+  if (!ids.length) return 0;
+  const placeholders = ids.map(() => '?').join(',');
+  const tx = db.transaction(() => {
+    const r = db.prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...ids);
+    return r.changes;
+  });
+  return tx();
+}

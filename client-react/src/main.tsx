@@ -6,6 +6,7 @@ import HomeScreen from './components/HomeScreen';
 import RoomScreen from './components/game/RoomScreen';
 import CardsPreview from './components/CardsPreview';
 import StatsScreen from './components/StatsScreen';
+import AdminScreen from './components/AdminScreen';
 import './i18n';
 import { useAppStore } from './store';
 import './scss/main.scss';
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: 'room/:roomId', element: <RoomScreen /> },
       { path: 'cards', element: <CardsPreview /> },
       { path: 'stats', element: <StatsScreen /> },
+      { path: 'admin', element: <AdminScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

@@ -231,3 +231,136 @@ export function getRanking(limit = 50): RankingRow[] {
     rankedDraws: r.ranked_draws,
   }));
 }
+
+// ── Admin-only operations ───────────────────────────────────────────────
+
+export type AdminMatchItem = {
+  id: string;
+  room_id: string;
+  game_mode: number;
+  ranked: boolean;
+  has_ai: boolean;
+  complete_city_size: number;
+  team_score_a: number | null;
+  team_score_b: number | null;
+  match_result: number;
+  started_at: string;
+  ended_at: string;
+  players: AdminMatchPlayerItem[];
+};
+
+export type AdminMatchPlayerItem = {
+  user_id: string | null;
+  player_id: string;
+  seat: number;
+  team: number;
+  display_name: string;
+  personal_score: number;
+  is_ai: boolean;
+  team_won: boolean;
+};
+
+export function adminListMatches(limit: number, offset: number): AdminMatchItem[] {
+  const matchRows = db.prepare(`
+    SELECT id, room_id, game_mode, ranked, has_ai, complete_city_size,
+           team_score_a, team_score_b, match_result, started_at, ended_at
+    FROM matches ORDER BY ended_at DESC LIMIT ? OFFSET ?
+  `).all(limit, offset) as MatchRow[];
+
+  if (matchRows.length === 0) return [];
+
+  const ids = matchRows.map((m) => m.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const playerRows = db.prepare(`
+    SELECT match_id, user_id, player_id, seat, team, display_name,
+           personal_score, is_ai, team_won
+    FROM match_players WHERE match_id IN (${placeholders})
+    ORDER BY match_id, seat
+  `).all(...ids) as (MatchPlayerRow & { match_id: string })[];
+
+  const byMatch = new Map<string, AdminMatchPlayerItem[]>();
+  playerRows.forEach((p) => {
+    const arr = byMatch.get(p.match_id) ?? [];
+    arr.push({
+      user_id: p.user_id,
+      player_id: p.player_id,
+      seat: p.seat,
+      team: p.team,
+      display_name: p.display_name,
+      personal_score: p.personal_score,
+      is_ai: Boolean(p.is_ai),
+      team_won: Boolean(p.team_won),
+    });
+    byMatch.set(p.match_id, arr);
+  });
+
+  return matchRows.map((m) => ({
+    id: m.id,
+    room_id: m.room_id,
+    game_mode: m.game_mode,
+    ranked: Boolean(m.ranked),
+    has_ai: Boolean(m.has_ai),
+    complete_city_size: m.complete_city_size,
+    team_score_a: m.team_score_a,
+    team_score_b: m.team_score_b,
+    match_result: m.match_result,
+    started_at: m.started_at,
+    ended_at: m.ended_at,
+    players: byMatch.get(m.id) ?? [],
+  }));
+}
+
+export function adminCountMatches(): number {
+  const r = db.prepare('SELECT COUNT(*) n FROM matches').get() as { n: number };
+  return r.n;
+}
+
+export function adminGetMatch(id: string): AdminMatchItem | undefined {
+  const m = db.prepare(`
+    SELECT id, room_id, game_mode, ranked, has_ai, complete_city_size,
+           team_score_a, team_score_b, match_result, started_at, ended_at
+    FROM matches WHERE id = ?
+  `).get(id) as MatchRow | undefined;
+  if (!m) return undefined;
+
+  const playerRows = db.prepare(`
+    SELECT user_id, player_id, seat, team, display_name,
+           personal_score, is_ai, team_won
+    FROM match_players WHERE match_id = ? ORDER BY seat
+  `).all(id) as MatchPlayerRow[];
+
+  return {
+    id: m.id,
+    room_id: m.room_id,
+    game_mode: m.game_mode,
+    ranked: Boolean(m.ranked),
+    has_ai: Boolean(m.has_ai),
+    complete_city_size: m.complete_city_size,
+    team_score_a: m.team_score_a,
+    team_score_b: m.team_score_b,
+    match_result: m.match_result,
+    started_at: m.started_at,
+    ended_at: m.ended_at,
+    players: playerRows.map((p) => ({
+      user_id: p.user_id,
+      player_id: p.player_id,
+      seat: p.seat,
+      team: p.team,
+      display_name: p.display_name,
+      personal_score: p.personal_score,
+      is_ai: Boolean(p.is_ai),
+      team_won: Boolean(p.team_won),
+    })),
+  };
+}
+
+// Delete a match and its players in one transaction. Relies on the
+// match_players ON DELETE CASCADE FK, but we wrap explicitly so a partial
+// failure leaves nothing dangling.
+export function adminDeleteMatch(id: string): boolean {
+  const tx = db.transaction(() => {
+    const r = db.prepare('DELETE FROM matches WHERE id = ?').run(id);
+    return r.changes > 0;
+  });
+  return tx();
+}

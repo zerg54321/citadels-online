@@ -50,7 +50,7 @@
 
 ### 2.1 一条纪律
 
-> **重构时遇到业务/显示纯逻辑，只允许存在于 `common/` 或 `client/` 内的纯 TS 模块，不允许写死在 `.vue` 组件和 Vuex mutation 里。**
+> **重构时遇到业务/显示纯逻辑，只允许存在于 `common/` 或 `client-react/` 内的纯 TS 模块，不允许写死在 `.tsx` 组件和 Zustand store 里。**（原 Vue 版本对应 `client/` 的 `.vue`/Vuex；`client/` 已移除，历史可从 git 早期提交回溯。）
 
 理由：
 

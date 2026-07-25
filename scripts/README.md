@@ -162,7 +162,7 @@ netstat -ano | findstr ":3010"
 - 只改 server 源码：可 `dev-restart`（start 会 tsc）
 - 改了 `common`：restart 会 rebuild common
 - 新增 npm 包：在对应包目录 `npm install` 后再 start
-- 改了 client 源码：Vite 一般热更新，不必重启；大改配置可 `dev-restart`
+- 改了 client-react 源码：Vite 一般热更新，不必重启；大改配置可 `dev-restart`
 
 ### 5. PowerShell：`The term 'dev-start.cmd' is not recognized`
 

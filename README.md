@@ -10,7 +10,6 @@
 - **服务端**：Express + Socket.IO + better-sqlite3 + JWT，服务端权威，负责在线房间、玩家动作、状态同步与游戏规则
 - **共享协议**：`common/` 包，提供纯类型 / 枚举 / 框架无关的 view 纯函数（含单测，作为前端行为契约）
 - **离线引擎**：`server/src/engine`，可独立跑完一整局，适合 AI 训练、自动对局与策略评估
-- 旧 Vue 3 客户端 `client/` 仅作遗留参考保留，不再投入，不参与构建与部署
 
 ## 文档索引
 
@@ -27,7 +26,6 @@
 common/        共享类型、枚举与 view 纯函数（先 build）
 server/        权威规则、房间、Socket、数据库、离线引擎
 client-react/  React 前端（现役）
-client/        Vue 前端（遗留参考，不再投入，不参与构建/部署）
 scripts/       本地开发脚本、自动模拟、VPS 部署脚本
 docs/          说明文档
 ```
@@ -57,7 +55,7 @@ docs/          说明文档
 
 ### 1) 安装依赖
 
-构建顺序是**铁律**：`common` 必须先 build，server / client 才能引用其 `dist`。
+构建顺序是**铁律**：`common` 必须先 build，server / client-react 才能引用其 `dist`。
 
 ```bash
 cd common && npm install && npm run build
@@ -85,7 +83,7 @@ cd ../client-react && npm install
 | React 前端（现役） | http://127.0.0.1:**3010**/ | Vite dev，代理 `/s/` 与 `/api` 到 8081 |
 | 后端 | http://127.0.0.1:**8081**/ | Express + Socket.IO |
 
-> Socket 路径固定为 **`/s/`**（client Vite 代理与 server 一致；改路径须两处同改）。
+> Socket 路径固定为 **`/s/`**（client-react Vite 代理与 server 一致；改路径须两处同改）。
 
 ### 3) 手动双进程
 
@@ -109,7 +107,7 @@ npm run dev -- --host 127.0.0.1 --port 3010
                    静态目录指向 ../client-react/dist
 ```
 
-- 修改 `common` 后必须先 rebuild common，再启 server / 刷新 client
+- 修改 `common` 后必须先 rebuild common，再启 server / 刷新 client-react
 - VPS / CI 脚本必须同一顺序
 - 根目录 `npm run build` 已按此顺序串联三包
 

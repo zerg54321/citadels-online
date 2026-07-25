@@ -282,7 +282,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 >
 > **复盘说明（2026-07-21，基于阶段一/二/三已完成）**：阶段二已把 5 个 view 层纯函数（teamScores/pricing/parseGameState/statusBar/boardLayout）抽入 `common/` 并配 110 个单测——这正是当初"为 React 重构铺路"的目标。由此阶段四的 A/C 抉择成本结构已变，见 4.2。
 >
-> **结果**：4.2 选定 **C 方案（Vite + React 18 + Zustand + React Router + i18next）**，React 客户端全量迁移完成（见 4.4），随后分批完成 UI 现代化（见 4.5）。Vue 客户端 `client/` 保留为遗留参考，`client-react/` 为现役前端。
+> **结果**：4.2 选定 **C 方案（Vite + React 18 + Zustand + React Router + i18next）**，React 客户端全量迁移完成（见 4.4），随后分批完成 UI 现代化（见 4.5）。Vue 客户端 `client/` 已移除（历史可从 git 早期提交回溯），`client-react/` 为现役前端。
 
 #### 4.0 前置决策（两项行为怪癖，至今未修，独立于 UI 工作可随时处理）
 
@@ -350,7 +350,7 @@ const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : (process.env.DATAB
 - `client_react.zustand_selector_stable_reference`：Zustand selector 禁止 `{...x}` 展开等每次创建新对象，否则 `useSyncExternalStore` 误判快照变化导致无限重渲染。
 - `client_react.router_type`：必须 `createBrowserRouter`，因 `useBlocker` 需数据路由器；`App.tsx` 作布局路由用 `<Outlet />`。
 
-**遗留**：Vue 客户端 `client/` 保留为遗留参考，不再投入；部署/开发均以 `client-react/` 为准。
+**遗留**：Vue 客户端 `client/` 已移除（历史可从 git 早期提交回溯），不再投入；部署/开发均以 `client-react/` 为准。
 
 ---
 

@@ -166,7 +166,7 @@ export default function ActionLog({ displayActionFeed, onShowEvent, collapsed, o
             onClick={onToggleCollapsed}
             title={t('ui.game.action_log_collapse')}
           >
-            <span className="board-table__log-arrow board-table__log-arrow--up">&#9660;</span>
+            <span className="board-table__log-arrow">&#9654;</span>
           </button>
         </div>
         {renderList()}

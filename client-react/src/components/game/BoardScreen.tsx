@@ -39,7 +39,7 @@ import EndGameModal from './EndGameModal';
 // assembles all migrated subcomponents. Vue data() → useState; computed →
 // useMemo; mounted/beforeUnmount timers → useEffect with cleanup; watch
 // blocks → useEffect on the watched dependency.
-const COLLAPSE_BREAKPOINT = 1100;
+const COLLAPSE_BREAKPOINT = 1500;
 
 function useLogCollapsed() {
   const [collapsed, setCollapsed] = useState(() => window.innerWidth <= COLLAPSE_BREAKPOINT);
@@ -349,7 +349,7 @@ export default function BoardScreen() {
     <div className="board-table">
       <div className="board-table__bg" />
 
-      <div className={`board-table__stage${isSpectator ? ' board-table__stage--spectate' : ''}${logCollapsed ? ' board-table__stage--log-collapsed' : ''}`}>
+      <div className={`board-table__stage${isSpectator ? ' board-table__stage--spectate' : ''}`}>
         {tableSlots.map((slot) => (
           <div key={slot.playerId} className={`board-table__slot board-table__slot--${slot.pos}`}>
             <SeatPanel

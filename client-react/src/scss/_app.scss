@@ -50,6 +50,33 @@ header {
       text-align: left;
       flex: 0 1 auto;
     }
+    // GameStage downscales the whole shell on smaller iPads (scale < 1).
+    // Pre-enlarge the right-cluster controls ~1.3× so that after scaling
+    // they remain comfortably tappable; on iPad Pro (scale 1) they read as
+    // slightly generous, which the ample header space absorbs.
+    .header-leave-btn {
+      font-size: 0.95rem;
+      padding: 0.45rem 0.8rem;
+    }
+    .hdr-btn {
+      font-size: 0.95rem;
+      padding: 0.5rem 0.9rem;
+    }
+    .locale-select__btn {
+      font-size: 0.95rem;
+      padding: 0.45rem 0.75rem;
+    }
+    .auth-panel__status {
+      font-size: 0.9rem;
+      padding: 0.3rem 0.7rem;
+    }
+    .auth-panel__who {
+      font-size: 1.15rem;
+    }
+    .auth-panel__avatar {
+      width: 1.85rem;
+      height: 1.85rem;
+    }
   }
 }
 

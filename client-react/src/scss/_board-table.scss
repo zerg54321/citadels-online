@@ -120,25 +120,19 @@
     flex: 1 1 auto;
     min-height: 0;
     display: grid;
+    // The action log no longer occupies a grid column — it escapes the stage
+    // via portal (docked beside the canvas on PC, overlay on iPad). Only the
+    // three board columns remain: left seats / center / right seats.
     grid-template-columns:
       minmax(140px, 0.8fr)
       minmax(220px, 1.2fr)
-      minmax(140px, 0.8fr)
-      minmax(180px, 260px);
+      minmax(140px, 0.8fr);
     // Row 3 (l3 + self) gets more height than row 1/2 so the self strip can
     // show its hand + coins fully. Row 1/2 seats only need the 2×4 building
     // grid, so they take the smaller share.
     grid-template-rows: 0.95fr 0.95fr 1.1fr;
     gap: 0.45rem;
     padding: 0.35rem 0.55rem 0.45rem;
-  }
-
-  &__stage--log-collapsed {
-    grid-template-columns:
-      minmax(140px, 0.8fr)
-      minmax(220px, 1.2fr)
-      minmax(140px, 0.8fr)
-      auto;
   }
 
   &__slot {
@@ -216,6 +210,13 @@
     overflow: hidden;
   }
 
+  // Docked log (PC): portaled into .game-stage__log-dock beside the canvas.
+  // Fill the dock container height so the panel aligns with the board.
+  &__log--dock {
+    height: 100%;
+    width: 100%;
+  }
+
   &__log-header {
     flex: 0 0 auto;
     display: flex;
@@ -224,6 +225,16 @@
     gap: 0.35rem;
     padding: 0.4rem 0.35rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  // Overlay-mode header is the collapse trigger (title + arrow both clickable).
+  // Keep the toggle visual but signal interactivity with a hover tint.
+  &__log-header--clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+    &:hover {
+      background: rgba(212, 175, 55, 0.1);
+    }
   }
 
   &__log-title {
@@ -286,7 +297,7 @@
 
   /* Floating tab button — fixed to right edge, independent of parent */
   &__log-tab {
-    position: fixed;
+    position: absolute;
     right: 0;
     top: 50%;
     transform: translateY(-50%);
@@ -302,6 +313,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.35rem;
+    pointer-events: auto;
     transition: background 0.15s ease;
     &:hover { background: rgba(30, 24, 16, 0.95); }
   }
@@ -319,13 +331,13 @@
     font-size: 0.7rem;
   }
 
-  /* Overlay popout — slides from right */
+  /* Overlay popout — slides from right, layered over the board */
   &__log-popout {
     display: none;
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 100;
-    pointer-events: none;
+    pointer-events: auto;
   }
 
   &__log-popout--open {
@@ -355,9 +367,31 @@
     animation: board-log-slide-in 0.2s ease;
   }
 
+  // Closing state: backdrop fades out, drawer slides back off-screen. The
+  // component stays mounted until the animation ends, then swaps to the tab.
+  // Only the ::before backdrop fades — the drawer itself slides (not fades)
+  // so it reads as the reverse of the expand slide-in.
+  &__log-popout--closing {
+    &::before { animation: board-log-fade-out 0.2s ease forwards; }
+
+    .board-table__log-popout-inner {
+      animation: board-log-slide-out 0.2s ease forwards;
+    }
+  }
+
   @keyframes board-log-slide-in {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
+  }
+
+  @keyframes board-log-slide-out {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+
+  @keyframes board-log-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 
   &__log-item {
@@ -959,29 +993,12 @@
   to { opacity: 1; transform: translateX(3px); }
 }
 
-@media (max-width: 1100px) {
-  .board-table__stage {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-    overflow: auto;
-  }
-
-  .board-table__slot--l1,
-  .board-table__slot--l2,
-  .board-table__slot--l3,
-  .board-table__slot--r1,
-  .board-table__slot--r2,
-  .board-table__slot--center,
-  .board-table__slot--self,
-  .board-table__slot--log {
-    grid-column: auto;
-    grid-row: auto;
-  }
-
-  .board-table__slot--self {
-    flex-direction: column;
-  }
-}
+// Responsive scaling is handled by GameStage (transform: scale on a fixed
+// 1366×1024 design canvas). CSS media queries evaluate against the physical
+// viewport, not the scaled canvas, so the old (max-width: 1100px) mobile
+// reflow breakpoint would still fire on iPad mini (1024px landscape) and
+// fight the scaler. It has been removed entirely — the scaler is the single
+// source of responsive behaviour for the in-game board.
 
 // End-game score dialog — matches the game's dark medieval/fantasy theme.
 .endgame-overlay {

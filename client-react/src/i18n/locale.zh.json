@@ -196,6 +196,7 @@
             "action_log_empty": "暂无记录",
             "action_log_expand": "展开行动记录",
             "action_log_collapse": "收起行动记录",
+            "rotate_to_landscape": "请旋转设备至横屏以获得最佳体验",
             "feed": {
                 "kill": "刺杀标记：{role}（持有者到其顺位再揭示）",
                 "rob": "偷窃标记：{role}（行动时夺金）",

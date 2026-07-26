@@ -196,6 +196,7 @@
             "action_log_empty": "No events yet",
             "action_log_expand": "Expand action log",
             "action_log_collapse": "Collapse action log",
+            "rotate_to_landscape": "Please rotate your device to landscape for the best experience",
             "feed": {
                 "kill": "Kill mark: {role} (revealed when their turn comes)",
                 "rob": "Rob mark: {role} (steal gold on their turn)",

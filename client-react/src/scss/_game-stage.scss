@@ -1,0 +1,120 @@
+// GameStage — equal-ratio scaling shell. The whole in-game UI (header + board)
+// is authored for DESIGN_WIDTH × DESIGN_HEIGHT (iPad Pro 12.9" landscape) and
+// scaled as a unit to fit any landscape viewport. Letterboxed margins are
+// filled with a themed ambient background so they read as part of the scene
+// rather than dead black bars.
+
+.game-stage {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  // Ambient backdrop visible only in the letterboxed margins (the canvas
+  // covers the centre). Warm radial glows over the void colour keep the
+  // edges from looking like empty black bars.
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(80, 56, 24, 0.35) 0%, transparent 60%),
+    radial-gradient(circle at 15% 85%, rgba(120, 80, 30, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(60, 80, 130, 0.16), transparent 40%),
+    var(--bg-void);
+}
+
+// Dock mode (PC, wide): canvas on the left, native-width log on the right.
+// The canvas+log group is centred so the leftover space splits evenly into
+// themed letterbox margins on both sides.
+.game-stage--dock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+// Overlay mode (iPad): canvas centred, log floats over its right edge.
+.game-stage--overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Outer box occupies the scaled dimensions so flex layout around it is
+// correct; the inner canvas keeps the design size and is scaled from the
+// top-left corner to fill the outer box exactly.
+.game-stage__canvas-outer {
+  flex: 0 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-stage__canvas {
+  position: relative;
+  // GPU compositing for crisper non-integer scaling on Air/mini.
+  transform: translateZ(0);
+}
+
+// Normal-flow content (header + body) stacks in a column filling the canvas.
+.game-stage__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+// Absolute host layered over the canvas for overlay-mode log drawers.
+// pointer-events: none by default so it never blocks the board; the portaled
+// children re-enable pointer-events on themselves.
+.game-stage__overlay-host {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+// Native-width log panel beside the canvas (dock mode). Capped at a fixed
+// width so it reads as a sidebar rather than swallowing all remaining space
+// on very wide PC monitors; the gap to the right edge blends into the
+// ambient letterbox background.
+.game-stage__log-dock {
+  flex: 0 0 auto;
+  width: 20rem;
+  max-width: 22rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.5rem 0.5rem 0;
+  align-self: center;
+}
+
+// Portrait rotate prompt — blocks the game until the device is turned.
+.game-stage--portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-stage__rotate-hint {
+  text-align: center;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+
+  p {
+    margin: 1rem 0 0;
+    font-size: 1.1rem;
+  }
+}
+
+.game-stage__rotate-icon {
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(212, 175, 55, 0.5);
+  animation: game-stage-rotate 2.2s ease-in-out infinite;
+}
+
+@keyframes game-stage-rotate {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}

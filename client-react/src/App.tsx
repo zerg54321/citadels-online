@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
 import GameTopBar from './components/game/GameTopBar';
+import GameStage from './components/game/GameStage';
 import { useAppStore, useGameProgress } from './store';
 
 // Mirrors Vue App.vue. The About modal (Vue Bootstrap data-toggle) becomes a
@@ -21,6 +22,10 @@ export default function App() {
   const gameProgress = useGameProgress();
 
   const inGame = location.pathname.startsWith('/room');
+  // GameStage (equal-ratio scaling) is only for an active board. The lobby
+  // shares the /room path and the in-game header styling, but it is a normal
+  // responsive page and must not be forced into the 1366×1024 scaled canvas.
+  const inPlay = inGame && (gameProgress === 'IN_GAME' || gameProgress === 'FINISHED');
 
   const leaveRoom = async () => {
     try {
@@ -31,64 +36,92 @@ export default function App() {
     navigate('/');
   };
 
-  return (
-    <div className="d-flex flex-column h-100">
-      <header className={inGame ? 'header--game' : undefined}>
-        <div className="container-fluid">
-          <div className="header-row">
+  const header = (
+    <header className={inGame ? 'header--game' : undefined}>
+      <div className="container-fluid">
+        <div className="header-row">
             <div className="header-brand">
-              <h1><a href="/" className="text-reset">{t('ui.title')}</a></h1>
+              <h1>
+                {inGame ? (
+                  t('ui.title')
+                ) : (
+                  <a href="/" className="text-reset">{t('ui.title')}</a>
+                )}
+              </h1>
               <h6 className={inGame ? 'header-subtitle--hidden' : ''}>{t('ui.subtitle2')}</h6>
             </div>
-            {inGame && <GameTopBar />}
-            <div className="header-actions">
-              {inGame && gameProgress === 'IN_GAME' && (
-                <button type="button" className="header-leave-btn" onClick={leaveRoom}>
-                  {t('ui.score.leave_room')}
-                </button>
-              )}
-              <div className={`header-extra${inGame ? ' header-extra--hidden' : ''}`}>
-                <Link className="hdr-link" to="/stats">
-                  {t('ui.stats.title')}
-                </Link>
-                <button
-                  type="button"
-                  className="hdr-link"
-                  onClick={() => setShowAbout(true)}
-                >
-                  {t('ui.about.title')}
-                </button>
-              </div>
-              <AuthPanel />
-              <LocaleSelector />
+          {inGame && <GameTopBar />}
+          <div className="header-actions">
+            {inGame && gameProgress === 'IN_GAME' && (
+              <button type="button" className="header-leave-btn" onClick={leaveRoom}>
+                {t('ui.score.leave_room')}
+              </button>
+            )}
+            <div className={`header-extra${inGame ? ' header-extra--hidden' : ''}`}>
+              <Link className="hdr-link" to="/stats">
+                {t('ui.stats.title')}
+              </Link>
+              <button
+                type="button"
+                className="hdr-link"
+                onClick={() => setShowAbout(true)}
+              >
+                {t('ui.about.title')}
+              </button>
             </div>
+            <AuthPanel />
+            <LocaleSelector />
           </div>
         </div>
-      </header>
-
-      <div className={`body flex-fill${inGame ? ' body--game' : ''}`}>
-        <Outlet />
       </div>
+    </header>
+  );
 
-      {showAbout && createPortal(
-        <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content app-modal">
-              <div className="modal-header border-0 pb-2">
-                <h5 className="modal-title app-modal__title">{t('ui.about.title')}</h5>
-                <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowAbout(false)}>
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div className="modal-body app-modal__about">
-                {/* eslint-disable-next-line react/no-danger */}
-                <p dangerouslySetInnerHTML={{ __html: t('ui.about.text') as string }} />
-              </div>
-            </div>
+  const body = (
+    <div className={`body flex-fill${inGame ? ' body--game' : ''}`}>
+      <Outlet />
+    </div>
+  );
+
+  const aboutModal = showAbout && createPortal(
+    <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content app-modal">
+          <div className="modal-header border-0 pb-2">
+            <h5 className="modal-title app-modal__title">{t('ui.about.title')}</h5>
+            <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowAbout(false)}>
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
-        </div>,
-        document.body,
-      )}
+          <div className="modal-body app-modal__about">
+            {/* eslint-disable-next-line react/no-danger */}
+            <p dangerouslySetInnerHTML={{ __html: t('ui.about.text') as string }} />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+
+  // In-play: wrap header + body in GameStage so the whole shell scales as a
+  // unit to fit any landscape viewport (iPad Pro/Air/mini, PC). The action
+  // log escapes the stage via portal (see ActionLog + GameStage context).
+  // The lobby (also under /room) is NOT scaled — it's a normal responsive page.
+  if (inPlay) {
+    return (
+      <GameStage>
+        {header}
+        {body}
+        {aboutModal}
+      </GameStage>
+    );
+  }
+
+  return (
+    <div className="d-flex flex-column h-100">
+      {header}
+      {body}
+      {aboutModal}
     </div>
   );
 }

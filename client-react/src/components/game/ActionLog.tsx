@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatActionFeedLine, type ActionFeedLine } from 'citadels-common';
-
-const COLLAPSE_BREAKPOINT = 1100;
+import { useGameStage } from './gameStageContext';
 
 interface ActionLogProps {
   displayActionFeed: ActionFeedLine[];
@@ -28,13 +27,20 @@ const WARN_STYLE_KINDS = new Set(['rob', 'rob_move', 'rob_move_empty', 'warn']);
 
 export default function ActionLog({ displayActionFeed, onShowEvent, collapsed, onToggleCollapsed }: ActionLogProps) {
   const { t } = useTranslation();
-  const [narrow, setNarrow] = useState(() => window.innerWidth <= COLLAPSE_BREAKPOINT);
-  useEffect(() => {
-    const onResize = () => setNarrow(window.innerWidth <= COLLAPSE_BREAKPOINT);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const stage = useGameStage();
   const listRef = useRef<HTMLDivElement>(null);
+  // Closing phase: when the user collapses the overlay drawer, keep it
+  // mounted briefly so the slide-out animation can play before swapping to
+  // the tab button. Without this the drawer unmounts instantly (no exit
+  // animation), which felt jarring vs. the slide-in on expand.
+  const [closing, setClosing] = useState(false);
+  const prevCollapsedRef = useRef(collapsed);
+  useEffect(() => {
+    const prev = prevCollapsedRef.current;
+    if (!prev && collapsed) setClosing(true); // expanded → collapsed: animate out
+    if (prev && !collapsed) setClosing(false); // collapsed → expanded: reset
+    prevCollapsedRef.current = collapsed;
+  }, [collapsed]);
   // Track whether the user is parked at the bottom of the log ("sticky").
   // We only auto-scroll to newly appended entries while sticky, so a user
   // who scrolled up to read earlier history isn't yanked back to the bottom
@@ -107,70 +113,80 @@ export default function ActionLog({ displayActionFeed, onShowEvent, collapsed, o
     </div>
   );
 
-  // Collapsed: floating tab button (portaled to body so it escapes any
-  // overflow:hidden ancestor), grid slot hidden.
-  if (collapsed) {
-    return (
-      <>
-        {createPortal(
-          <button
-            className="board-table__log-tab"
-            onClick={onToggleCollapsed}
-            title={t('ui.game.action_log_expand')}
-          >
-            <span className="board-table__log-tab-text">{t('ui.game.action_log')}</span>
-            <span className="board-table__log-tab-arrow">&#9664;</span>
-          </button>,
-          document.body,
-        )}
-        <div className="board-table__slot board-table__slot--log board-table__slot--log-collapsed" />
-      </>
-    );
-  }
+  // Portal target comes from GameStage: dock mode → native-width panel
+  // beside the canvas (PC); overlay mode → absolute host layered over the
+  // canvas (iPad). Until the host mounts (first render) render nothing.
+  const target = stage?.mode === 'dock' ? stage?.logDockEl : stage?.logOverlayEl;
+  if (!target) return null;
 
-  // Narrow + expanded: popout overlay (no grid space).
-  if (narrow) {
-    return (
-      <>
-        {createPortal(
-          <div className="board-table__log-popout board-table__log-popout--open" onClick={onToggleCollapsed}>
-            <div className="board-table__log-popout-inner" onClick={e => e.stopPropagation()}>
-              <div className="board-table__log-header">
-                <div className="board-table__log-title">{t('ui.game.action_log')}</div>
-                <button
-                  className="board-table__log-toggle"
-                  onClick={onToggleCollapsed}
-                  title={t('ui.game.action_log_collapse')}
-                >
-                  <span className="board-table__log-arrow board-table__log-arrow--right">&#9654;</span>
-                </button>
-              </div>
-              {renderList()}
-            </div>
-          </div>,
-          document.body,
-        )}
-        <div className="board-table__slot board-table__slot--log board-table__slot--log-collapsed" />
-      </>
-    );
-  }
-
-  // Wide + expanded: inline grid slot.
-  return (
-    <div className="board-table__slot board-table__slot--log">
-      <div className="board-table__log">
+  // Dock mode (PC, wide): the log is a permanent panel beside the canvas.
+  // It ignores `collapsed` — the side has room, so always show it inline.
+  if (stage?.mode === 'dock') {
+    return createPortal(
+      <div className="board-table__log board-table__log--dock">
         <div className="board-table__log-header">
           <div className="board-table__log-title">{t('ui.game.action_log')}</div>
-          <button
-            className="board-table__log-toggle"
-            onClick={onToggleCollapsed}
-            title={t('ui.game.action_log_collapse')}
-          >
-            <span className="board-table__log-arrow">&#9654;</span>
-          </button>
+        </div>
+        {renderList()}
+      </div>,
+      target,
+    );
+  }
+
+  // Overlay mode (iPad): a floating drawer over the board's right edge.
+  // While closing, keep the drawer mounted with the slide-out animation;
+  // onAnimationEnd (bubbled from the inner slide-out) flips closing off and
+  // the collapsed tab renders next.
+  if (closing) {
+    return createPortal(
+      <div
+        className="board-table__log-popout board-table__log-popout--open board-table__log-popout--closing"
+        onAnimationEnd={() => setClosing(false)}
+      >
+        <div className="board-table__log-popout-inner">
+          <div className="board-table__log-header">
+            <div className="board-table__log-title">{t('ui.game.action_log')}</div>
+            <span className="board-table__log-toggle" aria-hidden="true">
+              <span className="board-table__log-arrow board-table__log-arrow--right">&#9654;</span>
+            </span>
+          </div>
+          {renderList()}
+        </div>
+      </div>,
+      target,
+    );
+  }
+
+  if (collapsed) {
+    return createPortal(
+      <button
+        className="board-table__log-tab"
+        onClick={onToggleCollapsed}
+        title={t('ui.game.action_log_expand')}
+      >
+        <span className="board-table__log-tab-text">{t('ui.game.action_log')}</span>
+        <span className="board-table__log-tab-arrow">&#9664;</span>
+      </button>,
+      target,
+    );
+  }
+
+  return createPortal(
+    <div className="board-table__log-popout board-table__log-popout--open" onClick={onToggleCollapsed}>
+      <div className="board-table__log-popout-inner" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="board-table__log-header board-table__log-header--clickable"
+          onClick={onToggleCollapsed}
+          title={t('ui.game.action_log_collapse')}
+        >
+          <div className="board-table__log-title">{t('ui.game.action_log')}</div>
+          <span className="board-table__log-toggle" aria-hidden="true">
+            <span className="board-table__log-arrow board-table__log-arrow--right">&#9654;</span>
+          </span>
         </div>
         {renderList()}
       </div>
-    </div>
+    </div>,
+    target,
   );
 }

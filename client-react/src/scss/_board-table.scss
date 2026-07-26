@@ -125,9 +125,10 @@
       minmax(220px, 1.2fr)
       minmax(140px, 0.8fr)
       minmax(180px, 260px);
-    // Self strip (row 3) gets extra height so the hand area can show full
-    // cards + cost without clipping.
-    grid-template-rows: 1fr 1fr 1.5fr;
+    // Row 3 (l3 + self) gets more height than row 1/2 so the self strip can
+    // show its hand + coins fully. Row 1/2 seats only need the 2×4 building
+    // grid, so they take the smaller share.
+    grid-template-rows: 0.95fr 0.95fr 1.1fr;
     gap: 0.45rem;
     padding: 0.35rem 0.55rem 0.45rem;
   }
@@ -467,7 +468,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; // banner 顶，hand 底
+    justify-content: flex-start; // 内容从顶部排列，手牌紧跟 body
     border-radius: 12px;
     background: rgba(10, 18, 40, 0.75);
     border: 2px solid rgba(96, 165, 250, 0.55);
@@ -488,17 +489,17 @@
   &__self-banner {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.45rem;
+    gap: 0.2rem;
+    padding: 0.1rem 0.3rem;
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.68rem;
     background: linear-gradient(90deg, rgba(30, 64, 175, 0.85), rgba(15, 23, 42, 0.9));
     color: #dbeafe;
   }
 
   &__self-name {
     font-family: var(--font-display);
-    font-size: 1.12rem;
+    font-size: 0.9rem;
     font-weight: 800;
     line-height: 1;
     letter-spacing: 0.02em;
@@ -506,15 +507,15 @@
   }
 
   &__self-pick {
-    min-width: 1.65rem;
-    height: 1.65rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 900;
     flex-shrink: 0;
   }
@@ -525,7 +526,7 @@
     display: flex;
     flex-direction: row;
     gap: 0.3rem;
-    padding: 0.25rem 0.35rem;
+    padding: 0.12rem 0.3rem;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
@@ -536,7 +537,7 @@
     overflow: auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: 0;
     align-content: flex-start;
     max-height: 10rem; // 两行建筑
   }
@@ -572,13 +573,13 @@
 
   &__self-hand {
     flex: 0 0 auto;
-    min-height: 10.5rem;
+    min-height: 6rem;
     overflow: auto;
-    padding: 0.25rem 0.4rem 0.4rem;
+    padding: 0.15rem 0.3rem 0.25rem;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
-    margin-top: auto; // 手牌/金币沉底
+    margin-top: 0; // 紧贴 body 上方，不再沉底，手牌/金币整体上移
   }
 
   &__actions-title {
@@ -724,10 +725,10 @@
   &__banner {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.45rem;
+    gap: 0.2rem;
+    padding: 0.1rem 0.3rem;
     font-weight: 800;
-    font-size: 0.8rem;
+    font-size: 0.68rem;
     letter-spacing: 0.02em;
   }
 
@@ -751,22 +752,22 @@
 
   /* pick order this round (1 = first to draft) */
   &__pick-no {
-    min-width: 1.65rem;
-    height: 1.65rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 900;
     flex-shrink: 0;
   }
 
   &__avatar {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.15rem;
+    height: 1.15rem;
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -775,7 +776,7 @@
 
   &__name {
     font-family: var(--font-display);
-    font-size: 1.12rem;
+    font-size: 0.9rem;
     font-weight: 800;
     line-height: 1;
     letter-spacing: 0.02em;
@@ -798,8 +799,8 @@
   &__chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.12rem 0.55rem;
+    gap: 0.18rem;
+    padding: 0.05rem 0.35rem;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
@@ -840,13 +841,13 @@
   }
 
   &__chip-icon {
-    font-size: 1.3rem;
+    font-size: 1rem;
     line-height: 1;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
   }
 
   &__chip-val {
-    font-size: 1.08rem;
+    font-size: 1.18rem;
     font-weight: 900;
     line-height: 1;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
@@ -858,7 +859,7 @@
     display: flex;
     flex-direction: row;
     gap: 0.3rem;
-    padding: 0.25rem 0.35rem 0.4rem;
+    padding: 0.12rem 0.3rem 0.15rem;
   }
 
   &__city {
@@ -868,7 +869,7 @@
     overflow: auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: 0;
     align-content: flex-start;
   }
 

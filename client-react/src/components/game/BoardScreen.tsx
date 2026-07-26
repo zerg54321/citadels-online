@@ -29,6 +29,7 @@ import SeatPanel from './elements/SeatPanel';
 import PlayerHand from './elements/PlayerHand';
 import DistrictCard from './elements/DistrictCard';
 import CharacterCard from './elements/CharacterCard';
+import Emoji from '@/components/common/Emoji';
 import ActionLog from './ActionLog';
 import ActionPanel from './ActionPanel';
 import CenterPanel from './CenterPanel';
@@ -38,9 +39,23 @@ import EndGameModal from './EndGameModal';
 // assembles all migrated subcomponents. Vue data() → useState; computed →
 // useMemo; mounted/beforeUnmount timers → useEffect with cleanup; watch
 // blocks → useEffect on the watched dependency.
+const COLLAPSE_BREAKPOINT = 1100;
+
+function useLogCollapsed() {
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth <= COLLAPSE_BREAKPOINT);
+  useEffect(() => {
+    const onResize = () => setCollapsed(window.innerWidth <= COLLAPSE_BREAKPOINT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const toggle = useCallback(() => setCollapsed(v => !v), []);
+  return [collapsed, toggle] as const;
+}
+
 export default function BoardScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [logCollapsed, toggleLogCollapsed] = useLogCollapsed();
 
   const gameState = useGameState();
   const gameProgress = useGameProgress();
@@ -334,7 +349,7 @@ export default function BoardScreen() {
     <div className="board-table">
       <div className="board-table__bg" />
 
-      <div className={`board-table__stage${isSpectator ? ' board-table__stage--spectate' : ''}`}>
+      <div className={`board-table__stage${isSpectator ? ' board-table__stage--spectate' : ''}${logCollapsed ? ' board-table__stage--log-collapsed' : ''}`}>
         {tableSlots.map((slot) => (
           <div key={slot.playerId} className={`board-table__slot board-table__slot--${slot.pos}`}>
             <SeatPanel
@@ -364,12 +379,12 @@ export default function BoardScreen() {
         {!isSpectator && (
           <div className="board-table__slot board-table__slot--self">
             <div className="board-table__self-wrap">
-              <div className="board-table__self-panel">
+              <div className={`board-table__self-panel${gameProgress === 'IN_GAME' && isCurrentPlayerSelf ? ' board-table__self-panel--acting' : ''}`}>
                 <div className="board-table__self-banner">
                   <span className="board-table__self-pick">{selfPickOrder}</span>
                   <span className="text-truncate flex-fill board-table__self-name">{selfName}</span>
                   <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
-                    <span className="seat-panel__chip-icon">🪙</span>
+                    <span className="seat-panel__chip-icon"><Emoji emoji="🪙" /></span>
                     <span className="seat-panel__chip-val">{(selfBoard.stash as number) ?? 0}</span>
                   </span>
                   <span className="seat-panel__chip seat-panel__chip--hand" title={t('ui.game.stat_hand')}>
@@ -438,6 +453,8 @@ export default function BoardScreen() {
         <ActionLog
           displayActionFeed={displayActionFeed}
           onShowEvent={showEvent}
+          collapsed={logCollapsed}
+          onToggleCollapsed={toggleLogCollapsed}
         />
       </div>
 

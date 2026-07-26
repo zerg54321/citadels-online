@@ -2,6 +2,11 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+process.on('uncaughtException', (err) => {
+  if ((err as NodeJS.ErrnoException).code === 'ECONNRESET') return;
+  console.error('Uncaught:', err);
+});
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],

@@ -62,27 +62,29 @@ export default function ActionPanel({
           {t(`ui.game.actions.${action.title}`, action.args ?? {})}
         </button>
       ))}
-      <div className="board-table__actions-secondary">
+      <div className="board-table__actions-footer">
         {finishTurnAction && (
           <button
             type="button"
-            className="board-table__action-btn board-table__action-btn--danger"
+            className="board-table__action-btn board-table__action-btn--danger board-table__action-btn--finish"
             onClick={(e) => onAction?.(finishTurnAction.move, e.currentTarget)}
           >
             {t(`ui.game.actions.${finishTurnAction.title}`, finishTurnAction.args ?? {})}
           </button>
         )}
-        {gameProgress === 'IN_GAME' && (
-          <button
-            type="button"
-            className="board-table__action-btn"
-            disabled={autoplayBusy}
-            onClick={onToggleAutoplay}
-          >
-            {isAutoplay ? t('ui.game.autoplay_cancel') : t('ui.game.autoplay_enable')}
-          </button>
-        )}
-        {isAutoplay && <div className="board-table__meta-line">{t('ui.game.autoplay_on')}</div>}
+        <div className="board-table__actions-footer-autoplay">
+          {gameProgress === 'IN_GAME' && (
+            <button
+              type="button"
+              className="board-table__action-btn"
+              disabled={autoplayBusy}
+              onClick={onToggleAutoplay}
+            >
+              {isAutoplay ? t('ui.game.autoplay_cancel') : t('ui.game.autoplay_enable')}
+            </button>
+          )}
+          {isAutoplay && <div className="board-table__meta-line">{t('ui.game.autoplay_on')}</div>}
+        </div>
       </div>
     </div>
   );

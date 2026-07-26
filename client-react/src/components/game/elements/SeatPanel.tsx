@@ -16,6 +16,7 @@ import {
 } from '@/store';
 import CharacterCard from './CharacterCard';
 import DistrictCard from './DistrictCard';
+import Emoji from '@/components/common/Emoji';
 
 type BoardWithCrown = PlayerBoard & { crown: boolean };
 
@@ -136,7 +137,7 @@ export default function SeatPanel({
           {avatarSrc && <img src={avatarSrc} alt="" className="seat-panel__avatar" />}
           <span className="text-truncate flex-fill seat-panel__name">{username}</span>
           <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
-            <span className="seat-panel__chip-icon">🪙</span>
+            <span className="seat-panel__chip-icon"><Emoji emoji="🪙" /></span>
             <span className="seat-panel__chip-val">{board.stash ?? 0}</span>
           </span>
           <span

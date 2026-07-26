@@ -1,10 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { formatActionFeedLine, type ActionFeedLine } from 'citadels-common';
+
+const COLLAPSE_BREAKPOINT = 1100;
 
 interface ActionLogProps {
   displayActionFeed: ActionFeedLine[];
   onShowEvent?: (text: string) => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 // Feed entries are pushed by the server as structured { kind, params } (no
@@ -21,8 +26,14 @@ const KILL_STYLE_KINDS = new Set(['kill', 'call_killed']);
 // kinds that get the amber "warn" log-item styling
 const WARN_STYLE_KINDS = new Set(['rob', 'rob_move', 'rob_move_empty', 'warn']);
 
-export default function ActionLog({ displayActionFeed, onShowEvent }: ActionLogProps) {
+export default function ActionLog({ displayActionFeed, onShowEvent, collapsed, onToggleCollapsed }: ActionLogProps) {
   const { t } = useTranslation();
+  const [narrow, setNarrow] = useState(() => window.innerWidth <= COLLAPSE_BREAKPOINT);
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth <= COLLAPSE_BREAKPOINT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   // Track whether the user is parked at the bottom of the log ("sticky").
   // We only auto-scroll to newly appended entries while sticky, so a user
@@ -72,29 +83,93 @@ export default function ActionLog({ displayActionFeed, onShowEvent }: ActionLogP
     if (el && stickyRef.current) el.scrollTop = el.scrollHeight;
   }, [displayActionFeed, onShowEvent, t]);
 
+  // Render the log list body (shared by inline + popout). Only one of them
+  // is mounted at a time, so sharing listRef is safe.
+  const renderList = () => (
+    <div className="board-table__log-list" ref={listRef}>
+      {displayActionFeed.map((line, i) => (
+        line.kind === 'round' ? (
+          <div key={i} className="board-table__log-round-sep">
+            {t('ui.game.round_start', { n: line.round ?? '' })}
+          </div>
+        ) : (
+          <div
+            key={i}
+            className={`board-table__log-item${WARN_STYLE_KINDS.has(line.kind) ? ' board-table__log-item--warn' : ''}${KILL_STYLE_KINDS.has(line.kind) ? ' board-table__log-item--kill' : ''}`}
+          >
+            {formatActionFeedLine(line, t)}
+          </div>
+        )
+      ))}
+      {!displayActionFeed.length && (
+        <div className="board-table__log-item opacity-50">{t('ui.game.action_log_empty')}</div>
+      )}
+    </div>
+  );
+
+  // Collapsed: floating tab button (portaled to body so it escapes any
+  // overflow:hidden ancestor), grid slot hidden.
+  if (collapsed) {
+    return (
+      <>
+        {createPortal(
+          <button
+            className="board-table__log-tab"
+            onClick={onToggleCollapsed}
+            title={t('ui.game.action_log_expand')}
+          >
+            <span className="board-table__log-tab-text">{t('ui.game.action_log')}</span>
+            <span className="board-table__log-tab-arrow">&#9664;</span>
+          </button>,
+          document.body,
+        )}
+        <div className="board-table__slot board-table__slot--log board-table__slot--log-collapsed" />
+      </>
+    );
+  }
+
+  // Narrow + expanded: popout overlay (no grid space).
+  if (narrow) {
+    return (
+      <>
+        {createPortal(
+          <div className="board-table__log-popout board-table__log-popout--open" onClick={onToggleCollapsed}>
+            <div className="board-table__log-popout-inner" onClick={e => e.stopPropagation()}>
+              <div className="board-table__log-header">
+                <div className="board-table__log-title">{t('ui.game.action_log')}</div>
+                <button
+                  className="board-table__log-toggle"
+                  onClick={onToggleCollapsed}
+                  title={t('ui.game.action_log_collapse')}
+                >
+                  <span className="board-table__log-arrow board-table__log-arrow--right">&#9654;</span>
+                </button>
+              </div>
+              {renderList()}
+            </div>
+          </div>,
+          document.body,
+        )}
+        <div className="board-table__slot board-table__slot--log board-table__slot--log-collapsed" />
+      </>
+    );
+  }
+
+  // Wide + expanded: inline grid slot.
   return (
     <div className="board-table__slot board-table__slot--log">
       <div className="board-table__log">
-        <div className="board-table__log-title">{t('ui.game.action_log')}</div>
-        <div className="board-table__log-list" ref={listRef}>
-          {displayActionFeed.map((line, i) => (
-            line.kind === 'round' ? (
-              <div key={i} className="board-table__log-round-sep">
-                {t('ui.game.round_start', { n: line.round ?? '' })}
-              </div>
-            ) : (
-              <div
-                key={i}
-                className={`board-table__log-item${WARN_STYLE_KINDS.has(line.kind) ? ' board-table__log-item--warn' : ''}${KILL_STYLE_KINDS.has(line.kind) ? ' board-table__log-item--kill' : ''}`}
-              >
-                {formatActionFeedLine(line, t)}
-              </div>
-            )
-          ))}
-          {!displayActionFeed.length && (
-            <div className="board-table__log-item opacity-50">{t('ui.game.action_log_empty')}</div>
-          )}
+        <div className="board-table__log-header">
+          <div className="board-table__log-title">{t('ui.game.action_log')}</div>
+          <button
+            className="board-table__log-toggle"
+            onClick={onToggleCollapsed}
+            title={t('ui.game.action_log_collapse')}
+          >
+            <span className="board-table__log-arrow board-table__log-arrow--up">&#9660;</span>
+          </button>
         </div>
+        {renderList()}
       </div>
     </div>
   );

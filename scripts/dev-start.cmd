@@ -74,7 +74,7 @@ if errorlevel 1 (
 
 echo [dev-start] starting client-react on port %REACT_PORT%...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$p = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--host','127.0.0.1','--port','%REACT_PORT%' -WorkingDirectory '%ROOT%\client-react' -RedirectStandardOutput '%LOG_DIR%\client-react.out.log' -RedirectStandardError '%LOG_DIR%\client-react.err.log' -PassThru -WindowStyle Hidden; Set-Content -Path '%PID_DIR%\client-react.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] client-react pid ' + $p.Id)"
+    "$p = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--host','0.0.0.0','--port','%REACT_PORT%' -WorkingDirectory '%ROOT%\client-react' -RedirectStandardOutput '%LOG_DIR%\client-react.out.log' -RedirectStandardError '%LOG_DIR%\client-react.err.log' -PassThru -WindowStyle Hidden; Set-Content -Path '%PID_DIR%\client-react.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] client-react pid ' + $p.Id)"
 if errorlevel 1 (
   echo [dev-start] ERROR: failed to start client-react - stopping server
   call "%~dp0dev-stop.cmd"

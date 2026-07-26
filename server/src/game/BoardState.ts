@@ -52,16 +52,14 @@ export default class BoardState {
   }
 
   exportForPlayer(destPlayerId: PlayerId) {
-    // whether the player can see all hands
     const destPlayerPos = this.playerOrder.indexOf(destPlayerId) as PlayerPosition;
-    const seesAll = destPlayerPos === PlayerPosition.SPECTATOR;
 
     return {
       players: Object.fromEntries(
         Array.from(this.players).map((elem) => {
           const playerId = elem[0];
           const board = elem[1];
-          const canSeeHand = seesAll || playerId === destPlayerId;
+          const canSeeHand = playerId === destPlayerId;
           const otherPlayerPos = this.playerOrder.indexOf(playerId) as PlayerPosition;
           return [playerId, {
             ...board.exportForPlayer(canSeeHand),

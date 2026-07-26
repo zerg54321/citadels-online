@@ -292,14 +292,39 @@ describe('getTableSlots', () => {
     expect(p2Slot?.relation).toBe('enemy');
   });
 
-  it('spectator layout: all players, positions by index parity', () => {
+  it('spectator layout: all players, clockwise positions (left 3,2,1 / right 4,5,6)', () => {
     const gs = makeSixPlayerState('sp1');
     gs.players.sp1 = makePlayer('sp1', TeamId.NONE, PlayerRole.SPECTATOR);
     const slots = getTableSlots(gs, true);
     expect(slots).toHaveLength(6);
     const positions = slots.map((s) => s.pos);
-    // first 3 → l1,l2,l3; next 3 → r1,r2,r3
-    expect(positions).toEqual(['l1', 'l2', 'l3', 'r1', 'r2', 'r3']);
+    // clockwise: left top→bottom = seats 3,2,1 (l3,l2,l1); right top→bottom = 4,5,6 (r1,r2,r3)
+    expect(positions).toEqual(['l3', 'l2', 'l1', 'r1', 'r2', 'r3']);
+  });
+
+  it('spectator layout: positions fixed by lobbyPlayerOrder when king changes', () => {
+    const gs = makeSixPlayerState('sp1');
+    gs.players.sp1 = makePlayer('sp1', TeamId.NONE, PlayerRole.SPECTATOR);
+    // Simulate the initial lobby/entry order (stable, never rotates)
+    gs.lobbyPlayerOrder = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+    // playerOrder rotated so p3 is now king (index 0) — seats must NOT move
+    gs.board!.playerOrder = ['p3', 'p4', 'p5', 'p6', 'p1', 'p2'];
+    const slots = getTableSlots(gs, true);
+    // Positions follow lobbyPlayerOrder (fixed), not playerOrder (rotated)
+    const byId = Object.fromEntries(slots.map((s) => [s.playerId, s.pos]));
+    expect(byId.p1).toBe('l3'); // lobby index 0 → l3
+    expect(byId.p2).toBe('l2'); // lobby index 1 → l2
+    expect(byId.p3).toBe('l1'); // lobby index 2 → l1
+    expect(byId.p4).toBe('r1'); // lobby index 3 → r1
+    expect(byId.p5).toBe('r2'); // lobby index 4 → r2
+    expect(byId.p6).toBe('r3'); // lobby index 5 → r3
+    // But crown/pickOrder follow the rotated playerOrder
+    const crownSlot = slots.find((s) => s.board.crown);
+    expect(crownSlot?.playerId).toBe('p3'); // p3 is king now
+    const p1Slot = slots.find((s) => s.playerId === 'p1');
+    expect(p1Slot?.pickOrder).toBe(5); // p1 is at index 4 in rotated playerOrder → 5
+    const p3Slot = slots.find((s) => s.playerId === 'p3');
+    expect(p3Slot?.pickOrder).toBe(1); // p3 is at index 0 → 1
   });
 
   it('spectator layout: relations follow team (A→ally, B→enemy)', () => {

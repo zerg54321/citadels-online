@@ -97,8 +97,12 @@ const EMPTY_BOARD: PlayerBoard = {
 /**
  * Compute the full table-layout slots for rendering the board.
  *
- * Spectator layout: all seats laid out left-then-right by index
- *   (l1, l2, l3, r1, r2, ...).
+ * Spectator layout: seats are positioned by the STABLE lobby/entry order
+ *   (`lobbyPlayerOrder`) so they never rearrange when the king changes.
+ *   Positions follow a clockwise arrangement — left column top→bottom =
+ *   seats 3,2,1 (l3,l2,l1); right column top→bottom = seats 4,5,6
+ *   (r1,r2,r3). Crown and pickOrder still track the live `playerOrder`,
+ *   so only the numbers/crown move, not the seats.
  *
  * Player layout: viewer at center-bottom (handled by caller via `selfBoard`),
  * remaining 5 seats split as left-three (top-to-bottom: l1,l2,l3) and
@@ -128,8 +132,20 @@ export function getTableSlots(gs: ClientGameState, spectator: boolean): TableSlo
   };
 
   if (spectator) {
-    return order.map((pid: PlayerId, i: number) => {
-      const pos = i < 3 ? `l${i + 1}` : `r${i - 2}`;
+    // Fix seat POSITIONS by the stable lobby/entry order so seats never move
+    // when the king changes (playerOrder rotates, but positions stay put).
+    // Crown and pickOrder are still derived from the current playerOrder
+    // inside `mk`, so only the numbers/crown icon move — not the seats.
+    const fixedOrder = (gs.lobbyPlayerOrder?.length
+      ? gs.lobbyPlayerOrder.filter((id) => order.includes(id))
+      : order);
+    // If filtering left some seats out (edge case), append them in playerOrder.
+    const missing = order.filter((id) => !fixedOrder.includes(id));
+    const seatOrder = [...fixedOrder, ...missing];
+    return seatOrder.map((pid: PlayerId, i: number) => {
+      // Clockwise layout: left column top→bottom = seats 3,2,1 (index 0→l3,
+      // 1→l2, 2→l1); right column top→bottom = seats 4,5,6 (index 3→r1 …).
+      const pos = i < 3 ? `l${3 - i}` : `r${i - 2}`;
       return mk(pid, pos);
     });
   }

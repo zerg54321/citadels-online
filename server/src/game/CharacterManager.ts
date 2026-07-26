@@ -390,8 +390,9 @@ export default class CharacterManager {
     // - others only when that character's call order is reached (id <= current)
     // - killed/robbed does NOT reveal who owns the role early — only the role number
     //   is marked on the global 1–8 list; owner is shown when that role is called
-    const canSee = dest === PlayerPosition.SPECTATOR
-      || dest === pos
+    // - spectators follow the SAME reveal timing as a non-owner player (no
+    //   omniscient view), so they cannot cheat by reading unrevealed roles
+    const canSee = dest === pos
       || this.turnState === TurnState.DONE;
     const characterPos = pos + CharacterPosition.PLAYER_1 as CharacterPosition;
     const currentCharacter = this.getCurrentCharacter();

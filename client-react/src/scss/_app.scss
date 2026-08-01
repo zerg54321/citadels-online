@@ -80,6 +80,15 @@ header {
   }
 }
 
+// 英文按钮文案比中文长约 3 倍，游戏内顶栏缩小字号以保证布局一致
+html[lang="en"] .header--game {
+  .header-brand h1 { font-size: 1.5rem; letter-spacing: 0.02em; }
+  .header-leave-btn { font-size: 0.78rem; }
+  .hdr-btn { font-size: 0.78rem; }
+  .locale-select__btn { font-size: 0.78rem; }
+  .auth-panel__who { font-size: 0.95rem; }
+}
+
 // Header layout: brand on the left, actions cluster on the right.
 .header-row {
   display: flex;

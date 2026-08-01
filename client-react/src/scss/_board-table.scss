@@ -131,7 +131,10 @@
     // show its hand + coins fully. Row 1/2 seats only need the 2×4 building
     // grid, so they take the smaller share.
     grid-template-rows: 0.95fr 0.95fr 1.1fr;
-    gap: 0.45rem;
+    column-gap: 0.45rem;
+    // 缩小行间距（玩家之间的纵向间距），腾出的高度分给各行，
+    // 使其他玩家 2×4 建筑格第 4 行不出现滚动条
+    row-gap: 0.22rem;
     padding: 0.35rem 0.55rem 0.45rem;
   }
 

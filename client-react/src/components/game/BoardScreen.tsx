@@ -401,26 +401,49 @@ export default function BoardScreen() {
                   <span className="seat-panel__tag">{t('ui.lobby.you')}</span>
                 </div>
                 <div className="board-table__self-body">
-                  <div className="board-table__self-city">
-                    {selfCity.map((id, i) => id && <DistrictCard key={`city-${i}`} districtId={id} small />)}
-                    {!selfCity.length && <div className="seat-panel__city-empty">{t('ui.game.no_buildings')}</div>}
-                  </div>
-                  <div className="board-table__self-role">
-                    {gameProgress === 'IN_GAME' && selfRoleCard.show && (
-                      <CharacterCard
-                        characterId={selfRoleCard.id}
-                        faceDown={selfRoleCard.faceDown}
-                        killed={selfRoleCard.killed}
-                        robbed={selfRoleCard.robbed}
-                        size="medium"
-                      />
-                    )}
-                    {gameProgress === 'IN_GAME' && !selfRoleCard.show && (
-                      <div className="board-table__self-role-empty" title={t('ui.game.character_unknown')}>
-                        <span>？</span>
+                  {(selfBoard.tmpHand || []).length > 0 && selfCity.length === 0 ? (
+                    <div className="tmp-hand-pick">
+                      <span className="tmp-hand-pick__hint">
+                        {t('ui.game.messages.choose_card_prompt')}
+                      </span>
+                      <div className="tmp-hand-pick__cards">
+                        {(selfBoard.tmpHand || []).map((id: string, i: number) => id && (
+                          <div key={i} className="tmp-hand-pick__slot">
+                            <DistrictCard
+                              districtId={id as DistrictId}
+                              selectable
+                              onSelect={() => {
+                                sendMove({ type: MoveType.DRAW_CARDS, data: id }).catch((e: unknown) => console.log('error when sending move', e));
+                              }}
+                            />
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="board-table__self-city">
+                        {selfCity.map((id, i) => id && <DistrictCard key={`city-${i}`} districtId={id} small />)}
+                        {!selfCity.length && <div className="seat-panel__city-empty">{t('ui.game.no_buildings')}</div>}
+                      </div>
+                      <div className="board-table__self-role">
+                        {gameProgress === 'IN_GAME' && selfRoleCard.show && (
+                          <CharacterCard
+                            characterId={selfRoleCard.id}
+                            faceDown={selfRoleCard.faceDown}
+                            killed={selfRoleCard.killed}
+                            robbed={selfRoleCard.robbed}
+                            size="medium"
+                          />
+                        )}
+                        {gameProgress === 'IN_GAME' && !selfRoleCard.show && (
+                          <div className="board-table__self-role-empty" title={t('ui.game.character_unknown')}>
+                            <span>？</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="board-table__self-hand">
                   <PlayerHand

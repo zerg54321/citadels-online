@@ -422,12 +422,10 @@ export default class GameState implements Subject {
       }
     });
 
-    // 随机打乱行动顺序（首发/选角序），不影响队伍分配
-    const pickOrder = [...stablePlayers];
-    for (let i = pickOrder.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pickOrder[i], pickOrder[j]] = [pickOrder[j], pickOrder[i]];
-    }
+    // 座位顺序 = 大厅顺序（与大厅预览一致）
+    // 随机首发 = 随机旋转起点（与游戏内国王轮换机制相同，不改变相对座位）
+    const rotation = Math.floor(Math.random() * stablePlayers.length);
+    const pickOrder = [...stablePlayers.slice(rotation), ...stablePlayers.slice(0, rotation)];
 
     this.actionTimeoutSeconds = gameSetupData.actionTimeoutSeconds ?? 120;
     this.turnDeadlineAt = null;

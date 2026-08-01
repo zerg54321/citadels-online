@@ -1,6 +1,6 @@
 {
     "flag": "🇬🇧",
-    "name": "English",
+    "name": "EN",
     "ui": {
         "title": "Citadels",
         "subtitle1": "Bruno Faidutti's",
@@ -19,7 +19,7 @@
         "auth": {
             "login": "Log in",
             "register": "Register",
-            "logout": "Log out",
+            "logout": "Exit",
             "profile": "Profile",
             "username": "Account name",
             "password": "Password",
@@ -133,8 +133,8 @@
         "team": {
             "a": "Team A",
             "b": "Team B",
-            "mine": "Allies",
-            "enemy": "Opponents",
+            "mine": "Us",
+            "enemy": "Them",
             "ally": "Ally",
             "enemy_short": "Foe"
         },
@@ -300,7 +300,7 @@
             "game_over": "Game Over",
             "back_home": "Back to lobby",
             "keep_browsing": "Keep browsing board",
-            "leave_room": "Leave room",
+            "leave_room": "Leave",
             "leave_room_confirm_title": "Confirm leave room",
             "leave_room_confirm_body": "You are currently in a room. Leaving will remove you from the room for other players. Are you sure you want to leave?",
             "show_result": "Show results"

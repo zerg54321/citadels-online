@@ -2,6 +2,72 @@
 // .crown, .district-card-wrapper are scoped to the hand area; .coin here is
 // intentionally distinct from .district-card .coin (hand coins are larger,
 // stacked vertically). Nesting under a stable parent avoids collisions.
+
+// 手牌区根容器：禁止滚动条，宽度压力由手牌区弹性吸收
+.player-hand-root {
+  overflow: hidden;
+}
+
+// 初始选牌二选一：占据整个 self-body 区域（城市+角色位），卡牌完整尺寸居中展示
+.tmp-hand-pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 0;
+
+  &__hint {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--gold-bright);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  &__cards {
+    display: flex;
+    gap: 2.5rem;
+    justify-content: center;
+  }
+
+  // 卡牌完整尺寸（10rem×7rem），hover 平滑上浮
+  &__slot {
+    transition: transform 0.18s ease;
+
+    &:hover {
+      transform: translateY(-0.4rem);
+    }
+  }
+
+  // 内联模式：非首轮二选一，嵌入手牌条内，卡牌等比缩小以适应 ~10rem 容器高
+  &--inline {
+    justify-content: flex-end;
+    gap: 0.4rem;
+    min-width: 0;
+
+    .tmp-hand-pick__hint {
+      font-size: 0.8rem;
+    }
+
+    .tmp-hand-pick__cards {
+      gap: 1.2rem;
+    }
+
+    .tmp-hand-pick__slot {
+      .district-card {
+        height: 8rem;
+        width: 5.6rem;
+      }
+
+      &:hover {
+        transform: translateY(-0.3rem);
+      }
+    }
+  }
+}
 .player-hand-stash,
 .district-card-wrapper .stash,
 .stash {

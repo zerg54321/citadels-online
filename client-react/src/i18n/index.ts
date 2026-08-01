@@ -17,4 +17,6 @@ export default i18n;
 
 export function updateTitle() {
   document.title = i18n.t('ui.title') as string;
+  // 同步 lang 属性，供 CSS 按语言调整字号（如 html[lang="en"]）
+  document.documentElement.lang = i18n.language;
 }

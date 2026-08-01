@@ -33,6 +33,7 @@ lerna-debug.log*
 # IDE / Editor
 .vscode/
 .idea/
+.qoder/
 *.swp
 *.swo
 *~

@@ -164,9 +164,16 @@ export default function EndGameModal({
                   </td>
                   {showTeamScores && (
                     <td className="endgame-td endgame-td--center">
-                      <span className={`endgame-team-tag${row.team === 'A' ? ' endgame-team-tag--a' : ' endgame-team-tag--b'}`}>
-                        {row.team}
-                      </span>
+                      {(() => {
+                        // 视角化队伍标签：非观众显示“我方/对方”（颜色与上方徽章一致），观众显示 A/B
+                        const myTeam = getPlayerFromId(selfId)?.team;
+                        const isMyTeam = row.team === 'A' ? myTeam === TeamId.A : myTeam === TeamId.B;
+                        const label = isSpectator ? row.team : (isMyTeam ? t('ui.team.mine') : t('ui.team.enemy'));
+                        const cls = isSpectator
+                          ? (row.team === 'A' ? 'endgame-team-tag--a' : 'endgame-team-tag--b')
+                          : (isMyTeam ? 'endgame-team-tag--a' : 'endgame-team-tag--b');
+                        return <span className={`endgame-team-tag ${cls}`}>{label}</span>;
+                      })()}
                     </td>
                   )}
                   <td className="endgame-td endgame-td--num">{row.buildings}</td>

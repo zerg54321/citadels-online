@@ -1076,57 +1076,47 @@ function warlordDestroyCandidates(gs: GameState, actorId: string): DestroyCandid
 // ---------------------------------------------------------------------------
 
 /**
- * 资源决策逻辑：
+ * 资源决策逻辑（拿金 vs 抽牌）：
  *
- * 1. 有铁匠铺时：
- *    - 如果手牌少（< 3）：绝对不能选牌（应该先拿金，再用铁匠铺花 2 金抽 3 张）
- *    - 如果手牌多：拿金，用铁匠铺不如直接拿金盖房
+ * 核心原则：手里的牌只有转化为建筑才是分数。
+ * 囤积建不起的牌不仅不产生分数，还会增加被魔术师换牌的风险。
  *
- * 2. 有实验室时：
- *    - 手牌有多余低价值牌 → 优先拿金后卖牌
+ * 1. 手里有非重复牌 → 优先拿金（尽快把牌转化为建筑）
+ *    - 例外：金币已足够建完所有有用牌且仍有富余 → 抽牌扩充选择
  *
- * 3. 默认决策：
- *    - 有可建造的牌 → 拿金盖房
- *    - 手牌少 → 抽牌补充
- *    - 冲刺阶段 → 根据资源决定
+ * 2. 手牌为空或全是重复死牌 → 抽牌换血
+ *    - 例外：有铁匠铺 → 拿金（花 2 金抽 3 张远比二选一划算）
+ *
+ * 3. 图书馆+天文台双持 → 抽 3 张全保留，价值极高，优先抽牌
  */
 function shouldDrawCards(gs: GameState, actorId: string): boolean {
-	const hc = handCount(gs, actorId);
 	const stash = stashOf(gs, actorId);
 	const hand = handOf(gs, actorId);
 	const city = cityOf(gs, actorId);
+	const hc = hand.length;
 	const hasSm = hasDistrict(actorId, gs, 'smithy');
-	const hasLab = hasDistrict(actorId, gs, 'laboratory');
-	const tempo = detectTempo(gs, actorId);
-
-	// 有可建造的牌（手牌不重复且付得起）时，优先拿金币盖房
-	const buildable = hand.filter((c) => costOf(c) <= stash && !city.includes(c));
-	if (buildable.length > 0) return false;
-
-	// 有铁匠铺且手牌少：拿金，用铁匠铺抽 3 张更划算
-	if (hasSm && hc <= 2 && stash >= 2) return false;
-
-	// 有实验室但手牌有多余垃圾：拿金，然后用实验室卖牌
-	if (hasLab && hc >= 2 && stash >= 2) return false;
-
-	// 手里有牌但建不起：仍然拿金
-	if (hc > 0 && stash >= 2) return false;
-
-	// 图书馆+天文台双持：抽牌极高价值（抽 3 张全保留）
 	const hasLib = hasDistrict(actorId, gs, 'library');
 	const hasObs = hasDistrict(actorId, gs, 'observatory');
-	if (hasLib && hasObs && hc < 5) return true; // 双持：必抽牌
 
-	// 手牌极少才抽牌
-	if (hc < 2) return true;
+	// 图书馆+天文台双持：抽 3 张全保留，价值极高，手牌不满就抽
+	if (hasLib && hasObs && hc < 5) return true;
 
-	// 冲刺模式且没牌才抽
-	if (tempo === 'sprint' && hc === 0) return true;
+	// 手里有非重复牌（无论当前是否建得起）：优先拿金币
+	// 囤牌不能转化为分数，反而增加被魔术师换牌的风险；
+	// 拿金才能把手里的牌尽快转化为建筑
+	const useful = hand.filter((c) => !city.includes(c));
+	if (useful.length > 0) {
+		// 例外：金币已足够建完手里所有有用牌且仍有富余——
+		// 资源溢出时继续拿金意义不大，抽牌扩充选择
+		const needed = useful.reduce((sum, c) => sum + costOf(c), 0);
+		return stash >= needed + 2;
+	}
 
-	// 有铁匠铺且手牌少且有金币：选择拿金用于铁匠铺
-	if (hasSm && hc <= 1 && stash >= 1) return false;
+	// 手牌为空或全是重复死牌：
+	// 有铁匠铺时拿金（花 2 金抽 3 张远比二选一划算），否则抽牌换血
+	if (hasSm) return false;
 
-	return false;
+	return true;
 }
 
 // ---------------------------------------------------------------------------

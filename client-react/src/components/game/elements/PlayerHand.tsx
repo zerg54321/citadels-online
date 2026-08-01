@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Move, MoveType, DistrictId, PlayerBoard, districts,
 } from 'citadels-common';
@@ -26,6 +27,7 @@ export default function PlayerHand({
 }: PlayerHandProps) {
   const sendMove = useAppStore((s) => s.sendMove);
   const setSelectedCards = useAppStore((s) => s.setSelectedCards);
+  const { t } = useTranslation();
 
   const [selectedCards, setSelected] = useState<boolean[]>([]);
 
@@ -69,13 +71,9 @@ export default function PlayerHand({
     return !board.city.includes(name) && (data?.cost ?? 0) <= board.stash;
   };
 
-  const chooseCard = async (name: DistrictId) => {
-    try {
-      const move: Move = { type: MoveType.DRAW_CARDS, data: name };
-      await sendMove(move);
-    } catch (error) {
-      console.log('error when sending move', error);
-    }
+  const chooseCard = (name: DistrictId) => {
+    const move: Move = { type: MoveType.DRAW_CARDS, data: name };
+    sendMove(move).catch((e) => console.log('error when sending move', e));
   };
 
   const handleSelect = (index: number, next: boolean) => {
@@ -87,12 +85,7 @@ export default function PlayerHand({
   };
 
   return (
-    <div className="d-flex justify-content-start align-items-end overflow-auto">
-      {board.crown && (
-        <div className="crown card rounded-pill bg-danger p-3 m-2 shadow-sm">
-          <Emoji emoji="👑" />
-        </div>
-      )}
+    <div className="d-flex justify-content-start align-items-end player-hand-root">
       <div className="flex-grow-1 px-2 pb-2 d-flex overflow-hidden">
         {board.hand.map((id, i) => id && (
           <div key={i} className="district-card-wrapper pt-1">
@@ -107,23 +100,26 @@ export default function PlayerHand({
             </div>
           </div>
         ))}
+        {/* 非首轮的二选一：城市有建筑时在手牌区内联展示（首轮由 BoardScreen 全幅展示） */}
+        {showTmpHand && board.city.length > 0 && (
+          <div className="tmp-hand-pick tmp-hand-pick--inline">
+            <span className="tmp-hand-pick__hint">
+              {t('ui.game.messages.choose_card_prompt')}
+            </span>
+            <div className="tmp-hand-pick__cards">
+              {board.tmpHand.map((id, i) => id && (
+                <div key={i} className="tmp-hand-pick__slot">
+                  <DistrictCard
+                    districtId={id}
+                    selectable
+                    onSelect={() => chooseCard(id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      {showTmpHand && (
-        <div className="bg-secondary d-flex justify-content-start pl-2 py-2 my-n2">
-          <span className="mr-2 text-white" style={{ whiteSpace: 'nowrap', fontSize: '0.75rem', alignSelf: 'center' }}>
-            点击要保留的牌
-          </span>
-          {board.tmpHand.map((id, i) => id && (
-            <DistrictCard
-              key={i}
-              districtId={id}
-              className="mr-2"
-              selectable={showTmpHand}
-              onSelect={() => chooseCard(id)}
-            />
-          ))}
-        </div>
-      )}
       <div
         className="stash d-flex flex-column-reverse flex-wrap-reverse justify-content-start"
         style={{ width: `${2.5 * Math.ceil(board.stash / 5)}rem` }}

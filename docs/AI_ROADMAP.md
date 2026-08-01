@@ -80,13 +80,23 @@
 
 ### 阶段二（✅ 大部分已完成）：静态策略增强 + 概率推理
 
-#### 2.1 `predictLikelyRoles` 升级：排除法推理（✅ 已实现 `predictElimination`）
+#### 2.1 刺杀/偷窃目标预测：概率推理（✅ 已实现 `roleProbabilities`）
 
-**实现**：`server/src/game/AutoplayPolicy.ts` 新增 `predictElimination()` + `predictLikelyRolesV2()`。
+**实现**：`server/src/game/AutoplayPolicy.ts` 的 `roleProbabilities()` + `buildActionPhasePool()`。
 
-- 利用公开信息（已分配座位 + 已亮面弃置的角色）从候选池中排除，缩小对手可能角色范围
-- 对剩余候选角色用 `scoreCharacterPick` 打分，返回 Top-N
-- `assassinTargets` / `thiefTargets` 支持 `usePredictionV2` 参数切换
+- 旧方案（`predictElimination`/`predictLikelyRolesV2` 排除法）已移除：行动阶段所有角色均已分配，
+  排除法候选池为空，实际退化为固定角色权重 baseW，导致刺客永远刺8军阀、盗贼永远偷6商人
+- 新方案：对每个玩家（敌人+队友）用 softmax(选角渴望度) 估算其持有各角色的概率分布，
+  按角色聚合为「敌人阻止收益 gainEV」与「队友持有概率 allyP」，净 EV = gainEV - allyP×误伤惩罚
+- **队友误伤惩罚**（关键）：旧版只算敌人收益，导致误伤队友率高达 31%（随机基线33%）。
+  刺客惩罚=12（误杀浪费队友整回合），盗贼惩罚=4（金币队内转移但打乱计划）
+- **盗贼摇摆因子×2**：偷敌人 X 金 = 我方+X 且敌方-X，相对差距摆动 2X；放大收益项主导排序，
+  避免惩罚项噪声把目标推向旁观牌（曾误调高惩罚导致落空率飙到33%）
+- 概率校准：预测偏差修正（建筑师-1/收入角色+0.5）+ ±0.75 噪声 + softmax(T=4) + 均匀先验 0.2 混合
+- **40局实测命中率**（随机基线：敌人50%/队友33%/旁观17%）：
+  - 刺客：命中敌人 **57.9%**、误伤队友 23.2%、落空 18.8%；分布均衡（军阀25%/商22%/魔18%/盗17%/建11%）
+  - 盗贼：命中敌人 **56.1%**、误偷队友 26.4%、落空 17.6%、平均每次偷 1.69 金
+- `aiEval.test.ts` 已添加命中结果统计（enemy/ally/aside 三分类 + 实际偷金）
 
 #### 2.2 选角博弈评分树（❌ 未实现，暂缓）
 

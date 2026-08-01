@@ -49,20 +49,24 @@ function totalOf(gs: GameState, pid: string): number {
   return gs.board!.players.get(pid)!.score.total ?? 0;
 }
 
-/** 从 playerOrder 的奇偶位推断玩家队伍 */
+/** 从玩家实际 team 字段推断队伍（队伍基于大厅顺序分配，与 board.playerOrder 无关） */
 function teamIds(gs: GameState): { a: string[]; b: string[] } {
   const a: string[] = [];
   const b: string[] = [];
-  gs.board?.playerOrder.forEach((pid, idx) => {
-    if (idx % 2 === 0) a.push(pid); else b.push(pid);
+  gs.players.forEach((player, pid) => {
+    if (player.team === TeamId.A) a.push(pid);
+    else if (player.team === TeamId.B) b.push(pid);
   });
   return { a, b };
 }
 
 describe('refreshLiveScores — 3v3 scoring', () => {
-  it('team assignment: even seats = A, odd seats = B', () => {
+  it('team assignment: lobby even seats = A, odd seats = B', () => {
     const gs = create3v3State();
-    const { a, b } = teamIds(gs);
+    // 队伍基于 lobbyPlayerOrder 的奇偶位分配
+    const lobby = gs.lobbyPlayerOrder;
+    const a = lobby.filter((_, i) => i % 2 === 0);
+    const b = lobby.filter((_, i) => i % 2 === 1);
     expect(a.length).toBe(3);
     expect(b.length).toBe(3);
     a.forEach((pid) => expect(gs.players.get(pid)!.team).toBe(TeamId.A));

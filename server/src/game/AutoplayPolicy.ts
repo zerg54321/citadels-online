@@ -49,12 +49,42 @@ const CARD_EXTRA: Record<string, number> = Object.fromEntries(
 );
 
 const GE_GOLD = 1;
-const GE_CARD = 2;
+const GE_CARD = 2; // 早期基准：1张牌 ≈ 2金（抽牌机会成本）
 const COMPLETE_DEFAULT = 8;
 
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
+
+/**
+ * 动态卡牌边际价值：早期 2.0，中后期衰减至 ~1.0。
+ *
+ * 原理：初期牌稀缺（每回合只能抽 1 张），1 张牌≈ 2 金；
+ * 中后期建筑师/铁匠铺/天文台图书馆/墓地持续产牌，
+ * 边际价值递减至接近金币价值。
+ */
+function cardMarginalValue(gs: GameState, playerId: string): number {
+	const hc = handCount(gs, playerId);
+	const city = cityOf(gs, playerId);
+
+	let v = 2.0;
+
+	// 手牌越多，边际价值越低（囤牌收益递减）
+	if (hc >= 2) v -= 0.2;
+	if (hc >= 3) v -= 0.3;
+	if (hc >= 5) v -= 0.3;
+
+	// 产牌引擎降低牌的稀缺性
+	if (hasDistrict(playerId, gs, 'smithy')) v -= 0.2;
+	if (hasDistrict(playerId, gs, 'observatory')) v -= 0.15;
+	if (hasDistrict(playerId, gs, 'library')) v -= 0.15;
+
+	// 游戏进度：城市越大，牌越不再是瓶颈
+	const progress = city.length / completeSize(gs);
+	v -= progress * 0.3;
+
+	return Math.max(1.0, v);
+}
 
 /** 逐个尝试 move 列表，返回第一个可行的 move */
 function tryMoves(gameState: GameState, moves: Move[]): Move | null {
@@ -100,6 +130,34 @@ function isAlly(gs: GameState, actorId: string, otherId: string): boolean {
 	return a === b;
 }
 
+/** 返回本轮已被队友选走的角色列表（选角阶段用，感知队友已选） */
+function allyPickedCharacters(gs: GameState, actorId: string): CharacterType[] {
+	const cm = gs.board?.characterManager;
+	if (!cm) return [];
+	const result: CharacterType[] = [];
+	for (let ch = 0; ch < CharacterType.CHARACTER_COUNT; ch += 1) {
+		const pos = cm.characters[ch];
+		if (pos < CharacterPosition.PLAYER_1) continue;
+		const pid = gs.board?.playerOrder[pos - CharacterPosition.PLAYER_1];
+		if (pid && pid !== actorId && isAlly(gs, actorId, pid)) result.push(ch as CharacterType);
+	}
+	return result;
+}
+
+/** 返回本轮已被敌人选走的角色列表 */
+function enemyPickedCharacters(gs: GameState, actorId: string): CharacterType[] {
+	const cm = gs.board?.characterManager;
+	if (!cm) return [];
+	const result: CharacterType[] = [];
+	for (let ch = 0; ch < CharacterType.CHARACTER_COUNT; ch += 1) {
+		const pos = cm.characters[ch];
+		if (pos < CharacterPosition.PLAYER_1) continue;
+		const pid = gs.board?.playerOrder[pos - CharacterPosition.PLAYER_1];
+		if (pid && isEnemy(gs, actorId, pid)) result.push(ch as CharacterType);
+	}
+	return result;
+}
+
 function cityOf(gs: GameState, playerId: string): DistrictId[] {
 	return gs.board?.players.get(playerId)?.city ?? [];
 }
@@ -123,46 +181,18 @@ function crownPlayerId(gs: GameState): string | null {
 	return gs.board?.playerOrder[0] ?? null;
 }
 
-/** 获取某个角色在 playerOrder 中的座位，未分配返回 -1 */
-function ownerSeatOfCharacter(gs: GameState, character: CharacterType): number {
-	if (!gs.board || character < 0) return -1;
-	const pos = gs.board.characterManager.characters[character];
-	if (pos < CharacterPosition.PLAYER_1) return -1;
-	return pos - CharacterPosition.PLAYER_1;
-}
-
-/** 获取某个角色的玩家 ID，未分配返回 null */
-function ownerIdOfCharacter(gs: GameState, character: CharacterType): string | null {
-	const seat = ownerSeatOfCharacter(gs, character);
-	if (seat < 0 || !gs.board) return null;
-	return gs.board.playerOrder[seat] ?? null;
-}
-
-/**
- * 角色是否已对全场"公开"——即人类玩家也能看到归属的状态。
- * 包括：当前正在行动的字符、已被刺杀/被偷、或面亮出放置的旁观牌。
- * 选角阶段其他玩家暗选的字符在此为 false，AI 不得据此获知归属（与人类一致）。
- */
-function isRolePubliclyKnown(gs: GameState, character: CharacterType): boolean {
-	const cm = gs.board?.characterManager;
-	if (!cm) return false;
-	if (cm.killedCharacter === character) return true;
-	if (cm.robbedCharacter === character) return true;
-	if (cm.getCurrentCharacter() === character) return true;
-	const faceUpAside = cm.getCharactersAtPosition(CharacterPosition.ASIDE_FACE_UP) || [];
-	if (faceUpAside.includes(character)) return true;
-	return false;
-}
-
-/** 仅当角色已公开时才返回真实归属；否则返回 null */
-function knownOwnerIfPublic(gs: GameState, character: CharacterType): string | null {
-	if (!isRolePubliclyKnown(gs, character)) return null;
-	return ownerIdOfCharacter(gs, character);
-}
-
 function countColorIn(list: string[], districtType: DistrictType | undefined): number {
 	if (districtType === undefined) return 0;
 	return list.filter((id) => typeOf(id) === districtType).length;
+}
+
+/** softmax：将渴望度数组转换为概率分布（温度 T 越大分布越平，越小越尖锐） */
+function softmax(scores: number[], T = 4): number[] {
+	if (!scores.length) return [];
+	const mx = Math.max(...scores);
+	const exps = scores.map((s) => Math.exp((s - mx) / T));
+	const sum = exps.reduce((a, b) => a + b, 0);
+	return exps.map((e) => e / sum);
 }
 
 function cityColors(city: string[]): Set<number> {
@@ -297,16 +327,18 @@ function estimatePickEV(
 		return ev;
 	}
 	case CharacterType.MAGICIAN: {
-		// 魔术师 EV = 换手牌收益（对手多出的手牌 × GE_CARD）或弃劣牌收益
+		// 魔术师 EV = 换手牌收益（对手多出的手牌 × 动态卡值）或弃劣牌收益
+		// 核心：空手套白狼——我手牌越少、敌人手牌越多，收益越大
 		let maxEnemyHand = 0;
 		gs.board?.playerOrder.forEach((pid) => {
 			if (isEnemy(gs, actorId, pid)) maxEnemyHand = Math.max(maxEnemyHand, handCount(gs, pid));
 		});
 		const delta = Math.max(0, maxEnemyHand - hc);
-		let ev = delta * GE_CARD * 0.5; // 换牌收益打折（不确定对手手牌质量）
-		// 自己手牌极差（无牌可建）时弃牌也有价值
+		const cardVal = cardMarginalValue(gs, actorId);
+		let ev = delta * cardVal * 0.5; // 换牌收益打折（不确定对手手牌质量）
+		// 自己手牌极差（无牌可建）时弃牌换牌也有价值
 		const buildable = hand.filter((c) => costOf(c) <= stash && !city.includes(c));
-		if (buildable.length === 0 && hc >= 2) ev += 1.5;
+		if (buildable.length === 0 && hc >= 1) ev += 1.5;
 		return ev;
 	}
 	case CharacterType.KING: {
@@ -333,9 +365,10 @@ function estimatePickEV(
 		return ev;
 	}
 	case CharacterType.ARCHITECT: {
-		// 建筑师 EV = 2 张手牌(×GE_CARD=4) + 可建造牌的建造收益期望
+		// 建筑师 EV = 2 张手牌(×动态卡值) + 可建造牌的建造收益期望
 		const buildable = hand.filter((c) => costOf(c) <= stash + 2 && !city.includes(c));
-		let ev = 2 * GE_CARD + buildable.length * 1.5;
+		const cardVal = cardMarginalValue(gs, actorId);
+		let ev = 2 * cardVal + buildable.length * 1.5;
 		if (hc >= 2 && stash >= 4) ev += 2; // 资源充足时建造兑现率高
 		if (selfCity >= limit - 2) ev += 2; // 冲刺收尾
 		if (hasLab && hc >= 2) ev += 1.5;
@@ -379,6 +412,7 @@ function scoreCharacterPick(
 	character: CharacterType,
 	remaining: CharacterType[],
 	useSeatWeights = true, // V1: 启用座位权重/口诀策略
+	useTeamAware = true, // 团队感知：颜色亲和度 + 队友已选互补（预测时关闭）
 ): number {
 	if (!remaining.includes(character)) return -999;
 
@@ -418,6 +452,12 @@ function scoreCharacterPick(
 			if (character === CharacterType.ARCHITECT) score += 5;
 			if (character === CharacterType.MAGICIAN) score += 3;
 		}
+	}
+
+	// 团队感知（仅选角时启用，预测时关闭以避免循环惩罚）
+	if (useTeamAware) {
+		score += colorAffinityBonus(gs, actorId, character);
+		score += teamSynergyScore(gs, actorId, character);
 	}
 
 	return score;
@@ -491,6 +531,61 @@ function colorInterceptScore(
 		}
 	}
 	return 0;
+}
+
+/**
+ * 颜色亲和度让牌：收入角色对应色系建筑多的玩家更适合拿该角色。
+ * 若队友的亲和色建筑远多于我 → 减分（让给队友）；反之加分。
+ * 仅对 KING/BISHOP/MERCHANT/WARLORD 生效。
+ */
+function colorAffinityBonus(gs: GameState, actorId: string, character: CharacterType): number {
+	const dt = DistrictCard.getDistrictTypeFromCharacter(character);
+	if (dt === undefined) return 0; // 非收入角色无亲和色
+
+	const myColor = countColorIn(cityOf(gs, actorId), dt);
+
+	// 找队友中该色建筑最多的
+	let allyMaxColor = 0;
+	gs.board?.playerOrder.forEach((pid) => {
+		if (pid !== actorId && isAlly(gs, actorId, pid)) {
+			allyMaxColor = Math.max(allyMaxColor, countColorIn(cityOf(gs, pid), dt));
+		}
+	});
+
+	// 队友亲和色远多于我 → 让牌（减分）；我远多于队友 → 加分
+	const diff = myColor - allyMaxColor;
+	if (diff >= 2) return 2; // 我最适合拿这个
+	if (diff <= -2) return -2; // 队友更适合，让给他
+	return 0;
+}
+
+/**
+ * 团队互补分：感知队友本轮已选角色，避免功能重叠。
+ * - 队友已选进攻角色（刺客/盗贼）→ 我不需要再选（-3）
+ * - 队友已选同类型收入角色 → 递减（-2）
+ * - 队友已选建筑师 → 发展位已覆盖（-2）
+ */
+function teamSynergyScore(gs: GameState, actorId: string, character: CharacterType): number {
+	const allyPicks = allyPickedCharacters(gs, actorId);
+	if (!allyPicks.length) return 0;
+
+	let penalty = 0;
+	const INCOME_ROLES = [CharacterType.KING, CharacterType.BISHOP, CharacterType.MERCHANT, CharacterType.WARLORD];
+
+	allyPicks.forEach((ch) => {
+		if (ch === CharacterType.ASSASSIN || ch === CharacterType.THIEF) {
+			// 队友已覆盖进攻，我不需要再选同类
+			if (character === CharacterType.ASSASSIN || character === CharacterType.THIEF) penalty -= 3;
+		} else if (INCOME_ROLES.includes(ch)) {
+			// 队友已选收入角色，我选同类型收益递减
+			if (character === ch) penalty -= 2;
+		} else if (ch === CharacterType.ARCHITECT) {
+			// 发展位已覆盖
+			if (character === CharacterType.ARCHITECT) penalty -= 2;
+		}
+	});
+
+	return penalty;
 }
 
 /** 选角入口：决定选哪个角色。AI 首发必拿刺客（forceAssassin=true 时）。 */
@@ -577,73 +672,47 @@ function sortBuildCandidates(
 // ---------------------------------------------------------------------------
 
 /**
- * V2：排除法角色预测
+ * 概率推理：估算目标玩家持有池中各角色的概率分布（softmax over 选角渴望度）。
  *
- * 利用公开信息推理对手可能选的角色：
- * 1. 所有角色 = 刺客(0)~军阀(7)
- * 2. 从已知归属的角色中排除：已分配座位的 + 已亮面弃置的
- * 3. 对剩余候选按 scoreCharacterPick 打分
- * 4. 返回按分数降序排列的 Top-N
- *
- * 与 V1 的 predictLikelyRoles 相比：
- * - V1 仅根据城市颜色/手牌/金币推测对手可能"想选"的角色
- * - V2 额外排除"肯定不在池中"的角色（已选走的/已弃置的）
- * - V2 对候选池中的每个角色实际评分，而非仅用启发式规则
+ * 设计要点：
+ * - 池中角色用 scoreCharacterPick 从目标玩家视角评分（座位权重反映选角倾向）
+ * - 预测专用偏差修正：scoreCharacterPick 是为「自己选角」设计的，用作「预测他人」时
+ *   有系统性偏差——建筑师基础EV恒定4GE(2牌)导致被过度预测，而真实玩家选角时
+ *   收入需求权重更高。因此对建筑师施加 -1 预测折扣，对四个收入角色 +0.5 补偿。
+ * - 叠加 ±0.75 噪声模拟人类非最优选角
+ * - softmax(T=4.0) 输出与均匀先验按 0.8/0.2 混合，保证任何单一角色不会垄断目标
+ * - 返回 { role → probability }，池外角色概率为 0
  */
-function predictElimination(
-	gs: GameState,
-	targetId: string,
-	actorId: string, // 评估者 ID（决定信息可见性）
-	useSeatWeights: boolean,
-): CharacterType[] {
-	if (!gs.board) return [];
-	const cm = gs.board.characterManager;
-
-	// 收集所有已分配的角色（座位 ≥ PLAYER_1 或 ASIDE_* 状态）
-	const assigned: CharacterType[] = [];
-	for (let ch = 0; ch < 8; ch += 1) {
-		const pos = cm.characters[ch];
-		if (pos !== CharacterPosition.NOT_CHOSEN) {
-			assigned.push(ch as CharacterType);
-		}
-	}
-
-	// 候选角色 = 全部 8 个 - 已分配的
-	const candidates: CharacterType[] = [];
-	for (let ch = 0; ch < 8; ch += 1) {
-		if (!assigned.includes(ch as CharacterType)) {
-			candidates.push(ch as CharacterType);
-		}
-	}
-
-	if (candidates.length === 0) return candidates;
-
-	// 对候选角色用 scoreCharacterPick 打分，按分数降序排列
-	const scored = candidates.map((ch) => ({
-		ch,
-		score: scoreCharacterPick(gs, targetId, ch, candidates, useSeatWeights),
-	}));
-	scored.sort((a, b) => b.score - a.score);
-	return scored.map((s) => s.ch);
+function roleProbabilities(
+	gs: GameState, targetId: string, pool: CharacterType[],
+): Map<CharacterType, number> {
+	const result = new Map<CharacterType, number>();
+	if (!pool.length) return result;
+	const INCOME_ROLES = [CharacterType.KING, CharacterType.BISHOP, CharacterType.MERCHANT, CharacterType.WARLORD];
+	const desirability = pool.map((ch) => {
+		let s = scoreCharacterPick(gs, targetId, ch, pool, true, false);
+		// 预测偏差修正：建筑师基础EV恒定高估，收入角色被低估
+		if (ch === CharacterType.ARCHITECT) s -= 1;
+		if (INCOME_ROLES.includes(ch)) s += 0.5;
+		return s + (Math.random() - 0.5) * 1.5;
+	});
+	const raw = softmax(desirability, 4);
+	// 与均匀先验混合：模型 80% + 先验 20%
+	const uniform = 1 / pool.length;
+	pool.forEach((ch, i) => result.set(ch, raw[i] * 0.8 + uniform * 0.2));
+	return result;
 }
 
-/**
- * V2 版 predictLikelyRoles（排除法 + 原有启发式）
- * 优先用排除法缩小范围，再用原有启发式做补充
- */
-function predictLikelyRolesV2(
-	gs: GameState,
-	targetId: string,
-	actorId: string, // 评估者
-	useSeatWeights: boolean,
-): CharacterType[] {
-	// 先用排除法
-	const eliminated = predictElimination(gs, targetId, actorId, useSeatWeights);
-	if (eliminated.length <= 3) return eliminated;
-
-	// 候选池仍较大（>3），用原有启发式进一步排序取 Top-3
-	return eliminated.slice(0, 3);
+/** 构建行动阶段的候选角色池：全部角色 - 刺客(自己) - 明置旁观牌 */
+function buildActionPhasePool(cm: { characters: CharacterPosition[] }): CharacterType[] {
+	const pool: CharacterType[] = [];
+	for (let ch = CharacterType.THIEF; ch < CharacterType.CHARACTER_COUNT; ch += 1) {
+		if (cm.characters[ch] === CharacterPosition.ASIDE_FACE_UP) continue;
+		pool.push(ch as CharacterType);
+	}
+	return pool;
 }
+
 function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
 	const stash = stashOf(gs, targetId);
 	const hc = handCount(gs, targetId);
@@ -673,8 +742,15 @@ function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
 	// 手牌极少时可能选盗贼（偷别人的）
 	if (hc <= 1 && stash <= 3) likely.push({ ch: CharacterType.THIEF, w: 2 });
 
-	// 手牌多时可能选魔术师（可以和人换手牌）
-	if (hc >= 3) likely.push({ ch: CharacterType.MAGICIAN, w: 2 });
+	// 魔术师：手牌少时交换收益大（空手套白狼），尤其场上有人手牌多
+	if (hc <= 1) {
+		let maxOtherHand = 0;
+		gs.board?.playerOrder.forEach((pid) => {
+			if (pid !== targetId) maxOtherHand = Math.max(maxOtherHand, handCount(gs, pid));
+		});
+		if (hc === 0 && maxOtherHand >= 2) likely.push({ ch: CharacterType.MAGICIAN, w: 4 });
+		else if (maxOtherHand >= 2) likely.push({ ch: CharacterType.MAGICIAN, w: 3 });
+	}
 
 	likely.sort((a, b) => b.w - a.w);
 	const out: CharacterType[] = [];
@@ -683,138 +759,199 @@ function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
 }
 
 /**
- * 计算刺杀目标的优先队列（客户端 ID 1-8）
- * 已知归属：砍高城市/高资源/高威胁角色
- * 未知归属：通过 predictLikelyRoles 缩小范围
+ * 计算刺杀目标的优先队列（客户端 ID 2-8）
+ *
+ * V3 概率推理版——核心转变：从「按角色打分」变为「按敌人打分」。
+ *
+ * 旧版缺陷：对每个角色独立评分（预测排名 + 固定角色权重 baseW），军阀 baseW
+ * 最高且 predictLikelyRoles 对多种敌人画像都推荐军阀，导致刺客永远刺 8。
+ *
+ * 新模型：
+ * 1. 用 roleProbabilities 估算每个敌人持有各角色的概率分布（softmax over 选角渴望度）
+ * 2. 对每个 (敌人, 角色) 组合计算期望阻止价值 = P(持有) × V(阻止该角色)
+ *    V 综合考虑：城市规模、金库、手牌、角色功能威胁、终局节奏
+ * 3. 按组合 EV 降序输出——自然实现「先锁定最大威胁的敌人，再打他最可能的角色」
  */
-function assassinTargets(gs: GameState, actorId: string, usePredictionV2 = false): number[] {
+function assassinTargets(gs: GameState, actorId: string): number[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
 	const tempo = detectTempo(gs, actorId);
 	const limit = completeSize(gs);
 	const allyNearWin = maxAllyCity(gs, actorId) >= limit - 2;
 	const enemyNearWin = maxEnemyCity(gs, actorId) >= limit - 2;
+	const pool = buildActionPhasePool(cm);
+	if (!pool.length) return [];
 
-	const scored: { clientId: number; score: number }[] = [];
+	// 按角色聚合：敌人阻止收益 gainEV 与队友持有概率 allyP
+	const gainEV = new Map<CharacterType, number>();
+	const allyP = new Map<CharacterType, number>();
+	pool.forEach((ch) => { gainEV.set(ch, 0); allyP.set(ch, 0); });
 
-	for (let ch = CharacterType.THIEF; ch <= CharacterType.WARLORD; ch += 1) {
-		if (ch === cm.killedCharacter) continue;
-		const ownerId = knownOwnerIfPublic(gs, ch);
-		let score = 0;
+	gs.board.playerOrder.forEach((pid) => {
+		const enemy = isEnemy(gs, actorId, pid);
+		const ally = pid !== actorId && isAlly(gs, actorId, pid);
+		if (!enemy && !ally) return;
+		const probs = roleProbabilities(gs, pid, pool);
 
-		if (ownerId && isAlly(gs, actorId, ownerId)) {
-			score = -200; // 不砍队友（已知归属）
-		} else if (ownerId && isEnemy(gs, actorId, ownerId)) {
-			// 已知是敌人：按对方城市/资源/角色评估
-			score = citySize(gs, ownerId) * 4 + stashOf(gs, ownerId) + handCount(gs, ownerId);
-			if (ch === CharacterType.WARLORD) score += 8;
-			if (ch === CharacterType.ARCHITECT) score += 7;
-			if (ch === CharacterType.MERCHANT) score += 4;
-			if (ch === CharacterType.MAGICIAN) score += 3;
-			if (citySize(gs, ownerId) >= limit - 2) score += 12;
-		} else {
-			// 未知归属：用 predictLikelyRoles 预测
-			const predFn = usePredictionV2
-				? (pid: string) => predictLikelyRolesV2(gs, pid, actorId, true)
-				: (pid: string) => predictLikelyRoles(gs, pid);
-			let pred = 1;
-			gs.board.playerOrder.forEach((pid) => {
-				if (!isEnemy(gs, actorId, pid)) return;
-				const roles = predFn(pid);
-				const idx = roles.indexOf(ch);
-				if (idx >= 0) {
-					const threat = citySize(gs, pid) * 2 + stashOf(gs, pid) * 0.5;
-					pred = Math.max(pred, (6 - idx) + threat);
-				}
-			});
-			score = pred;
-			// 角色基础权重
-			const baseW: Partial<Record<CharacterType, number>> = {
-				[CharacterType.WARLORD]: enemyNearWin ? 10 : 4,
-				[CharacterType.ARCHITECT]: enemyNearWin ? 9 : 3,
-				[CharacterType.MERCHANT]: 3,
-				[CharacterType.THIEF]: 2,
-				[CharacterType.BISHOP]: 2,
-				[CharacterType.MAGICIAN]: enemyNearWin ? 6 : 3, // 受刺杀目标统计修正：魔术师实际选角频率高，威胁应匹配
-				[CharacterType.KING]: 2,
-			};
-			score += baseW[ch as CharacterType.THIEF | CharacterType.MAGICIAN | CharacterType.KING | CharacterType.BISHOP | CharacterType.MERCHANT | CharacterType.ARCHITECT | CharacterType.WARLORD] ?? 0;
+		// 队友：累加其持有各角色的概率（用于误伤惩罚）
+		if (ally) {
+			probs.forEach((p, ch) => allyP.set(ch, (allyP.get(ch) ?? 0) + p));
+			return;
 		}
 
-		// 保护队友：优先刺军阀/盗贼保护接近完成的队友
-		if (allyNearWin) {
-			if (ch === CharacterType.WARLORD) score += 12;
-			if (ch === CharacterType.THIEF) score += 3;
-		}
-		if (tempo === 'deny' && ch === CharacterType.ARCHITECT) score += 6;
-		if (tempo === 'deny' && ch === CharacterType.MERCHANT) score += 4;
+		// 敌人：计算逐角色阻止价值并累加期望收益
+		const city = citySize(gs, pid);
+		const stash = stashOf(gs, pid);
+		const hc = handCount(gs, pid);
+		const nearWin = city >= limit - 2;
+		probs.forEach((p, ch) => {
+			if (p < 0.01) return;
+			// 阻止价值 V：该角色本回合能产生的综合收益（城市/资源/手牌 + 角色功能）
+			let v = city * 2.5 + stash * 0.8 + hc * 1.2;
+			switch (ch) {
+			case CharacterType.WARLORD: {
+				// 拆建筑是最具破坏性的行动——威胁随我方队伍建筑量增长
+				// （用队伍最大城市而非刺客自己城市：军阀拆的是全队的楼）
+				// 注：加成不宜过高，否则跨敌人求和后军阀 EV 被放大导致过度集中
+				const teamMaxCity = maxAllyCity(gs, actorId);
+				v += enemyNearWin ? 8 : (teamMaxCity >= 4 ? 4 : 3);
+				break;
+			}
+			case CharacterType.ARCHITECT:
+				// 抽2牌+建2栋：高威胁节奏角色，敌人手牌多时阻止价值高
+				v += nearWin ? 12 : (hc >= 2 ? 5 : 3);
+				break;
+			case CharacterType.MERCHANT: v += 3; break; // 经济引擎
+			case CharacterType.MAGICIAN: v += 3.5; break; // 换手牌破坏资源
+			case CharacterType.THIEF: v += 2.5; break; // 偷窃队友
+			case CharacterType.KING: v += 3; break; // 王冠(下轮先选) + 黄色收租
+			case CharacterType.BISHOP: v += 2; break; // 蓝色收租 + 免疫拆
+			default: break;
+			}
+			if (nearWin) v += 8; // 接近建成 → 阻止其任何角色都极有价值
+			// 保护队友：刺军阀/盗贼降低队友被拆/被偷风险
+			if (allyNearWin && ch === CharacterType.WARLORD) v += 6;
+			if (allyNearWin && ch === CharacterType.THIEF) v += 3;
+			if (tempo === 'deny' && ch === CharacterType.ARCHITECT) v += 5;
 
-		scored.push({ clientId: ch + 1, score });
-	}
+			gainEV.set(ch, (gainEV.get(ch) ?? 0) + p * v);
+		});
+	});
 
-	scored.sort((a, b) => b.score - a.score);
-	return scored.filter((s) => s.score > -100).map((s) => s.clientId);
+	// 净 EV = 敌人阻止收益 - 队友误伤成本
+	// 误杀队友 = 浪费其整个回合（资产+角色收入损失），约 12 GE 当量
+	const ALLY_KILL_PENALTY = 12;
+	const combos = pool.map((ch) => ({
+		clientId: ch + 1,
+		ev: (gainEV.get(ch) ?? 0) - (allyP.get(ch) ?? 0) * ALLY_KILL_PENALTY,
+	}));
+	combos.sort((a, b) => b.ev - a.ev);
+	return combos.map((c) => c.clientId);
 }
 
 /**
- * 偷窃目标：优先偷富有的敌人
- * 已知归属：直接按金币量排序
- * 未知归属：预测高收入角色（商人/军阀）优先
+ * 偷窃目标优先队列（客户端 ID 3-8）
+ *
+ * V3 概率推理版——核心转变：从「角色加成」变为「期望金币最大化」。
+ *
+ * 旧版缺陷：对富敌 predictLikelyRoles 总推荐商人（stash>=4 即触发），叠加
+ * 商人固定 +2 加成，导致盗贼永远偷 6 商人。
+ *
+ * 新模型：
+ * 1. 对每个敌人估算「行动时预期金币」= 当前金库 + 按角色概率加权的收入期望
+ *    （收入角色会先于盗贼行动并收租，金库会增长）
+ * 2. 对每个 (敌人, 角色) 组合计算 EV = P(持有) × 预期金币
+ * 3. 按 EV 降序输出——谁最富就偷谁最可能的角色，而非固定偷商人
  */
-function thiefTargets(gs: GameState, actorId: string, usePredictionV2 = false): number[] {
+function thiefTargets(gs: GameState, actorId: string): number[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
-	const scored: { clientId: number; score: number }[] = [];
+	const limit = completeSize(gs);
+	const pool = buildActionPhasePool(cm);
+	if (!pool.length) return [];
 
-	const enemies = (gs.board.playerOrder || []).filter((pid) => isEnemy(gs, actorId, pid));
-	enemies.sort((a, b) => stashOf(gs, b) - stashOf(gs, a));
+	// 按角色聚合：敌人期望金币收益 gainEV 与队友持有概率 allyP
+	const gainEV = new Map<CharacterType, number>();
+	const allyP = new Map<CharacterType, number>();
+	pool.forEach((ch) => { gainEV.set(ch, 0); allyP.set(ch, 0); });
 
-	for (let ch = CharacterType.MAGICIAN; ch <= CharacterType.WARLORD; ch += 1) {
-		if (ch === cm.killedCharacter || ch === cm.robbedCharacter) continue;
-		const ownerId = knownOwnerIfPublic(gs, ch);
-		let score = 0;
+	gs.board.playerOrder.forEach((pid) => {
+		const enemy = isEnemy(gs, actorId, pid);
+		const ally = pid !== actorId && isAlly(gs, actorId, pid);
+		if (!enemy && !ally) return;
+		const probs = roleProbabilities(gs, pid, pool);
 
-		if (ownerId && isAlly(gs, actorId, ownerId)) {
-			score = -200;
-		} else if (ownerId && isEnemy(gs, actorId, ownerId)) {
-			score = stashOf(gs, ownerId) * 5 + citySize(gs, ownerId);
-			if (ch === CharacterType.MERCHANT) score += 4; // 商人有钱
-		} else {
-			// 预测：优先偷可能选商人/军阀的富敌
-			const predFn = usePredictionV2
-				? (pid: string) => predictLikelyRolesV2(gs, pid, actorId, true)
-				: (pid: string) => predictLikelyRoles(gs, pid);
-			enemies.forEach((pid) => {
-				const roles = predFn(pid);
-				const idx = roles.indexOf(ch);
-				if (idx >= 0) {
-					score += stashOf(gs, pid) * (1 - idx * 0.15);
-				}
-			});
-			if (ch === CharacterType.MERCHANT) score += 2;
-			if (ch === CharacterType.WARLORD) score += 1.5;
-			if (ch === CharacterType.ARCHITECT) score += 1;
+		// 队友：累加其持有各角色的概率（用于误偷惩罚）
+		if (ally) {
+			probs.forEach((p, ch) => allyP.set(ch, (allyP.get(ch) ?? 0) + p));
+			return;
 		}
-		scored.push({ clientId: ch + 1, score });
-	}
 
-	scored.sort((a, b) => b.score - a.score);
-	return scored.filter((s) => s.score > -100).map((s) => s.clientId);
+		// 敌人：计算逐角色期望金币并累加收益
+		const stash = stashOf(gs, pid);
+		const city = cityOf(gs, pid);
+		const nearWin = city.length >= limit - 2;
+		probs.forEach((p, ch) => {
+			if (p < 0.01) return;
+			// 预期金币 = 当前金库 + 该角色行动时的收租/被动收入
+			let income = 0;
+			switch (ch) {
+			case CharacterType.MERCHANT: income = 1 + countColorIn(city, DistrictType.TRADE); break;
+			case CharacterType.KING: income = countColorIn(city, DistrictType.NOBLE); break;
+			case CharacterType.BISHOP: income = countColorIn(city, DistrictType.RELIGIOUS); break;
+			case CharacterType.WARLORD: income = countColorIn(city, DistrictType.MILITARY); break;
+			default: income = 0; break; // 盗贼/魔术师/建筑师无色系收入
+			}
+			const expectedGold = stash + income;
+			// 敌人接近建成时偷窃的战术价值更高（拖延其建造节奏）
+			const urgency = nearWin ? 1.3 : 1.0;
+			// ×2 摇摆因子：偷敌人 X 金 = 我方+X 且敌方-X，相对差距摆动了 2X
+			// 放大收益项使其主导排序，避免惩罚项噪声把目标推向旁观牌
+			gainEV.set(ch, (gainEV.get(ch) ?? 0) + p * expectedGold * urgency * 2);
+		});
+	});
+
+	// 净 EV = 敌人金币摇摆收益 - 队友误偷成本
+	// 误偷队友：金币只是在队内转移（总量不变），但打乱其建造计划 + 浪费一次偷窃机会
+	const ALLY_ROB_PENALTY = 4;
+	const combos = pool.map((ch) => ({
+		clientId: ch + 1,
+		ev: (gainEV.get(ch) ?? 0) - (allyP.get(ch) ?? 0) * ALLY_ROB_PENALTY,
+	}));
+	combos.sort((a, b) => b.ev - a.ev);
+	return combos.map((c) => c.clientId);
 }
 
-/** 魔术师交换目标：手牌数远多于我的敌人 */
+/** 估算一手牌的总建造价值（用于魔术师交换决策） */
+function handQuality(hand: DistrictId[], city: DistrictId[]): number {
+	return hand.reduce((sum, card) => {
+		if (city.includes(card)) return sum; // 重复牌价值 ≈ 0
+		let v = costOf(card); // 基础价值 = 建造费用
+		if (isUnique(card)) v += 2; // 特殊建筑额外价值
+		return sum + v;
+	}, 0);
+}
+
+/** 魔术师交换目标：综合手牌数量差和质量差，避免拿高价值牌换垃圾 */
 function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
 	if (!gs.board) return [];
-	const myHand = handCount(gs, actorId);
+	const myHand = handOf(gs, actorId);
+	const myCity = cityOf(gs, actorId);
+	const myQuality = handQuality(myHand, myCity);
 	const scored: { seat: number; score: number }[] = [];
 
 	gs.board.playerOrder.forEach((pid, seat) => {
 		if (!isEnemy(gs, actorId, pid)) return;
 		const their = handCount(gs, pid);
-		const deltaCards = their - myHand;
+		const deltaCards = their - myHand.length;
 		if (deltaCards <= 0) return;
-		const geGain = deltaCards * GE_CARD;
-		scored.push({ seat, score: geGain * 10 + their });
+		// 数量收益：多出的牌 × 动态卡值
+		const quantityGain = deltaCards * cardMarginalValue(gs, actorId);
+		// 质量保护：我给出的牌越值钱，交换越不划算
+		// 只有数量收益明显超过质量损失时才交换
+		const netGain = quantityGain - myQuality * 0.4;
+		if (netGain <= 0) return;
+		scored.push({ seat, score: netGain * 10 + their });
 	});
 	scored.sort((a, b) => b.score - a.score);
 	return scored.map((s) => s.seat);
@@ -1021,7 +1158,6 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	// 选角阶段
 	// =====================================================================
 	const useSeatWeights = version === 'v1' || version === 'v2' || version === 'v3';
-	const usePredV2 = version === 'v2' || version === 'v3';
 	const useMCTS = version === 'v3';
 
 	if (board.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
@@ -1169,17 +1305,24 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 
 		// 特殊能力
 		if (canSpecial && character === CharacterType.ASSASSIN) {
-			const t = assassinTargets(gameState, actorId, usePredV2);
+			const t = assassinTargets(gameState, actorId);
 			if (t.length) moves.push({ type: MoveType.ASSASSIN_KILL });
 		}
 		if (canSpecial && character === CharacterType.THIEF) {
-			const t = thiefTargets(gameState, actorId, usePredV2);
+			const t = thiefTargets(gameState, actorId);
 			if (t.length) moves.push({ type: MoveType.THIEF_ROB });
 		}
 		if (canSpecial && character === CharacterType.MAGICIAN) {
 			const seats = magicianExchangeTargets(gameState, actorId);
-			if (seats.length) moves.push({ type: MoveType.MAGICIAN_EXCHANGE_HAND });
-			else if (hand.length <= 1) moves.push({ type: MoveType.MAGICIAN_DISCARD_CARDS });
+			if (seats.length) {
+				moves.push({ type: MoveType.MAGICIAN_EXCHANGE_HAND });
+			} else if (hand.length > 0) {
+				// 弃牌换牌：手牌≤1 / 无可建牌 / 全是重复牌
+				const allDuplicate = hand.every((c) => player.city.includes(c));
+				if (hand.length <= 1 || affordable.length === 0 || allDuplicate) {
+					moves.push({ type: MoveType.MAGICIAN_DISCARD_CARDS });
+				}
+			}
 		}
 		if (canSpecial && character === CharacterType.WARLORD) {
 			const destroys = warlordDestroyCandidates(gameState, actorId);
@@ -1221,7 +1364,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	// 特殊能力状态（刺杀/偷窃/交换/摧毁/墓地/实验室）
 	// -----------------------------------------------------------------------
 	case ClientTurnState.ASSASSIN_KILL: {
-		const targets = assassinTargets(gameState, actorId, usePredV2);
+		const targets = assassinTargets(gameState, actorId);
 		const moves = targets.map((id) => ({ type: MoveType.ASSASSIN_KILL, data: id } as Move));
 		for (let cid = 2; cid <= 8; cid += 1) if (!targets.includes(cid)) moves.push({ type: MoveType.ASSASSIN_KILL, data: cid });
 		moves.push({ type: MoveType.DECLINE });
@@ -1230,7 +1373,7 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 
 	case ClientTurnState.THIEF_ROB: {
 		const killedClientId = cm.killedCharacter >= 0 ? cm.killedCharacter + 1 : -1;
-		const targets = thiefTargets(gameState, actorId, usePredV2).filter((id) => id !== killedClientId);
+		const targets = thiefTargets(gameState, actorId).filter((id) => id !== killedClientId);
 		const moves = targets.map((id) => ({ type: MoveType.THIEF_ROB, data: id } as Move));
 		for (let cid = 3; cid <= 8; cid += 1) {
 			if (cid === killedClientId) continue;

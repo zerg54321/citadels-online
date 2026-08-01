@@ -52,10 +52,10 @@ const CHAR_NAMES: Record<number, string> = {
 interface PerGameMetrics {
 	/** 每位 AI 的选角记录 */
 	picks: { playerId: string; character: number; seat: number }[];
-	/** 刺杀记录 */
-	assassinations: { playerId: string; targetCharacter: number; round: number }[];
-	/** 偷窃记录 */
-	thefts: { playerId: string; targetCharacter: number; goldTaken: number; round: number }[];
+	/** 刺杀记录（result: enemy=命中敌人 ally=误伤队友 aside=落空在旁观牌） */
+	assassinations: { playerId: string; targetCharacter: number; round: number; result: 'enemy' | 'ally' | 'aside' }[];
+	/** 偷窃记录（result 同上；goldTaken=实际偷到的金币） */
+	thefts: { playerId: string; targetCharacter: number; goldTaken: number; round: number; result: 'enemy' | 'ally' | 'aside' }[];
 	/** 资源决策统计 */
 	resourceDecisions: { playerId: string; choseDraw: boolean }[];
 	/** 特殊建筑使用 */
@@ -91,11 +91,17 @@ interface OverallStats {
 	// 刺杀
 	totalAssassinations: number;
 	assassinTargetTypes: Record<string, number>; // 被刺角色名 → 次数
+	assassinHitEnemy: number; // 命中敌人
+	assassinHitAlly: number;  // 误伤队友
+	assassinMiss: number;     // 落空（旁观牌）
 
 	// 盗窃
 	totalThefts: number;
 	totalGoldStolen: number;
 	avgGoldPerTheft: number;
+	thiefHitEnemy: number; // 偷到敌人
+	thiefHitAlly: number;  // 偷到队友
+	thiefMiss: number;     // 落空（旁观牌）
 
 	// 资源
 	goldPct: number; // TAKE_GOLD 占比
@@ -236,24 +242,50 @@ function runGame(gameNum: number): PerGameMetrics {
 				}
 			}
 
-			// 刺杀记录
+			// 刺杀记录：根据目标角色的实际归属判定命中结果
 			if (move.type === MoveType.ASSASSIN_KILL && move.data !== undefined) {
-				const targetClientId = move.data as number;
+				const targetChar = (move.data as number) - 1;
+				const assassinPos = cm.characters[CharacterType.ASSASSIN];
+				const assassinId = assassinPos >= CharacterPosition.PLAYER_1
+					? gs.board?.playerOrder[assassinPos - CharacterPosition.PLAYER_1] ?? '' : '';
+				const targetPos = cm.characters[targetChar];
+				let result: 'enemy' | 'ally' | 'aside' = 'aside';
+				if (targetPos >= CharacterPosition.PLAYER_1) {
+					const victimId = gs.board?.playerOrder[targetPos - CharacterPosition.PLAYER_1] ?? '';
+					const aTeam = gs.players.get(assassinId)?.team;
+					const vTeam = gs.players.get(victimId)?.team;
+					result = (aTeam !== undefined && vTeam !== undefined && aTeam === vTeam) ? 'ally' : 'enemy';
+				}
 				metrics.assassinations.push({
-					playerId: cm.getCurrentCharacter() >= 0 ? gs.board?.getCurrentPlayerId() ?? '' : '',
-					targetCharacter: targetClientId - 1,
+					playerId: assassinId,
+					targetCharacter: targetChar,
 					round: roundCounter,
+					result,
 				});
 			}
 
-			// 偷窃记录（需要在执行后查看金库变化）
+			// 偷窃记录：判定命中结果 + 宣布时受害者金库（即实际偷到的金币）
 			if (move.type === MoveType.THIEF_ROB && move.data !== undefined) {
-				const targetClientId = move.data as number;
+				const targetChar = (move.data as number) - 1;
+				const thiefPos = cm.characters[CharacterType.THIEF];
+				const thiefId = thiefPos >= CharacterPosition.PLAYER_1
+					? gs.board?.playerOrder[thiefPos - CharacterPosition.PLAYER_1] ?? '' : '';
+				const targetPos = cm.characters[targetChar];
+				let result: 'enemy' | 'ally' | 'aside' = 'aside';
+				let goldTaken = 0;
+				if (targetPos >= CharacterPosition.PLAYER_1) {
+					const victimId = gs.board?.playerOrder[targetPos - CharacterPosition.PLAYER_1] ?? '';
+					const tTeam = gs.players.get(thiefId)?.team;
+					const vTeam = gs.players.get(victimId)?.team;
+					result = (tTeam !== undefined && vTeam !== undefined && tTeam === vTeam) ? 'ally' : 'enemy';
+					goldTaken = gs.board?.players.get(victimId)?.stash ?? 0;
+				}
 				metrics.thefts.push({
-					playerId: gs.board?.getCurrentPlayerId() ?? '',
-					targetCharacter: targetClientId - 1,
-					goldTaken: 0, // 后续在回合结束时分配合适的值
+					playerId: thiefId,
+					targetCharacter: targetChar,
+					goldTaken,
 					round: roundCounter,
+					result,
 				});
 			}
 
@@ -324,8 +356,14 @@ function aggregate(all: PerGameMetrics[]): OverallStats {
 	});
 
 	let totalAssassinations = 0;
+	let assassinHitEnemy = 0;
+	let assassinHitAlly = 0;
+	let assassinMiss = 0;
 	let totalThefts = 0;
 	let totalGoldStolen = 0;
+	let thiefHitEnemy = 0;
+	let thiefHitAlly = 0;
+	let thiefMiss = 0;
 	let totalGold = 0;
 	let totalDraw = 0;
 	let totalSmithy = 0;
@@ -358,15 +396,24 @@ function aggregate(all: PerGameMetrics[]): OverallStats {
 			pickCountsBySeat[name][bin] += 1;
 		});
 
-		// 刺杀
+		// 刺杀：目标分布 + 命中结果
 		totalAssassinations += m.assassinations.length;
 		m.assassinations.forEach((a) => {
 			const name = CHAR_NAMES[a.targetCharacter] ?? `角色${a.targetCharacter}`;
 			assassinTargetTypes[name] = (assassinTargetTypes[name] ?? 0) + 1;
+			if (a.result === 'enemy') assassinHitEnemy += 1;
+			else if (a.result === 'ally') assassinHitAlly += 1;
+			else assassinMiss += 1;
 		});
 
-		// 偷窃（偷窃次数；金币数暂无精确值，可后续从 stash 变化推算）
+		// 偷窃：次数 + 实际金币 + 命中结果
 		totalThefts += m.thefts.length;
+		m.thefts.forEach((t) => {
+			totalGoldStolen += t.goldTaken;
+			if (t.result === 'enemy') thiefHitEnemy += 1;
+			else if (t.result === 'ally') thiefHitAlly += 1;
+			else thiefMiss += 1;
+		});
 
 		// 资源
 		m.resourceDecisions.forEach((r) => {
@@ -400,8 +447,10 @@ function aggregate(all: PerGameMetrics[]): OverallStats {
 		pickCounts, pickCountsBySeat,
 		totalAssassinations,
 		assassinTargetTypes,
+		assassinHitEnemy, assassinHitAlly, assassinMiss,
 		totalThefts, totalGoldStolen,
 		avgGoldPerTheft: totalThefts ? (totalGoldStolen / totalThefts) : 0,
+		thiefHitEnemy, thiefHitAlly, thiefMiss,
 		goldPct: (totalGold + totalDraw) ? (totalGold / (totalGold + totalDraw)) : 0,
 		drawPct: (totalGold + totalDraw) ? (totalDraw / (totalGold + totalDraw)) : 0,
 		totalSmithy, totalLab, totalGraveyard,
@@ -438,6 +487,13 @@ function print(report: OverallStats) {
 	sortedAss.forEach(([name, count]) => {
 		console.log(`    ${name}: ${count}次`);
 	});
+
+	console.log('\n  ── 刺杀/偷窃命中率 ──');
+	const assTotal = report.totalAssassinations || 1;
+	console.log(`  刺杀命中敌人: ${report.assassinHitEnemy}/${report.totalAssassinations} = ${(report.assassinHitEnemy / assTotal * 100).toFixed(1)}%  误伤队友: ${report.assassinHitAlly}  落空(旁观牌): ${report.assassinMiss}`);
+	const thTotal = report.totalThefts || 1;
+	console.log(`  偷窃命中敌人: ${report.thiefHitEnemy}/${report.totalThefts} = ${(report.thiefHitEnemy / thTotal * 100).toFixed(1)}%  误偷队友: ${report.thiefHitAlly}  落空(旁观牌): ${report.thiefMiss}`);
+	console.log(`  偷窃总金币: ${report.totalGoldStolen}  平均每次: ${report.avgGoldPerTheft.toFixed(2)}`);
 
 	console.log('\n  ── 资源决策 ──');
 	const totalDecisions = report.goldPct + report.drawPct;

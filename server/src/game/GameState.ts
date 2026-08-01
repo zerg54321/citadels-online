@@ -380,28 +380,23 @@ export default class GameState implements Subject {
       : gameSetupData.players
     ).filter((id) => this.players.has(id));
 
-    // 随机打乱 playerOrder，实现随机首发（不修改 this.lobbyPlayerOrder）
-    const shuffled = [...orderedIdsSrc];
-    for (let i = shuffled.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-    const players: PlayerId[] = [];
-    shuffled.forEach((playerId) => {
+    // 筛选实际参战玩家（保持大厅原始顺序）
+    const stablePlayers: PlayerId[] = [];
+    orderedIdsSrc.forEach((playerId) => {
       const player = this.players.get(playerId);
       if (player && player.role === PlayerRole.PLAYER) {
-        players.push(playerId);
+        stablePlayers.push(playerId);
       }
     });
     // include any PLAYER missing from order
     this.players.forEach((player, playerId) => {
-      if (player.role === PlayerRole.PLAYER && !players.includes(playerId)) {
-        players.push(playerId);
+      if (player.role === PlayerRole.PLAYER && !stablePlayers.includes(playerId)) {
+        stablePlayers.push(playerId);
       }
     });
+    // non-participants become spectators
     Array.from(this.players.keys()).forEach((playerId) => {
-      if (!players.includes(playerId)) {
+      if (!stablePlayers.includes(playerId)) {
         const player = this.players.get(playerId);
         if (player) {
           player.role = PlayerRole.SPECTATOR;
@@ -410,20 +405,29 @@ export default class GameState implements Subject {
       }
     });
 
-    this.hasAiPlayers = players.some((id) => this.players.get(id)?.isAi);
+    this.hasAiPlayers = stablePlayers.some((id) => this.players.get(id)?.isAi);
     this.syncMode = this.hasAiPlayers;
 
     // only 6p 3v3: ranked if no AI, practice (unranked) if any AI
     this.gameMode = this.hasAiPlayers ? GameMode.CASUAL : GameMode.COMPETITIVE_TEAM6;
     this.completeCitySize = 8;
-    this.lobbyPlayerOrder = [...players];
-    players.forEach((playerId, index) => {
+
+    // 队伍分配基于原始大厅顺序（与大厅预览一致：偶数位=A队，奇数位=B队）
+    // 不受洗牌影响，保证玩家在大厅看到的队伍与结算画面一致
+    this.lobbyPlayerOrder = [...stablePlayers];
+    stablePlayers.forEach((playerId, index) => {
       const player = this.players.get(playerId);
       if (player) {
-        // seats 0,2,4 => A ; 1,3,5 => B
         player.team = index % 2 === 0 ? TeamId.A : TeamId.B;
       }
     });
+
+    // 随机打乱行动顺序（首发/选角序），不影响队伍分配
+    const pickOrder = [...stablePlayers];
+    for (let i = pickOrder.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pickOrder[i], pickOrder[j]] = [pickOrder[j], pickOrder[i]];
+    }
 
     this.actionTimeoutSeconds = gameSetupData.actionTimeoutSeconds ?? 120;
     this.turnDeadlineAt = null;
@@ -434,14 +438,14 @@ export default class GameState implements Subject {
     this.startedAt = new Date().toISOString();
     this.matchPersisted = false;
     this.roundNumber = 1;
-    players.forEach((id) => {
+    stablePlayers.forEach((id) => {
       const p = this.players.get(id);
       if (p) {
         p.isAutoplay = p.isAi;
         p.hadEffectiveAiControl = false;
       }
     });
-    this.board = new BoardState(players);
+    this.board = new BoardState(pickOrder);
   }
 
   /** true if current actor needs a human action timer */

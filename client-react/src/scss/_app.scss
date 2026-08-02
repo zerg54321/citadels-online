@@ -106,6 +106,9 @@ html[lang="en"] .header--game {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  // Align with home content max-width on ultra-wide screens.
+  max-width: 1560px;
+  margin: 0 auto;
 }
 .header-brand {
   text-align: left;

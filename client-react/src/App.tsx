@@ -42,13 +42,14 @@ export default function App() {
         <div className="header-row">
             <div className="header-brand">
               <h1>
+                <img src="/svg/1fa99.svg" alt="" className="header-brand__coin" />
                 {inGame ? (
                   t('ui.title')
                 ) : (
                   <a href="/" className="text-reset">{t('ui.title')}</a>
                 )}
               </h1>
-              <h6 className={inGame ? 'header-subtitle--hidden' : ''}>{t('ui.subtitle2')}</h6>
+
             </div>
           {inGame && <GameTopBar />}
           <div className="header-actions">

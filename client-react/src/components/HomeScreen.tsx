@@ -4,17 +4,39 @@ import { useNavigate } from 'react-router-dom';
 import { GameMode } from 'citadels-common';
 import { useAppStore } from '@/store';
 import roomsApi, { type RoomListItem } from '@/api/rooms';
+import ParticleField from '@/components/common/ParticleField';
+import imgAssassin from '@/assets/characters/assassin.jpg';
+import imgThief from '@/assets/characters/thief.jpg';
+import imgMagician from '@/assets/characters/magician.jpg';
+import imgKing from '@/assets/characters/king.jpg';
+import imgBishop from '@/assets/characters/bishop.jpg';
+import imgMerchant from '@/assets/characters/merchant.jpg';
+import imgArchitect from '@/assets/characters/architect.jpg';
+import imgWarlord from '@/assets/characters/warlord.jpg';
 
-// Mirrors Vue HomeScreen.vue. Vue data() (creatingRoom/createError/rooms/
-// roomsLoading/roomsError/pollTimer/featureKeys) → useState + useRef. Vue
-// computed isLoggedIn → store hook. Vue mounted/beforeUnmount poll loop →
-// useEffect with setInterval. SCSS extracted to _home-screen.scss.
-const FEATURE_KEYS = [
-  { icon: '⚔️', title: 'ui.homepage.feat_3v3_t', desc: 'ui.homepage.feat_3v3_d' },
-  { icon: '🤖', title: 'ui.homepage.feat_ai_t', desc: 'ui.homepage.feat_ai_d' },
-  { icon: '🏆', title: 'ui.homepage.feat_rank_t', desc: 'ui.homepage.feat_rank_d' },
-  { icon: '👁', title: 'ui.homepage.feat_spec_t', desc: 'ui.homepage.feat_spec_d' },
+// Immersive single-viewport home screen. Left: a cinematic hero (background
+// art + slogan + create CTA) crowned by the eight-character cast strip; right:
+// a glass panel holding the live room list and three gameplay highlights. The
+// app title + stats link stay in the shared header and are not repeated here.
+// Character portraits map to i18n `characters[1..8]` (index 0 is the unknown
+// placeholder). Art is lazy-loaded so the hero paints instantly.
+const CHARACTERS = [
+  { key: 1, img: imgAssassin },
+  { key: 2, img: imgThief },
+  { key: 3, img: imgMagician },
+  { key: 4, img: imgKing },
+  { key: 5, img: imgBishop },
+  { key: 6, img: imgMerchant },
+  { key: 7, img: imgArchitect },
+  { key: 8, img: imgWarlord },
 ] as const;
+
+const FACT_KEYS = [
+  { icon: '🎭', title: 'ui.homepage.facts_roles_t', desc: 'ui.homepage.facts_roles_d' },
+  { icon: '🏛', title: 'ui.homepage.facts_build_t', desc: 'ui.homepage.facts_build_d' },
+  { icon: '⚔️', title: 'ui.homepage.facts_team_t', desc: 'ui.homepage.facts_team_d' },
+] as const;
+
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -87,190 +109,166 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // Visual seat-fill row: 6 dots, first `count` filled, rest hollow.
-  const renderSeatDots = (count: number, max: number) => (
-    <span className="home-rooms__seats" aria-hidden>
-      {Array.from({ length: max }, (_, i) => (
-        <span key={i} className={`home-rooms__seat${i < count ? ' home-rooms__seat--on' : ''}`} />
-      ))}
-    </span>
-  );
-
   return (
     <div className="home">
-      <section className="home-hero">
-        <div className="home-hero__glow" />
-        <div className="home-hero__ornament" />
-        <div className="container py-5">
-          <div className="row align-items-center">
-            <div className="col-lg-7 mb-4 mb-lg-0">
-              <p className="home-hero__eyebrow">{t('ui.subtitle1')} · {t('ui.subtitle2')}</p>
-              <h1 className="home-hero__title">{t('ui.title')}</h1>
-              <p className="home-hero__lead">{t('ui.homepage.hero_lead')}</p>
-              <ul className="home-hero__bullets">
-                <li>{t('ui.homepage.bullet_3v3')}</li>
-                <li>{t('ui.homepage.bullet_ai')}</li>
-                <li>{t('ui.homepage.bullet_rank')}</li>
-              </ul>
-              <div className="d-flex flex-wrap align-items-center gap-2 mt-4 home-hero__actions">
+      {/* ── Left: cinematic hero + character cast ─────────────────────── */}
+      <section className="home-stage">
+        <div className="home-stage__bg" />
+        <ParticleField />
+        <div className="home-stage__veil" />
+        <div className="home-stage__glow" />
+
+        <div className="home-stage__inner">
+          <p className="home-stage__eyebrow">{t('ui.subtitle1')} · {t('ui.subtitle2')}</p>
+          <h2 className="home-stage__slogan">{t('ui.homepage.slogan')}</h2>
+          <p className="home-stage__tagline">{t('ui.homepage.tagline')}</p>
+          <p className="home-stage__lead">{t('ui.homepage.lead')}</p>
+          <div className="home-stage__cta">
+            <button
+              type="button"
+              className="btn btn-gold home-stage__btn"
+              disabled={creatingRoom || !isLoggedIn}
+              onClick={handleCreateRoom}
+            >
+              {creatingRoom ? t('ui.loading') : t('ui.homepage.create_room')}
+            </button>
+            {!isLoggedIn && (
+              <span className="home-stage__note text-gold">{t('ui.homepage.login_to_play')}</span>
+            )}
+            {createError && <span className="home-stage__note text-danger">{createError}</span>}
+          </div>
+        </div>
+
+        <div className="home-stage__cast">
+          <div className="home-stage__cast-head">
+            <span className="home-stage__cast-title">{t('ui.homepage.chars_title')}</span>
+            <span className="home-stage__cast-hint">{t('ui.homepage.chars_hint')}</span>
+          </div>
+          <div className="home-stage__chars">
+            {CHARACTERS.map((c) => (
+              <div className="home-char" key={c.key}>
+                <div className="home-char__frame">
+                  <div
+                    className="home-char__img"
+                    style={{ backgroundImage: `url(${c.img})` }}
+                  />
+                  <div className="home-char__veil" />
+                </div>
+                <span className="home-char__name">{t(`characters.${c.key}.name`)}</span>
+                <span className="home-char__desc">{t(`characters.${c.key}.description`)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Right: glass panel — live rooms + gameplay highlights ─────── */}
+      <aside className="home-panel">
+        <section className="home-rooms">
+          <div className="home-rooms__bar">
+            <div className="home-rooms__bar-left">
+              <strong className="home-rooms__bar-title">{t('ui.homepage.rooms_panel')}</strong>
+              <span className="home-rooms__count">{rooms.length}</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-gold home-rooms__refresh"
+              disabled={roomsLoading}
+              onClick={loadRooms}
+            >
+              {roomsLoading ? t('ui.loading') : t('ui.rooms.refresh')}
+            </button>
+          </div>
+          <div className="home-rooms__body">
+            {roomsError && <div className="alert alert-danger py-2">{roomsError}</div>}
+            {roomsLoading && rooms.length === 0 && (
+              <div className="home-rooms__state text-muted-gold">{t('ui.loading')}</div>
+            )}
+            {!roomsLoading && rooms.length === 0 && (
+              <div className="home-rooms__state home-rooms__empty">
+                <div className="home-rooms__empty-icon">🏛</div>
+                <p className="text-muted-gold">{t('ui.rooms.empty')}</p>
                 <button
                   type="button"
-                  className="btn btn-lg btn-gold home-hero__cta"
+                  className="btn btn-gold"
                   disabled={creatingRoom || !isLoggedIn}
                   onClick={handleCreateRoom}
                 >
-                  {creatingRoom ? t('ui.loading') : t('ui.homepage.create_room')}
-                </button>
-                <button type="button" className="btn btn-lg btn-outline-gold" onClick={() => navigate('/stats')}>
-                  {t('ui.stats.title')}
+                  {t('ui.homepage.create_room')}
                 </button>
               </div>
-              {!isLoggedIn && (
-                <p className="text-gold small mt-3 mb-0">{t('ui.homepage.login_to_play')}</p>
-              )}
-              {createError && <p className="text-danger small mt-2 mb-0">{createError}</p>}
-            </div>
-            <div className="col-lg-5">
-              <div className="home-hero__card">
-                <div className="home-hero__card-title">{t('ui.homepage.how_title')}</div>
-                <ol className="home-hero__steps mb-0">
-                  <li>{t('ui.homepage.how_1')}</li>
-                  <li>{t('ui.homepage.how_2')}</li>
-                  <li>{t('ui.homepage.how_3')}</li>
-                  <li>{t('ui.homepage.how_4')}</li>
-                </ol>
+            )}
+            {rooms.length > 0 && (
+              <div className="home-rooms__list">
+                {rooms.map((room) => (
+                  <div
+                    key={room.roomId}
+                    className={`home-rooms__card home-rooms__card--${room.phase}`}
+                  >
+                    <div className="home-rooms__card-top">
+                      <code className="home-rooms__id">{room.roomId}</code>
+                      <span className="home-rooms__status">
+                        <span className="home-rooms__status-dot" />
+                        {phaseLabel(room.phase)}
+                      </span>
+                    </div>
+                    <div className="home-rooms__card-mid">
+                      <span className="home-rooms__mode">{modeLabel(room)}</span>
+                      <span className="home-rooms__fill-count">
+                        <strong>{room.playerCount}</strong>/{room.maxPlayers}
+                      </span>
+                      {room.spectatorCount > 0 && (
+                        <span className="home-rooms__spec">
+                          {t('ui.rooms.spectators', { n: room.spectatorCount })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="home-rooms__names text-truncate" title={playerNames(room)}>
+                      {playerNames(room)}
+                    </div>
+                    <div className="home-rooms__card-actions">
+                      {room.canJoinAsPlayer && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-gold home-rooms__btn"
+                          disabled={!isLoggedIn}
+                          onClick={() => goJoin(room.roomId)}
+                        >
+                          {t('ui.rooms.join')}
+                        </button>
+                      )}
+                      {room.canSpectate && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-gold home-rooms__btn"
+                          onClick={() => goSpectate(room.roomId)}
+                        >
+                          {t('ui.rooms.spectate')}
+                        </button>
+                      )}
+                      {!room.canJoinAsPlayer && !room.canSpectate && (
+                        <span className="home-rooms__closed text-muted-gold small">—</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="container py-4 home-main">
-        <div className="row">
-          <div className="col-lg-8 mb-4">
-            <div className="home-rooms">
-              <div className="home-rooms__bar">
-                <div className="d-flex align-items-center">
-                  <strong className="text-gold home-rooms__bar-title">{t('ui.rooms.title')}</strong>
-                  <span className="home-rooms__count">{rooms.length}</span>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-gold home-rooms__refresh"
-                  disabled={roomsLoading}
-                  onClick={loadRooms}
-                >
-                  {roomsLoading ? t('ui.loading') : t('ui.rooms.refresh')}
-                </button>
-              </div>
-              <div className="home-rooms__body">
-                <p className="small text-muted-gold mb-3">{t('ui.rooms.hint')}</p>
-                {roomsError && <div className="alert alert-danger py-2">{roomsError}</div>}
-                {roomsLoading && rooms.length === 0 && (
-                  <div className="text-muted-gold py-5 text-center home-rooms__loading">{t('ui.loading')}</div>
-                )}
-                {!roomsLoading && rooms.length === 0 && (
-                  <div className="home-rooms__empty text-center py-5">
-                    <div className="home-rooms__empty-icon">🏛</div>
-                    <p className="text-muted-gold mb-3">{t('ui.rooms.empty')}</p>
-                    <button
-                      type="button"
-                      className="btn btn-gold"
-                      disabled={creatingRoom || !isLoggedIn}
-                      onClick={handleCreateRoom}
-                    >
-                      {t('ui.homepage.create_room')}
-                    </button>
-                  </div>
-                )}
-                {rooms.length > 0 && (
-                  <div className="home-rooms__grid">
-                    {rooms.map((room) => (
-                      <div
-                        key={room.roomId}
-                        className={`home-rooms__card home-rooms__card--${room.phase}`}
-                      >
-                        <div className="home-rooms__card-top">
-                          <code className="home-rooms__id">{room.roomId}</code>
-                          <span className="home-rooms__status">
-                            <span className="home-rooms__status-dot" />
-                            {phaseLabel(room.phase)}
-                          </span>
-                        </div>
-                        <div className="home-rooms__card-mid">
-                          <span className="home-rooms__mode">{modeLabel(room)}</span>
-                          {room.spectatorCount > 0 && (
-                            <span className="home-rooms__spec">
-                              {t('ui.rooms.spectators', { n: room.spectatorCount })}
-                            </span>
-                          )}
-                        </div>
-                        <div className="home-rooms__fill">
-                          {renderSeatDots(room.playerCount, room.maxPlayers)}
-                          <span className="home-rooms__fill-count">
-                            <strong>{room.playerCount}</strong>/{room.maxPlayers}
-                          </span>
-                        </div>
-                        <div className="home-rooms__names text-truncate" title={playerNames(room)}>
-                          {playerNames(room)}
-                        </div>
-                        <div className="home-rooms__card-actions">
-                          {room.canJoinAsPlayer && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-gold home-rooms__btn"
-                              disabled={!isLoggedIn}
-                              onClick={() => goJoin(room.roomId)}
-                            >
-                              {t('ui.rooms.join')}
-                            </button>
-                          )}
-                          {room.canSpectate && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-outline-gold home-rooms__btn"
-                              onClick={() => goSpectate(room.roomId)}
-                            >
-                              {t('ui.rooms.spectate')}
-                            </button>
-                          )}
-                          {!room.canJoinAsPlayer && !room.canSpectate && (
-                            <span className="home-rooms__closed text-muted-gold small">—</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        <section className="home-facts">
+          {FACT_KEYS.map((f) => (
+            <div className="home-fact" key={f.title}>
+              <div className="home-fact__icon">{f.icon}</div>
+              <div className="home-fact__text">
+                <div className="home-fact__name">{t(f.title)}</div>
+                <div className="home-fact__desc">{t(f.desc)}</div>
               </div>
             </div>
-          </div>
-
-          <div className="col-lg-4">
-            <div className="home-side home-side--features">
-              <h6 className="home-side__title">
-                {t('ui.homepage.features_title')}
-              </h6>
-              {FEATURE_KEYS.map((f) => (
-                <div className="home-feature" key={f.title}>
-                  <div className="home-feature__icon">{f.icon}</div>
-                  <div className="home-feature__text">
-                    <div className="home-feature__name">{t(f.title)}</div>
-                    <div className="small text-muted-gold">{t(f.desc)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="home-side home-side--tip">
-              <div className="home-side__tip-icon">💡</div>
-              <div>
-                <div className="home-side__tip-title">{t('ui.homepage.tip_title')}</div>
-                <p className="mb-0 small text-muted-gold">{t('ui.homepage.tip_body')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+          ))}
+        </section>
+      </aside>
     </div>
   );
 }

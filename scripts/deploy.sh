@@ -6,8 +6,9 @@ set -euo pipefail
 #
 # Two modes (auto-detected, can be forced with --install):
 #   * Install  : provisions a fresh box — system deps, Node 20, clones the repo
-#                (if needed), builds, writes systemd unit + Nginx reverse proxy,
-#                configures ufw, optional Let's Encrypt TLS, starts the service.
+#                (if needed), builds, writes systemd unit + Caddy reverse proxy
+#                (automatic HTTPS via Let's Encrypt when --domain is given),
+#                configures ufw, starts the service.
 #   * Update   : the existing flow — backup DB, stop, git pull, rebuild, restart,
 #                health check. This is the default once the service is installed.
 #
@@ -18,7 +19,9 @@ set -euo pipefail
 #   cd /opt/citadels/citadels-online
 #   bash scripts/deploy.sh --install
 #
-#   # With a domain + free HTTPS certificate:
+#   # With a domain — Caddy obtains & renews the HTTPS certificate automatically:
+#   bash scripts/deploy.sh --install --domain citadels.example.com
+#   # (optional) Let's Encrypt expiry-notification email:
 #   bash scripts/deploy.sh --install --domain citadels.example.com --email you@example.com
 #
 # Later updates (from the repo dir):
@@ -30,10 +33,11 @@ set -euo pipefail
 #   --install           Force full provisioning (idempotent — safe to re-run)
 #   --skip-backup       Skip the SQLite backup step
 #   --skip-build        Skip the npm build step (update mode)
-#   --domain DOMAIN     Domain name for Nginx + Let's Encrypt TLS
-#   --email EMAIL       Email for Let's Encrypt (required with --domain if not
-#                       registered yet; otherwise --register-unsafely-without-email)
+#   --domain DOMAIN     Domain name for Caddy + automatic Let's Encrypt TLS
+#   --email EMAIL       Email for Let's Encrypt (optional; Caddy uses an anonymous
+#                       ACME account when omitted, --domain works without it)
 #   --git-url URL       Git URL to clone when the repo is not present yet
+#                       (default: https://github.com/zerg54321/citadels-online.git)
 #   --branch NAME       Branch/tag to checkout after clone / pull (default: main)
 #   --yes               Skip interactive confirmations
 #   -h, --help          Show this help
@@ -48,7 +52,7 @@ SERVICE_NAME="citadels"
 APP_PORT="8081"
 HEALTH_URL="http://127.0.0.1:${APP_PORT}"
 HEALTH_TIMEOUT=40
-NGINX_SITE="citadels"
+CADDY_CONF="/etc/caddy/Caddyfile"
 NODE_MAJOR=20
 
 MODE=""
@@ -56,7 +60,7 @@ SKIP_BACKUP=false
 SKIP_BUILD=false
 DOMAIN=""
 EMAIL=""
-GIT_URL=""
+GIT_URL="https://github.com/zerg54321/citadels-online.git"
 BRANCH="main"
 ASSUME_YES=false
 
@@ -79,7 +83,7 @@ log()  { echo "[deploy] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
 warn() { echo "[deploy WARN] $*" >&2; }
 fail() { echo "[deploy ERROR] $*" >&2; exit 1; }
 
-# Must run as root (systemd / nginx / ufw / apt need it).
+# Must run as root (systemd / caddy / ufw / apt need it).
 [ "$(id -u)" -eq 0 ] || fail "请以 root 运行 (sudo bash scripts/deploy.sh)"
 
 # Resolve repo dir: prefer the git root the script lives in, else the default.
@@ -114,8 +118,19 @@ install_deps() {
   log "安装系统依赖 (Debian)..."
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y
-  apt-get install -y ca-certificates curl gnupg git build-essential nginx ufw openssl \
-    lsb-release
+  apt-get install -y ca-certificates curl gnupg git build-essential ufw openssl \
+    lsb-release debian-keyring debian-archive-keyring apt-transport-https
+  # Install Caddy from the official Cloudsmith repo (replaces nginx + certbot;
+  # Caddy handles reverse proxy + automatic Let's Encrypt TLS in one binary).
+  if ! command -v caddy >/dev/null 2>&1; then
+    log "安装 Caddy (官方源)..."
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+      | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.sh' \
+      | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+    apt-get update -y
+    apt-get install -y caddy
+  fi
   if ! command -v node >/dev/null 2>&1; then
     log "安装 Node.js ${NODE_MAJOR}.x (NodeSource)..."
     curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
@@ -123,6 +138,7 @@ install_deps() {
   fi
   node -v
   npm -v
+  caddy version
 }
 
 ensure_repo() {
@@ -189,81 +205,61 @@ EOF
   systemctl daemon-reload
 }
 
-write_nginx_site() {
-  log "写入 Nginx 站点: ${NGINX_SITE}"
-  local server_name="_"
-  [ -n "$DOMAIN" ] && server_name="$DOMAIN"
-  cat > "/etc/nginx/sites-available/${NGINX_SITE}" <<EOF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${server_name};
+write_caddyfile() {
+  log "写入 Caddyfile: ${CADDY_CONF}"
+  # With a domain Caddy serves HTTPS (auto cert) and redirects 80→443.
+  # Without one it serves plain HTTP on :80 (IP-only deploy).
+  local site_addr=":80"
+  [ -n "$DOMAIN" ] && site_addr="${DOMAIN}"
+  local global_block=""
+  if [ -n "$EMAIL" ]; then
+    global_block="{
+    email ${EMAIL}
+}
 
-    client_max_body_size 10m;
+"
+  fi
+  cat > "$CADDY_CONF" <<EOF
+${global_block}${site_addr} {
+    encode zstd gzip
 
     # Block the admin management API from the public internet entirely.
     # Admin is only reachable via an SSH tunnel to 127.0.0.1:8081, which
-    # bypasses Nginx. This is a third independent gate on top of the
-    # IP-allowlist + token checks enforced inside Node.
-    location /api/admin {
-        return 404;
+    # bypasses Caddy. Third independent gate on top of the IP-allowlist +
+    # token checks enforced inside Node.
+    @admin path /api/admin /api/admin/*
+    handle @admin {
+        respond 404
     }
 
-    # Socket.IO WebSocket endpoint
-    location /s/ {
-        proxy_pass http://127.0.0.1:${APP_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
-    }
-
-    # SPA + REST API
-    location / {
-        proxy_pass http://127.0.0.1:${APP_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
+    # SPA + REST API + Socket.IO WebSocket (Caddy upgrades the connection
+    # automatically, no per-location WebSocket plumbing needed).
+    reverse_proxy 127.0.0.1:${APP_PORT}
 }
 EOF
-  ln -sf "/etc/nginx/sites-available/${NGINX_SITE}" "/etc/nginx/sites-enabled/${NGINX_SITE}"
-  # Remove the default site if it conflicts on port 80.
-  rm -f /etc/nginx/sites-enabled/default
-  nginx -t
-  systemctl reload nginx || systemctl restart nginx
+  chmod 644 "$CADDY_CONF"
+  caddy validate --config "$CADDY_CONF" --adapter caddyfile
+  systemctl enable caddy >/dev/null 2>&1 || true
+  systemctl restart caddy || systemctl reload caddy
 }
 
 setup_firewall() {
   log "配置 ufw 防火墙..."
   ufw allow OpenSSH >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null 2>&1 || true
-  ufw allow 'Nginx Full' >/dev/null 2>&1 || { ufw allow 80/tcp >/dev/null 2>&1 || true; ufw allow 443/tcp >/dev/null 2>&1 || true; }
+  ufw allow 80/tcp >/dev/null 2>&1 || true
+  ufw allow 443/tcp >/dev/null 2>&1 || true
   yes | ufw --force enable >/dev/null 2>&1 || true
   ufw status || true
 }
 
-setup_tls() {
+update_cors_origin() {
   [ -z "$DOMAIN" ] && return 0
-  log "申请 Let's Encrypt 证书: ${DOMAIN}"
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get install -y certbot python3-certbot-nginx
-  local certbot_args=(--nginx -d "$DOMAIN" --non-interactive --agree-tos --redirect)
-  if [ -n "$EMAIL" ]; then
-    certbot_args+=(--email "$EMAIL")
-  else
-    certbot_args+=(--register-unsafely-without-email)
-  fi
-  certbot "${certbot_args[@]}"
-  # Make sure the app knows its public origin.
+  # Caddy obtains & renews the TLS certificate itself — no certbot step needed.
+  # We only make the app aware of its public origin: ensure_env sets this on
+  # first install, this covers later --domain additions on an existing .env.
   if [ -f "$REPO_DIR/.env" ] && grep -q '^CORS_ORIGIN=' "$REPO_DIR/.env"; then
     sed -i "s|^CORS_ORIGIN=.*|CORS_ORIGIN=https://${DOMAIN}|" "$REPO_DIR/.env"
+    log "已更新 CORS_ORIGIN=https://${DOMAIN}"
   fi
 }
 
@@ -336,15 +332,16 @@ if [ "$MODE" = "install" ]; then
     log "跳过构建步骤"
   fi
   write_systemd_unit
-  write_nginx_site
+  write_caddyfile
+  update_cors_origin
   setup_firewall
-  setup_tls
   start_service
   health_check
   log "首次部署完成 ✓"
   log "  本机:   $HEALTH_URL"
   [ -n "$DOMAIN" ] && log "  公网:   https://${DOMAIN}"
-  log "  日志:   journalctl -u $SERVICE_NAME -f"
+  log "  应用日志: journalctl -u $SERVICE_NAME -f"
+  log "  反代日志: journalctl -u caddy -f"
   log "  更新:   bash scripts/deploy.sh"
   exit 0
 fi
@@ -367,9 +364,9 @@ fi
 # Refresh unit/env wiring in case the repo moved or .env was added.
 ensure_env
 write_systemd_unit
-# Reload nginx if the site config changed.
-if [ -f "/etc/nginx/sites-enabled/${NGINX_SITE}" ]; then
-  nginx -t && systemctl reload nginx || true
+# Reload Caddy if the Caddyfile changed.
+if [ -f "$CADDY_CONF" ]; then
+  caddy validate --config "$CADDY_CONF" --adapter caddyfile && systemctl reload caddy || true
 fi
 start_service
 health_check

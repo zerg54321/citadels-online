@@ -14,6 +14,16 @@ export interface GameSlice {
   currentRoomId: RoomId | null;
   isConnected: boolean;
   /**
+   * Set by leaveRoom() to the room the local player just left. RoomEntryScreen
+   * reads this on mount to suppress its auto-join: leaveRoom clears gameState
+   * synchronously, which flips useIsInRoom to false and makes RoomScreen render
+   * <RoomEntryScreen /> before the caller's navigate('/') runs — without this
+   * guard RoomEntryScreen would immediately call joinRoom on the same room,
+   * re-adding the player ("leave then instantly re-enter" bug). Cleared
+   * shortly after by a timeout and on the next successful joinRoom.
+   */
+  recentlyLeftRoomId: RoomId | null;
+  /**
    * Character ids (1-based, matching server `callable[].id`) the local player
    * has seen face-up during their own CHOOSE_CHARACTER pick this round. Used
    * by the assassin/thief target grid to grey out cards the player never saw
@@ -42,7 +52,6 @@ export interface GameSlice {
   joinRoom: (params: { roomId: RoomId; playerId: PlayerId; username: string; asSpectator?: boolean }) => Promise<ClientGameState>;
   rejoinCurrentRoom: () => Promise<void>;
   leaveRoom: () => Promise<void>;
-  leaveRoomSilent: () => Promise<void>;
   startGame: () => Promise<void>;
   sendMove: (move: Move) => Promise<void>;
   setAutoplay: (enabled: boolean) => Promise<any>;
@@ -63,6 +72,7 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
   currentRoomId: null,
   isConnected: socket.connected,
   seenCharacterIds: [],
+  recentlyLeftRoomId: null,
 
   setGameState: (gs) => set({ gameState: gs }),
   setCurrentRoomId: (roomId) => set({ currentRoomId: roomId }),
@@ -136,7 +146,7 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
     await get().connect();
     const gs = await api.joinRoom(socket, roomId, playerId, username, asSpectator);
     localStorage.setItem(roomId, gs.self);
-    set({ currentRoomId: roomId, gameState: gs });
+    set({ currentRoomId: roomId, gameState: gs, recentlyLeftRoomId: null });
     return gs;
   },
 
@@ -155,32 +165,42 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
   },
 
   async leaveRoom() {
+    const leavingRoomId = get().currentRoomId;
     try {
-      if (socket.connected && get().currentRoomId) {
+      if (socket.connected && leavingRoomId) {
         await new Promise<void>((resolve) => {
+          let done = false;
+          const finish = () => { if (!done) { done = true; resolve(); } };
           socket.emit('leave room', (res: any) => {
             if (res?.status !== 'ok') console.warn('leave room failed', res?.message);
-            resolve();
+            finish();
           });
+          // Guard against a hung ack (e.g. socket drops mid-emit): without
+          // this, resetGameState in `finally` would never run and the store
+          // would keep currentRoomId/gameState, causing an auto-rejoin on the
+          // next reconnect.
+          setTimeout(finish, 3000);
         });
       }
     } catch (e) {
       console.warn('leave room error', e);
     } finally {
       if (socket.connected) socket.disconnect();
+      // Record the room we just left BEFORE clearing gameState. RoomScreen
+      // re-renders synchronously once gameState is undefined and would mount
+      // RoomEntryScreen, whose auto-join would re-add us to this very room.
+      // RoomEntryScreen checks recentlyLeftRoomId to skip that auto-join.
+      set({ recentlyLeftRoomId: leavingRoomId });
       get().resetGameState();
       get().reconnectSocket();
+      // Clear the guard after the leave/navigation race window has passed so
+      // a later manual visit to the same room URL can auto-join normally.
+      setTimeout(() => {
+        if (get().recentlyLeftRoomId === leavingRoomId) {
+          set({ recentlyLeftRoomId: null });
+        }
+      }, 2000);
     }
-  },
-
-  leaveRoomSilent() {
-    if (!socket.connected || !get().currentRoomId) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      socket.emit('leave room', (res: any) => {
-        if (res?.status !== 'ok') console.warn('leave room silent failed', res?.message);
-        resolve();
-      });
-    });
   },
 
   async startGame() {

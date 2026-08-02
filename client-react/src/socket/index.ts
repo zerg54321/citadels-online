@@ -47,6 +47,13 @@ socket.on('disconnectPlayer', (playerId: unknown) => {
 });
 
 socket.on('update game state', (data: unknown) => {
+  // Ignore state pushes for a room we have already left. After leaveRoom
+  // calls resetGameState(), currentRoomId is null, but a final in-flight
+  // 'update game state' broadcast (server emits to the whole room before
+  // processing our socket.leave) can still land here and would otherwise
+  // repopulate gameState with the old (often FINISHED) state — causing a
+  // freshly-joined lobby to show the previous game's scoreboard.
+  if (!useAppStore.getState().currentRoomId) return;
   useAppStore.getState().setGameState(parseClientGameState(data));
 });
 

@@ -13,14 +13,16 @@ export default function RoomScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isInRoom = useIsInRoom();
-  const leaveRoomSilent = useAppStore((s) => s.leaveRoomSilent);
-  const resetGameState = useAppStore((s) => s.resetGameState);
+  const leaveRoom = useAppStore((s) => s.leaveRoom);
 
   const [leaving, setLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   // useBlocker gives us the pending target location when navigation is
   // attempted while a blocker function returns true.
-  const blocker = useBlocker(() => !!isInRoom);
+  // Read getState() fresh: leaveRoom clears gameState synchronously, but the
+  // `isInRoom` closure is stale until re-render, which would block the
+  // post-leave navigate('/') and let RoomEntryScreen auto-rejoin.
+  const blocker = useBlocker(() => useAppStore.getState().gameState !== undefined);
 
   // Open the confirm modal whenever the blocker triggers (user tried to
   // navigate away while still in a room). This mirrors Vue beforeRouteLeave.
@@ -47,11 +49,10 @@ export default function RoomScreen() {
   const confirmLeave = async () => {
     setLeaving(true);
     try {
-      await leaveRoomSilent();
+      await leaveRoom();
     } catch (e) {
       console.error('leave room failed', e);
     }
-    resetGameState();
     setShowLeaveModal(false);
     setLeaving(false);
     if (blocker.state === 'blocked') {
@@ -71,11 +72,11 @@ export default function RoomScreen() {
             <div className="modal-content lobby-modal">
               <div className="modal-header border-0 pb-2">
                 <h5 className="modal-title text-gold lobby-modal-title">
-                  {t('ui.lobby.leave_room_confirm_title')}
+                  {t('ui.score.leave_room_confirm_title')}
                 </h5>
               </div>
               <div className="modal-body">
-                <p className="text-parchment mb-0">{t('ui.lobby.leave_room_confirm_body')}</p>
+                <p className="text-parchment mb-0">{t('ui.score.leave_room_confirm_body')}</p>
               </div>
               <div className="modal-footer border-0">
                 <button type="button" className="btn btn-outline-gold" onClick={cancelLeave}>

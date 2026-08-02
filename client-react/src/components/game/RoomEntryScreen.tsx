@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { type RoomId } from 'citadels-common';
 import { useAppStore } from '@/store';
 import LoadingSpinner from './elements/LoadingSpinner';
@@ -15,6 +15,7 @@ import LoadingSpinner from './elements/LoadingSpinner';
 // Vue watch (authReady/isLoggedIn) → useEffect pairs. Vue mounted → useEffect.
 export default function RoomEntryScreen() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { roomId: routeRoomId } = useParams();
   const [searchParams] = useSearchParams();
   const roomId = (routeRoomId || '') as RoomId;
@@ -75,6 +76,22 @@ export default function RoomEntryScreen() {
 
   const getRoomInfoAndJoin = async (rid: RoomId) => {
     if (!authReady) return;
+    // Suppress auto-join if the local player just left this very room.
+    // leaveRoom() clears gameState synchronously, which makes RoomScreen
+    // render <RoomEntryScreen /> before the caller's navigate('/') runs.
+    // Without this guard, mounting RoomEntryScreen would call joinRoom on the
+    // room we just left, re-adding the player ("leave then instantly
+    // re-enter" bug). Bounce to home instead.
+    //
+    // IMPORTANT: do NOT clear recentlyLeftRoomId here. This function can run
+    // more than once per mount (StrictMode double-invokes effects, and the
+    // authReady effect below also fires on mount). Clearing the guard on the
+    // first pass would let a subsequent pass slip through and re-join the
+    // room. leaveRoom() clears the guard once its race window has expired.
+    if (useAppStore.getState().recentlyLeftRoomId === rid) {
+      navigate('/', { replace: true });
+      return;
+    }
     let hadError = false;
     try {
       setLoading(true);
@@ -144,16 +161,11 @@ export default function RoomEntryScreen() {
     }
   };
 
-  // Vue mounted: if authReady, getRoomInfo. Runs once on mount.
-  useEffect(() => {
-    if (authReady && roomId) {
-      getRoomInfoAndJoin(roomId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Vue watch authReady(val): if val → getRoomInfo. Handles initial load when
-  // auth not yet ready at mount time.
+  // Runs on mount and whenever authReady flips true. A dependency-array
+  // effect already fires on the initial render, so a separate mount-only
+  // effect is unnecessary. Having both made getRoomInfoAndJoin run twice on
+  // mount: the first call consumed the recentlyLeftRoomId guard and the
+  // second bypassed it, re-joining the room the player had just left.
   useEffect(() => {
     if (authReady && roomId) {
       getRoomInfoAndJoin(roomId);

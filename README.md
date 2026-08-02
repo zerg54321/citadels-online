@@ -127,7 +127,7 @@ node server/dist/index.js
 ### 形态
 
 ```
-Internet → Nginx (80 / 443)
+Internet → Caddy (80 / 443, 自动 HTTPS)
               ├─ /s/  → WebSocket 升级 → Node (8081)
               └─ /    → Node（SPA + API）
 Node 单进程 + 本机 SQLite，systemd 守护
@@ -143,11 +143,13 @@ apt-get update && apt-get install -y git curl
 git clone https://github.com/<you>/citadels-online.git /opt/citadels/citadels-online
 cd /opt/citadels/citadels-online
 bash scripts/deploy.sh --install
-# 有域名 + 免费 HTTPS：
+# 有域名 —— Caddy 自动签发并续期 Let's Encrypt 证书：
+bash scripts/deploy.sh --install --domain citadels.example.com
+# （可选）Let's Encrypt 到期提醒邮箱：
 bash scripts/deploy.sh --install --domain citadels.example.com --email you@example.com
 ```
 
-`--install` 会自动：安装系统依赖与 Node 20、生成 `.env`（含随机 `JWT_SECRET`）、构建三包、写入 systemd 单元、配置 Nginx 反代（含 `/s/` WebSocket）、配置 ufw 防火墙、（可选）Let's Encrypt 证书并启动。脚本幂等，可重复执行。
+`--install` 会自动：安装系统依赖与 Node 20、生成 `.env`（含随机 `JWT_SECRET`）、构建三包、写入 systemd 单元、配置 Caddy 反代（自动处理 `/s/` WebSocket 升级与 80→443 跳转）、配置 ufw 防火墙、（传 `--domain` 时自动签发 Let's Encrypt 证书）并启动。脚本幂等，可重复执行。
 
 ### 后续更新（仓库目录内）
 
@@ -160,12 +162,12 @@ bash scripts/deploy.sh --skip-build # 仅重启（已手动构建时）
 
 | 变量 | 用途 | 开发默认 | 生产 |
 |---|---|---|---|
-| `PORT` | HTTP 端口 | `8081` | `8081`（由 Nginx 反代） |
+| `PORT` | HTTP 端口 | `8081` | `8081`（由 Caddy 反代） |
 | `NODE_ENV` | `development` / `production` | development | production |
 | `DATABASE_PATH` | SQLite 路径 | `./data/citadels.sqlite` | `/opt/citadels/data/citadels.sqlite` |
 | `JWT_SECRET` | 登录态密钥 | 本地固定测试串 | 强随机，由 deploy.sh 自动生成 |
 | `CORS_ORIGIN` | 生产允许的前端来源 | `http://localhost:8081` | 站点公网 URL |
-| `ENFORCE_HTTPS` | Node 直连 TLS 时才置 1 | `0` | `0`（由 Nginx 处理 80→443） |
+| `ENFORCE_HTTPS` | Node 直连 TLS 时才置 1 | `0` | `0`（由 Caddy 处理 80→443） |
 
 - 提供 `.env.example`，**不提交** `.env`
 - 禁止把密钥写进前端 `VITE_*`
@@ -175,7 +177,7 @@ bash scripts/deploy.sh --skip-build # 仅重启（已手动构建时）
 - [ ] Node 主版本与开发一致（20.x）
 - [ ] `NODE_ENV=production`
 - [ ] 已 build `client-react`，非 dev 代理
-- [ ] Nginx 已开启 WebSocket（`/s/`）
+- [ ] Caddy 已运行（自动处理 `/s/` WebSocket 与 HTTPS）
 - [ ] `JWT_SECRET` 非默认值
 - [ ] 防火墙仅开放 22 / 80 / 443
 

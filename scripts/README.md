@@ -224,10 +224,10 @@ node scripts\sim-6p.js --watch --delay 800 --max-steps 2000
 ```bash
 # 首次（fresh Vultr Debian 12，root）
 bash scripts/deploy.sh --install
-# 带域名 + HTTPS
-bash scripts/deploy.sh --install --domain citadels.example.com --email you@example.com
+# 带域名 —— Caddy 自动签发并续期 HTTPS 证书
+bash scripts/deploy.sh --install --domain citadels.example.com
 # 后续更新
 bash scripts/deploy.sh
 ```
 
-`--install` 自动安装依赖 / Node 20 / 构建 / systemd / Nginx 反代（含 `/s/` WebSocket）/ ufw / 可选 Let's Encrypt。脚本幂等。
+`--install` 自动安装依赖 / Node 20 / Caddy / 构建 / systemd / Caddy 反代（自动 `/s/` WebSocket + HTTPS）/ ufw。脚本幂等。

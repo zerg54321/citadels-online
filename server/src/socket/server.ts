@@ -90,8 +90,27 @@ export function initSocket(io: Server) {
           const room = gameStore.findRoom(roomId);
           if (room) {
             const player = room.gameState.getPlayer(socket.playerId);
-            if (player) player.online = false;
-            socket.to(roomId).emit('left room', socket.playerId);
+            if (!player) return;
+
+            // In the lobby a dropped/closed connection vacates the seat
+            // outright — keeping it as an offline ghost would block the 6-seat
+            // lobby from filling and is exactly the "still in the room after
+            // leaving" bug. Mid-game we keep the seat (offline) so the player
+            // can reconnect and resume their turn.
+            if (room.gameState.progress === GameProgress.IN_LOBBY) {
+              room.gameState.removePlayer(socket.playerId);
+              room.io.to(roomId).emit('remove player', socket.playerId);
+              room.update();
+            } else {
+              player.online = false;
+              socket.to(roomId).emit('left room', socket.playerId);
+              // Push the full state so every remaining client immediately sees
+              // this seat as offline. The 'left room' event alone is not
+              // sufficient, and without a state push the offline flag would
+              // only surface on the next update (e.g. the timeout autoplay),
+              // leaving the table guessing whether the player dropped.
+              room.update();
+            }
 
             // remove room only when it has no remaining players
             setImmediate(() => {
@@ -129,6 +148,13 @@ export function initSocket(io: Server) {
           return;
         }
         safeLeaveRoom(room, socket.playerId!, callback);
+        // Stop receiving room events for the room we just left. Without this,
+        // a silent leave (no socket.disconnect) keeps pushing 'update game
+        // state' to the leaver, which can repopulate the local store after it
+        // was cleared.
+        socket.leave(room.roomId);
+        socket.roomId = undefined;
+        socket.playerId = undefined;
       } catch (err) {
         console.error('[leave room] handler failed', err);
         callback({ status: 'error', message: 'internal server error' });

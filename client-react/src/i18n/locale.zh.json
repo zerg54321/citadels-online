@@ -219,6 +219,8 @@
             "stat_hand": "手牌数",
             "stat_score": "实时得分",
             "stat_city": "已建城区",
+            "status_offline": "离线",
+            "status_hosted": "托管",
             "no_buildings": "暂无建筑",
             "warn_destroy_ally": "确定要拆除队友「{name}」的建筑吗？这通常会损害己方利益。",
             "destroy_confirm_title": "拆除确认",

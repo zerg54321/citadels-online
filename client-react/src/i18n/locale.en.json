@@ -219,6 +219,8 @@
             "stat_hand": "Cards in hand",
             "stat_score": "Score",
             "stat_city": "Districts built",
+            "status_offline": "Offline",
+            "status_hosted": "Autoplay",
             "no_buildings": "No districts yet",
             "warn_destroy_ally": "Destroy a district owned by ally \"{name}\"? This usually hurts your team.",
             "destroy_confirm_title": "Destroy Confirmation",

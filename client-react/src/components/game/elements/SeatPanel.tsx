@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  DistrictId, Move, MoveType, PlayerBoard,
+  DistrictId, Move, MoveType, PlayerBoard, PlayerRole,
 } from 'citadels-common';
 import Modal from '@/components/common/Modal';
 import { cn } from '@/utils/cn';
@@ -56,6 +56,17 @@ export default function SeatPanel({
   const avatarSrc = player?.avatar ? avatarUrl(player.avatar) : '';
   const isCurrentPlayer = currentPlayerId === playerId;
   const isActingNow = isCurrentPlayer && gameProgress === 'IN_GAME';
+
+  // Seat status tag: tell a disconnected seat apart from one that is being
+  // auto-played (hosted). AI seats show nothing — they are always automated.
+  // Offline takes priority: after a disconnect the seat also times out into
+  // autoplay, but "offline" is the more meaningful signal to the table.
+  const seatStatus = (() => {
+    if (!player || player.role !== PlayerRole.PLAYER || player.isAi) return null;
+    if (!player.online) return 'offline';
+    if (player.isAutoplay) return 'hosted';
+    return null;
+  })();
 
   const roleCard = (() => {
     const chars = (board?.characters || []) as Array<{ id: number; faceDown?: boolean; killed?: boolean; robbed?: boolean }>;
@@ -136,6 +147,11 @@ export default function SeatPanel({
           <span className="seat-panel__pick-no" title={t('ui.game.pick_order_tip')}>{pickOrder}</span>
           {avatarSrc && <img src={avatarSrc} alt="" className="seat-panel__avatar" />}
           <span className="text-truncate flex-fill seat-panel__name">{username}</span>
+          {seatStatus && (
+            <span className={`seat-panel__status seat-panel__status--${seatStatus}`}>
+              {t(seatStatus === 'offline' ? 'ui.game.status_offline' : 'ui.game.status_hosted')}
+            </span>
+          )}
           <span className="seat-panel__chip seat-panel__chip--gold" title={t('ui.game.stat_gold')}>
             <span className="seat-panel__chip-icon"><Emoji emoji="🪙" /></span>
             <span className="seat-panel__chip-val">{board.stash ?? 0}</span>

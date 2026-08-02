@@ -60,13 +60,31 @@ if errorlevel 1 (
 )
 popd
 
+echo [dev-start] building client-react...
+REM The server (port 8081) also serves client-react/dist as a static fallback
+REM behind the history() SPA shim, so a stale dist would expose an outdated
+REM UI to anyone hitting :8081 directly. Rebuild it on every start to keep
+REM the served bundle in sync with the source. (Vite dev on :3010 is
+REM unaffected ¡ª it serves from source with HMR.)
+pushd "%ROOT%\client-react"
+call npm.cmd run build
+if errorlevel 1 (
+  popd
+  echo [dev-start] ERROR: client-react build failed
+  exit /b 1
+)
+popd
+
 echo [dev-start] starting server on port %SERVER_PORT%...
 REM CITADELS_FAST=1 shortens phase timers (handy for sim-6p); remove for human-paced play
-REM ADMIN_TOKEN / ADMIN_ALLOW_IPS enable the local /admin console. This is a
-REM fixed dev-only token (the IP allowlist restricts access to loopback, so it
-REM is safe to ship in the dev script). Replace with a random token in prod.
+REM ADMIN_TOKEN / ADMIN_ALLOW_IPS enable the local /admin console (dev-only,
+REM loopback-restricted). Replace with a random token in prod.
+REM Start-Process WITHOUT -RedirectStandard* (UseShellExecute=true) so the
+REM long-lived node process does not inherit the caller's stdout pipe handle
+REM (which would block `cmd /c dev-start.cmd` from returning). The inner
+REM `cmd /c` `>` / `2>` redirects node output to the log files instead.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$env:CITADELS_FAST='1'; $env:ADMIN_TOKEN='dev-only-admin-token-0123456789abcdef0123456789abcdef0123456789abcdef'; $env:ADMIN_ALLOW_IPS='127.0.0.1,::1'; $p = Start-Process -FilePath 'node' -ArgumentList 'dist/index.js' -WorkingDirectory '%ROOT%\server' -RedirectStandardOutput '%LOG_DIR%\server.out.log' -RedirectStandardError '%LOG_DIR%\server.err.log' -PassThru -WindowStyle Hidden; Set-Content -Path '%PID_DIR%\server.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] server pid ' + $p.Id + ' CITADELS_FAST=1')"
+  "$env:CITADELS_FAST='1'; $env:ADMIN_TOKEN='dev-only-admin-token-0123456789abcdef0123456789abcdef0123456789abcdef'; $env:ADMIN_ALLOW_IPS='127.0.0.1,::1'; $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c node dist\index.js > %LOG_DIR%\server.out.log 2> %LOG_DIR%\server.err.log' -WorkingDirectory '%ROOT%\server' -WindowStyle Hidden -PassThru; Set-Content -Path '%PID_DIR%\server.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] server pid ' + $p.Id + ' CITADELS_FAST=1')"
 if errorlevel 1 (
   echo [dev-start] ERROR: failed to start server
   exit /b 1
@@ -74,7 +92,7 @@ if errorlevel 1 (
 
 echo [dev-start] starting client-react on port %REACT_PORT%...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$p = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','dev','--','--host','0.0.0.0','--port','%REACT_PORT%' -WorkingDirectory '%ROOT%\client-react' -RedirectStandardOutput '%LOG_DIR%\client-react.out.log' -RedirectStandardError '%LOG_DIR%\client-react.err.log' -PassThru -WindowStyle Hidden; Set-Content -Path '%PID_DIR%\client-react.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] client-react pid ' + $p.Id)"
+  "$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c npm.cmd run dev -- --host 0.0.0.0 --port %REACT_PORT% > %LOG_DIR%\client-react.out.log 2> %LOG_DIR%\client-react.err.log' -WorkingDirectory '%ROOT%\client-react' -WindowStyle Hidden -PassThru; Set-Content -Path '%PID_DIR%\client-react.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] client-react pid ' + $p.Id)"
 if errorlevel 1 (
   echo [dev-start] ERROR: failed to start client-react - stopping server
   call "%~dp0dev-stop.cmd"

@@ -85,6 +85,20 @@ export default defineConfig({
       '/api': 'http://localhost:8081',
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        quietDeps: true,
+        silenceDeprecations: [
+          'import',
+          'global-builtin',
+          'color-functions',
+          'if-function',
+          'abs-percent',
+        ],
+      },
+    },
+  },
   define: { 'process.env': {} },
   resolve: {
     alias: {

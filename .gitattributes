@@ -1,0 +1,6 @@
+# CMD/BAT batch files require CRLF line endings — the Windows command
+# interpreter mis-parses LF-only files (fragmenting commands like
+# `setlocal` into `tlocal`, breaking `if errorlevel` blocks, etc.). Force
+# CRLF on checkout so git never re-normalizes them to LF.
+*.cmd text eol=crlf
+*.bat text eol=crlf

@@ -1,0 +1,141 @@
+// Hand-written utility layer that replaces Bootstrap 4's `_utilities.scss`
+// for the subset of classes actually used in client-react (see
+// docs/bootstrap-usage-baseline.txt). Class names are kept identical to
+// Bootstrap's so the 35 component files need zero className changes
+// (BOOTSTRAP_REMOVAL_PLAN §3.2.1).
+//
+// Per plan §4.2 only the classes that appear in the codebase are generated
+// — no full BS4 scale. Tokens come from _tokens.scss. All rules use
+// !important to mirror BS4's `$enable-important-utilities: true` default.
+
+// ── Spacing ─────────────────────────────────────────────────────────────────
+// Only the indices actually used (baseline §A.2 + pt-3 from DistrictCard).
+// BS4 $spacers: 0 / .25 / .5 / 1 / 1.5 / 3 rem.
+@each $i in 0 1 2 3 4 { .p-#{$i}  { padding:       var(--space-#{$i}) !important; } }
+@each $i in 1 3      { .pt-#{$i} { padding-top:    var(--space-#{$i}) !important; } }
+                     .pb-2      { padding-bottom:  var(--space-2)    !important; }
+@each $i in 0 1 2 3  { .px-#{$i} { padding-left:   var(--space-#{$i}) !important; padding-right: var(--space-#{$i}) !important; } }
+@each $i in 0 2 4 5  { .py-#{$i} { padding-top:    var(--space-#{$i}) !important; padding-bottom: var(--space-#{$i}) !important; } }
+@each $i in 0 1      { .m-#{$i}  { margin:         var(--space-#{$i}) !important; } }
+@each $i in 1 2 3 4  { .mt-#{$i} { margin-top:     var(--space-#{$i}) !important; } }
+@each $i in 0 2 3 4  { .mb-#{$i} { margin-bottom:  var(--space-#{$i}) !important; } }
+@each $i in 1 2      { .ml-#{$i} { margin-left:    var(--space-#{$i}) !important; } }
+@each $i in 1 2      { .mr-#{$i} { margin-right:   var(--space-#{$i}) !important; } }
+                     .gap-2     { gap:             var(--space-2)    !important; }
+
+// Negative margin — only mx-n1 is used (CharactersList.tsx:92).
+.mx-n1 {
+  margin-left: calc(var(--space-1) * -1) !important;
+  margin-right: calc(var(--space-1) * -1) !important;
+}
+
+// ── Display ─────────────────────────────────────────────────────────────────
+.d-flex  { display: flex !important; }
+.d-block { display: block !important; }
+
+// ── Flexbox ─────────────────────────────────────────────────────────────────
+.flex-column         { flex-direction: column !important; }
+.flex-column-reverse { flex-direction: column-reverse !important; }
+.flex-wrap           { flex-wrap: wrap !important; }
+.flex-wrap-reverse   { flex-wrap: wrap-reverse !important; }
+.flex-fill           { flex: 1 1 auto !important; }
+.flex-grow-1         { flex-grow: 1 !important; }
+.flex-shrink-0       { flex-shrink: 0 !important; }
+.justify-content-start  { justify-content: flex-start !important; }
+.justify-content-center { justify-content: center !important; }
+.justify-content-between{ justify-content: space-between !important; }
+.align-items-center { align-items: center !important; }
+.align-items-end    { align-items: flex-end !important; }
+.align-self-end     { align-self: flex-end !important; }
+
+// ── Sizing ──────────────────────────────────────────────────────────────────
+.h-100 { height: 100% !important; }
+.w-100 { width: 100% !important; }
+
+// ── Vertical align ──────────────────────────────────────────────────────────
+.align-top { vertical-align: top !important; }
+
+// ── Text ────────────────────────────────────────────────────────────────────
+.text-center  { text-align: center !important; }
+.text-left    { text-align: left !important; }
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-wrap    { white-space: normal !important; }
+.small        { font-size: 87.5% !important; }
+.font-weight-bold { font-weight: 700 !important; }
+.font-italic      { font-style: italic !important; }
+.text-reset { color: inherit !important; text-decoration: none !important; }
+
+// ── Position ────────────────────────────────────────────────────────────────
+.position-relative { position: relative !important; }
+
+// ── Overflow ────────────────────────────────────────────────────────────────
+.overflow-auto    { overflow: auto !important; }
+.overflow-hidden  { overflow: hidden !important; }
+
+// ── Border ──────────────────────────────────────────────────────────────────
+.border    { border: 1px solid var(--list-group-border-color) !important; }
+.border-0  { border: 0 !important; }
+@each $name, $val in (
+  'primary'   var(--c-primary),
+  'secondary' var(--c-secondary),
+  'light'     var(--c-light),
+  'dark'      var(--c-dark),
+) {
+  .border-#{$name} { border-color: #{$val} !important; }
+}
+
+// ── Radius ──────────────────────────────────────────────────────────────────
+.rounded { border-radius: var(--radius) !important; }
+
+// ── Shadow ──────────────────────────────────────────────────────────────────
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+
+// ── Background color ────────────────────────────────────────────────────────
+// Full color set retained — `bg-${color}` is dynamically concatenated in
+// DistrictCard / CharactersList / PlayerCity / SeatPanel (baseline §C), so
+// every entry must exist as a real CSS rule for the runtime lookup to resolve.
+// `.bg-black` and `.bg-purple` are also provided here (previously duplicated
+// in main.scss; that duplicate was removed during review).
+@each $name, $val in (
+  'primary'   var(--c-primary),
+  'secondary' var(--c-secondary),
+  'success'   var(--c-success),
+  'info'      var(--c-info),
+  'warning'   var(--c-warning),
+  'danger'    var(--c-danger),
+  'light'     var(--c-light),
+  'dark'      var(--c-dark),
+  'purple'    var(--c-purple),
+  'black'     var(--c-black),
+  'white'     var(--c-white),
+) {
+  .bg-#{$name} { background-color: #{$val} !important; }
+}
+
+// ── Text color ──────────────────────────────────────────────────────────────
+// Only colors actually used: danger (static), light/dark (dynamic per §C),
+// white (static, e.g. `bg-warning text-white`).
+@each $name, $val in (
+  'danger' var(--c-danger),
+  'light'  var(--c-light),
+  'dark'   var(--c-dark),
+  'white'  var(--c-white),
+) {
+  .text-#{$name} { color: #{$val} !important; }
+}
+
+// Lighter text variants (not from the theme-color map).
+.text-white-50 { color: rgba(255, 255, 255, 0.5) !important; }
+.text-muted    { color: var(--c-secondary) !important; }
+
+// ── Opacity (BS4 4.2+ scale) ────────────────────────────────────────────────
+// Only opacity-50 / opacity-75 are used (ActionLog, CenterPanel, GameTopBar,
+// CharactersList). `.opacity-0` is intentionally NOT defined here — main.scss
+// owns the separate custom `.opacity-0..5` scale (0/.2/.4/.6/.8/1) used by
+// DistrictCard; defining `.opacity-0` here would duplicate it.
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-75 { opacity: 0.75 !important; }

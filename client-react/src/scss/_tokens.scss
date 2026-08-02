@@ -1,0 +1,109 @@
+// Design tokens — Bootstrap 4 defaults mirrored as CSS custom properties so
+// the hand-written utility / component layers in _utilities.scss and
+// _components.scss can reference them without a SCSS variables layer.
+//
+// Values are aligned with Bootstrap 4.6 ($spacers, $grid-breakpoints, theme
+// colors, $border-radius, $modal-* ) to keep the same-name utility classes
+// visually identical after Bootstrap is removed (see BOOTSTRAP_REMOVAL_PLAN
+// §3.2 / §4.1).
+
+// ── Box-sizing reset (carried forward from BS4 reboot.scss) ─────────────────
+// BS4's first reboot rule set `box-sizing: border-box` globally; without it
+// every declared height/width becomes content-box and borders/padding push
+// elements past their stated size. Concretely: `.district-card--small`
+// (height:4rem) + inner `.card` 1px border + `.p-1` padding grew to ~4.56rem
+// under content-box, overflowing seat panels and forcing scrollbars at 2/4
+// rows of built districts. This rule must load before any component SCSS.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  // ── Spacing (BS4 $spacers) ────────────────────────────────────────────────
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 3rem;
+
+  // ── Grid breakpoints (BS4 $grid-breakpoints) ──────────────────────────────
+  --bp-sm: 576px;
+  --bp-md: 768px;
+  --bp-lg: 992px;
+  --bp-xl: 1200px;
+
+  // ── Container max-widths (BS4 $container-max-widths) ──────────────────────
+  --container-sm: 540px;
+  --container-md: 720px;
+  --container-lg: 960px;
+  --container-xl: 1140px;
+
+  // ── Theme colors (BS4 $theme-colors) ──────────────────────────────────────
+  --c-primary: #007bff;
+  --c-secondary: #6c757d;
+  --c-success: #28a745;
+  --c-info: #17a2b8;
+  --c-warning: #ffc107;
+  --c-danger: #dc3545;
+  --c-light: #f8f9fa;
+  --c-dark: #343a40;
+  --c-purple: #6f42c1;
+  --c-black: #000;
+  --c-white: #fff;
+
+  // Lighter/darker tints used by alert-bg / list-group-item-warning etc.
+  // (BS4 color-level() output approximated as literals to avoid pulling the
+  // full BS color function system.)
+  --c-danger-bg: #f8d7da;
+  --c-danger-border: #f5c6cb;
+  --c-danger-text: #721c24;
+  --c-warning-bg: #fff3cd;
+  --c-warning-border: #ffeeba;
+  --c-warning-text: #856404;
+  --c-success-bg: #d4edda;
+  --c-success-text: #155724;
+  --c-info-bg: #d1ecf1;
+  --c-info-text: #0c5460;
+  --c-primary-bg: #b8daff;
+  --c-primary-text: #004085;
+
+  // ── Radius / shadow (BS4 $border-radius* / $box-shadow*) ──────────────────
+  --radius: 0.25rem;
+  --radius-sm: 0.2rem;
+  --radius-lg: 0.3rem;
+  --radius-pill: 10rem;
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+
+  // ── Modal (BS4 $modal-*) ──────────────────────────────────────────────────
+  --modal-zindex: 1050;
+  --modal-md: 500px;
+  --modal-content-bg: #fff;
+  --modal-content-border-color: rgba(0, 0, 0, 0.2);
+  --modal-content-border-radius: 0.3rem;
+  --modal-content-box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+  --modal-inner-padding: 1rem;
+  --modal-header-border-color: #dee2e6;
+  --modal-footer-border-color: #dee2e6;
+  --modal-header-padding-y: 1rem;
+  --modal-header-padding-x: 1rem;
+
+  // ── Component surface colors (BS4 $card-* / $list-group-* / $input-*) ─────
+  --card-border-color: rgba(0, 0, 0, 0.125);
+  --card-cap-bg: rgba(0, 0, 0, 0.03);
+  --list-group-border-color: rgba(0, 0, 0, 0.125);
+  --list-group-action-active-bg: #f8f9fa;
+  --input-bg: #fff;
+  --input-color: #495057;
+  --input-border-color: #ced4da;
+  --input-placeholder-color: #6c757d;
+
+  // ── Body / link defaults (BS4 $body-* / $link-*) ──────────────────────────
+  --body-bg: #fff;
+  --body-color: #212529;
+  --link-color: #007bff;
+}

@@ -1,0 +1,68 @@
+// Bootstrap 4 grid subset — only the classes actually used (container /
+// container-fluid / container-lg / row / col / col-auto / col-lg-4|5|7|8).
+// See BOOTSTRAP_REMOVAL_PLAN §4.4. Gutters and breakpoints align with BS4
+// defaults ($grid-gutter-width: 30px ⇒ ±15px, $grid-breakpoints).
+
+// ── Containers ──────────────────────────────────────────────────────────────
+.container,
+.container-fluid,
+.container-lg {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.container {
+  @media (min-width: 576px) { max-width: 540px; }
+  @media (min-width: 768px) { max-width: 720px; }
+  @media (min-width: 992px) { max-width: 960px; }
+  @media (min-width: 1200px) { max-width: 1140px; }
+}
+
+.container-lg {
+  @media (min-width: 992px) { max-width: 960px; }
+}
+
+// ── Row ─────────────────────────────────────────────────────────────────────
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.no-gutters {
+  margin-right: 0;
+  margin-left: 0;
+  > .col,
+  > [class*='col-'] {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+// ── Columns ─────────────────────────────────────────────────────────────────
+// `.col` is a flex grow unit; `.col-auto` sizes to content; `.col-lg-*` are
+// fixed percentage widths at >= 992px. Only the col-lg variants actually
+// used by HomeScreen (4 / 5 / 7 / 8) are generated.
+.col,
+.col-auto,
+.col-lg-4, .col-lg-5, .col-lg-7, .col-lg-8 {
+  position: relative;
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+.col      { flex: 1 0 0%; max-width: 100%; }
+.col-auto { flex: 0 0 auto; width: auto; max-width: 100%; }
+
+@media (min-width: 992px) {
+  .col-lg-4  { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-lg-5  { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-lg-7  { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-lg-8  { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .mb-lg-0 { margin-bottom: 0 !important; }
+}

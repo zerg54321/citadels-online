@@ -1,0 +1,446 @@
+// Bootstrap 4 component classes used by client-react (modal / card / badge /
+// list-group / btn / alert / form / spinner / table). Reimplemented against
+// the _tokens.scss CSS variables with values matching Bootstrap 4.6 source
+// (BOOTSTRAP_REMOVAL_PLAN §4.3).
+//
+// Per plan §4.2 only the variants actually used are generated — no full BS4
+// color matrix. Class names are kept identical to Bootstrap so component
+// files need zero className changes. Custom project classes (.app-modal /
+// .lobby-modal / .btn-gold / .medieval-panel …) live in the loaded-later
+// SCSS files and override the base styles here via the cascade.
+
+// ── Modal ───────────────────────────────────────────────────────────────────
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--modal-zindex);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: 0;
+  display: none;
+}
+.modal.show.d-block { display: block; }
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 0.5rem;
+  pointer-events: none;
+}
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100% - 1rem);
+}
+.modal-dialog-scrollable {
+  display: flex;
+  max-height: calc(100% - 3.5rem);
+}
+.modal-dialog-scrollable .modal-content {
+  max-height: 100%;
+  overflow: hidden;
+}
+.modal-dialog-scrollable .modal-body {
+  overflow-y: auto;
+}
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: var(--modal-content-bg);
+  background-clip: padding-box;
+  border: 1px solid var(--modal-content-border-color);
+  border-radius: var(--modal-content-border-radius);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+  outline: 0;
+}
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--modal-header-padding-y) var(--modal-header-padding-x);
+  border-bottom: 1px solid var(--modal-header-border-color);
+  border-top-left-radius: calc(var(--modal-content-border-radius) - 1px);
+  border-top-right-radius: calc(var(--modal-content-border-radius) - 1px);
+}
+.modal-header .close {
+  padding: var(--modal-header-padding-y) var(--modal-header-padding-x);
+  margin: calc(var(--modal-header-padding-y) * -1) calc(var(--modal-header-padding-x) * -1)
+          calc(var(--modal-header-padding-y) * -1) auto;
+}
+.modal-title {
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+.modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: var(--modal-inner-padding);
+}
+.modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--modal-inner-padding);
+  border-top: 1px solid var(--modal-footer-border-color);
+  border-bottom-right-radius: calc(var(--modal-content-border-radius) - 1px);
+  border-bottom-left-radius: calc(var(--modal-content-border-radius) - 1px);
+}
+.modal-footer > * { margin: 0.25rem; }
+
+@media (min-width: 576px) {
+  .modal-dialog {
+    max-width: var(--modal-md);
+    margin: 1.75rem auto;
+  }
+  .modal-dialog-centered {
+    min-height: calc(100% - 3.5rem);
+  }
+}
+
+// ── Fade / show (used by `modal fade show d-block`) ─────────────────────────
+.fade {
+  opacity: 0;
+  transition: opacity 0.15s linear;
+}
+.fade.show { opacity: 1; }
+
+// ── Close button ────────────────────────────────────────────────────────────
+.close {
+  float: right;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #000;
+  text-shadow: 0 1px 0 #fff;
+  opacity: 0.5;
+}
+.close:hover {
+  color: #000;
+  text-decoration: none;
+}
+.close:not(:disabled):not(.disabled):hover,
+.close:not(:disabled):not(.disabled):focus {
+  opacity: 0.75;
+}
+button.close {
+  padding: 0;
+  background-color: transparent;
+  border: 0;
+  appearance: none;
+}
+
+// ── Card ────────────────────────────────────────────────────────────────────
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  word-wrap: break-word;
+  background-color: #fff;
+  background-clip: border-box;
+  border: 1px solid var(--card-border-color);
+  border-radius: var(--radius);
+}
+.card-body {
+  flex: 1 1 auto;
+  min-height: 1px;
+  padding: 0.75rem 1.25rem;
+}
+.card-header {
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 0;
+  background-color: var(--card-cap-bg);
+  border-bottom: 1px solid var(--card-border-color);
+}
+.card-header:first-child {
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+
+// ── Badge ───────────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.4em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: var(--radius);
+}
+.badge:empty { display: none; }
+.badge-pill {
+  padding-right: 0.6em;
+  padding-left: 0.6em;
+  border-radius: var(--radius-pill);
+}
+
+// All 8 badge variants are used (primary @PlayerCity:148, info/danger/warning/
+// dark/light/secondary/success across CharactersList/DistrictCard/PlayerCity).
+@each $name, $bg, $fg in (
+  'primary'   #007bff #fff,
+  'secondary' #6c757d #fff,
+  'success'   #28a745 #fff,
+  'info'      #17a2b8 #fff,
+  'warning'   #ffc107 #212529,
+  'danger'    #dc3545 #fff,
+  'light'     #f8f9fa #212529,
+  'dark'      #343a40 #fff,
+) {
+  .badge-#{$name} {
+    color: #{$fg};
+    background-color: #{$bg};
+  }
+}
+
+// ── List-group ──────────────────────────────────────────────────────────────
+.list-group {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+  margin-bottom: 0;
+  border-radius: var(--radius);
+}
+.list-group-item {
+  position: relative;
+  display: block;
+  padding: 0.75rem 1.25rem;
+  background-color: #fff;
+  border: 1px solid var(--list-group-border-color);
+}
+.list-group-item:first-child {
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+.list-group-item:last-child {
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+.list-group-item.disabled,
+.list-group-item:disabled {
+  color: #6c757d;
+  pointer-events: none;
+  background-color: #fff;
+}
+.list-group-item.active {
+  z-index: 2;
+  color: #fff;
+  background-color: var(--c-primary);
+  border-color: var(--c-primary);
+}
+.list-group-flush .list-group-item {
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+.list-group-flush:first-child .list-group-item:first-child {
+  border-top: 0;
+}
+.list-group-flush:last-child .list-group-item:last-child {
+  border-bottom: 0;
+}
+
+// Only dark / warning / danger variants are used (CharactersList, PlayerScore).
+@each $name, $bg, $fg in (
+  'warning' #ffeeba #856404,
+  'danger'  #f5c6cb #721c24,
+  'dark'    #c6c8ca #1b1e21,
+) {
+  .list-group-item-#{$name} {
+    color: #{$fg};
+    background-color: #{$bg};
+  }
+}
+
+// ── Buttons ─────────────────────────────────────────────────────────────────
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  color: var(--body-color);
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: var(--radius);
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
+              border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.btn:hover { color: var(--body-color); text-decoration: none; }
+.btn:focus { outline: 0; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+.btn:disabled,
+.btn.disabled { opacity: 0.65; pointer-events: none; }
+
+.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; line-height: 1.5; border-radius: var(--radius-sm); }
+.btn-lg { padding: 0.5rem 1rem; font-size: 1.25rem; line-height: 1.5; border-radius: var(--radius-lg); }
+.btn-block { display: block; width: 100%; }
+.btn-block + .btn-block { margin-top: 0.5rem; }
+
+// Solid variants — only secondary / warning / danger / dark are used.
+@each $name, $bg, $fg in (
+  'secondary' #6c757d #fff,
+  'warning'   #ffc107 #212529,
+  'danger'    #dc3545 #fff,
+  'dark'      #343a40 #fff,
+) {
+  .btn-#{$name} {
+    color: #{$fg};
+    background-color: #{$bg};
+    border-color: #{$bg};
+  }
+  .btn-#{$name}:hover {
+    color: #{$fg};
+    filter: brightness(0.92);
+  }
+  .btn-#{$name}:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.1);
+  }
+  .btn-#{$name}:disabled,
+  .btn-#{$name}.disabled {
+    color: #{$fg};
+    background-color: #{$bg};
+    border-color: #{$bg};
+  }
+}
+
+// Outline variants — only secondary / danger / light are used.
+@each $name, $color in (
+  'secondary' #6c757d,
+  'danger'    #dc3545,
+  'light'     #f8f9fa,
+) {
+  .btn-outline-#{$name} {
+    color: #{$color};
+    border-color: #{$color};
+  }
+  .btn-outline-#{$name}:hover {
+    color: #fff;
+    background-color: #{$color};
+    border-color: #{$color};
+  }
+  .btn-outline-#{$name}:disabled,
+  .btn-outline-#{$name}.disabled {
+    color: #{$color};
+    background-color: transparent;
+  }
+}
+// outline-light keeps dark text on hover to mirror BS4 color-yiq behavior.
+.btn-outline-light:hover { color: #212529; }
+
+// Link button (no border / bg).
+.btn-link {
+  font-weight: 400;
+  color: var(--link-color);
+  text-decoration: none;
+}
+.btn-link:hover { color: #0056b3; text-decoration: underline; }
+.btn-link:disabled,
+.btn-link.disabled { color: #6c757d; pointer-events: none; }
+
+// Button group (minimal — only inline-flex layout, used by PlayersList
+// reorder controls which carry their own btn-sm styling).
+.btn-group {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+.btn-group > .btn {
+  position: relative;
+  flex: 1 1 auto;
+}
+.btn-group-sm > .btn { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+
+// ── Alert ───────────────────────────────────────────────────────────────────
+// Only alert-danger is used (AuthPanel, StatsScreen, HomeScreen).
+.alert {
+  position: relative;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+// ── Forms ───────────────────────────────────────────────────────────────────
+.form-group { margin-bottom: 1rem; }
+.form-control {
+  display: block;
+  width: 100%;
+  height: calc(1.5em + 0.75rem + 2px);
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--input-color);
+  background-color: var(--input-bg);
+  background-clip: padding-box;
+  border: 1px solid var(--input-border-color);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.form-control::-ms-expand { background-color: transparent; border: 0; }
+.form-control:focus {
+  color: var(--input-color);
+  background-color: var(--input-bg);
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+.form-control::placeholder { color: var(--input-placeholder-color); opacity: 1; }
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: #e9ecef;
+  opacity: 1;
+}
+
+// ── Spinner ─────────────────────────────────────────────────────────────────
+.spinner-border {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  vertical-align: text-bottom;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+// ── Table ───────────────────────────────────────────────────────────────────
+// Bootstrap 4 base table. Used together with custom `.lobby-table` /
+// `.endgame-table` classes that override colors and padding for the dark
+// theme. Kept identical to BS4 so the unstyled cells keep their default
+// borders/padding before the custom layer paints them.
+.table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: var(--body-color);
+  background-color: transparent;
+}
+.table th,
+.table td {
+  padding: 0.75rem;
+  vertical-align: top;
+  border-top: 1px solid #dee2e6;
+}
+.table thead th {
+  vertical-align: bottom;
+  border-bottom: 2px solid #dee2e6;
+}
+.table tbody + tbody { border-top: 2px solid #dee2e6; }

@@ -88,14 +88,12 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        quietDeps: true,
-        silenceDeprecations: [
-          'import',
-          'global-builtin',
-          'color-functions',
-          'if-function',
-          'abs-percent',
-        ],
+        // Project SCSS still uses `@import` throughout (18 files). Dart Sass
+        // 3.0 will remove it; migrating to @use/@forward is tracked as a
+        // separate task. Only `import` is silenced — the other BS4-only
+        // deprecations (global-builtin / color-functions / if-function /
+        // abs-percent) left with Bootstrap and are NOT re-added.
+        silenceDeprecations: ['import'],
       },
     },
   },

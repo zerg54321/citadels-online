@@ -1,0 +1,95 @@
+# Bootstrap 类使用基线（client-react/src，截至 2026-08-02）
+
+来源：从所有 *.tsx 的 `className="..."` 静态提取 494 个唯一类，叠加对 `bg-${}` / `text-${}` / `border-${}` / `admin-alert--${}` 动态拼接的 grep 结果。
+
+## A. 需要自维护等价实现的 Bootstrap 类
+
+### A.1 布局 / Flexbox
+- `d-block` `d-flex`
+- `flex-column` `flex-column-reverse` `flex-fill` `flex-grow-1` `flex-shrink-0` `flex-wrap` `flex-wrap-reverse`
+- `justify-content-between` `justify-content-center` `justify-content-start`
+- `align-items-center` `align-items-end`
+- `align-self-end`
+- `align-top`
+- `h-100` `w-100`
+
+### A.2 间距（值对齐 BS4 $spacers：0/.25/.5/1/1.5/3rem）
+- `m-0` `m-1`
+- `mt-1` `mt-2` `mt-3` `mt-4`
+- `mb-0` `mb-2` `mb-3` `mb-4` `mb-lg-0`
+- `ml-1` `ml-2`
+- `mr-1` `mr-2`
+- `mx-n1` （负边距，对齐 BS4 -$spacer*.25 = -0.25rem）
+- `p-0` `p-1` `p-2` `p-3` `p-4`
+- `pt-1` `pb-2`
+- `px-0` `px-1` `px-2` `px-3`
+- `py-0` `py-2` `py-4` `py-5`
+- `gap-2`
+
+### A.3 文本
+- `text-center` `text-left` `text-truncate` `text-wrap`
+- `text-white` `text-white-50` `text-light` `text-dark` `text-danger` `text-muted` `text-reset`
+- 动态：`text-${light|dark}`
+- `small` `font-weight-bold` `font-italic`
+
+### A.4 背景 / 边框 / 阴影 / 圆角
+- `bg-black` `bg-dark` `bg-secondary`（静态）
+- 动态：`bg-${warning|primary|success|danger|purple|dark|secondary|white|light|info}` （DistrictCard + CharactersList + PlayerCity + SeatPanel）
+- `border` `border-0` `border-dark` `border-secondary` `border-primary` `border-light`
+- `rounded` `shadow-sm`
+
+### A.5 显示 / 溢出 / 定位 / 透明度
+- `overflow-auto` `overflow-hidden`
+- `position-relative` （DistrictCard.tsx:70）
+- `opacity-50` `opacity-75` （opacity-0..5 已是 main.scss 自定义，保留）
+- `cursor-pointer` （已是 main.scss 自定义，保留）
+- `z-0` `z-1` （已是 main.scss 自定义，保留）
+
+### A.6 组件类
+- **modal**：`modal` `modal-dialog` `modal-dialog-centered` `modal-dialog-scrollable` `modal-content` `modal-header` `modal-title` `modal-body` `modal-footer` `close` `fade` `show`
+- **card**：`card` `card-body` `card-header`
+- **badge**：`badge` `badge-pill` `badge-info` `badge-danger` `badge-warning` `badge-dark` `badge-light` `badge-secondary` `badge-success`
+- **list-group**：`list-group` `list-group-flush` `list-group-item` `list-group-item-dark` `list-group-item-warning` `active`（list-group-item active 态）
+- **btn**：`btn` `btn-sm` `btn-lg` `btn-block` `btn-link` `btn-danger` `btn-dark` `btn-warning` `btn-secondary` `btn-outline-danger` `btn-outline-light` `btn-outline-secondary` `btn-group` `btn-group-sm`
+  - 自定义保留：`btn-gold` `btn-outline-gold`（main.scss 已定义）
+- **alert**：`alert` `alert-danger`
+- **form**：`form-control` `form-group`
+- **spinner**：`spinner-border`
+- **table**：`table`（用于 stats-table / endgame-table 等容器）
+
+### A.7 Grid 系统
+- `container` `container-fluid` `container-lg`
+- `row` `no-gutters`
+- `col` `col-auto` `col-lg-4` `col-lg-5` `col-lg-7` `col-lg-8`
+- 响应式断点：`--bp-lg: 992px`（仅 HomeScreen 用 col-lg-*，LobbyScreen 用 container-lg）
+
+## B. 已是自定义、保留不动的类
+
+- `bg-black-alpha` `bg-purple`（main.scss，bg-purple 需把 `$purple` 改为 var）
+- `text-gold` `text-muted-gold` `text-parchment`（main.scss）
+- `opacity-0..5` `z-0` `z-1` `cursor-pointer`（main.scss）
+- `medieval-panel` `btn-gold` `btn-outline-gold` `gold-text` `gold-border`（main.scss）
+- `gradient-black-transparent` `gradient-transparent-black` `card-picture` `card-picture--${districtId}` `title` `coin` `rotated-cost`（_district-card.scss）
+- 各 BEM 命名组件类（admin-*, auth-panel*, app-modal*, board-table*, char-card*, district-card*, endgame-*, game-stage*, hdr-*, header-*, home-*, lobby-*, locale-select*, players-list*, room-chat*, seat-*, stats-*, tag-*, tmp-hand-pick* 等）
+
+## C. 动态拼接清单（实施时 token 命名须全覆盖）
+
+| 文件:行 | 模板 | 取值集 |
+|---------|------|--------|
+| DistrictCard.tsx:113 | `bg-${color}` | warning, primary, success, danger, purple |
+| CharactersList.tsx:145 | `bg-${bgColor()}` | dark, warning, primary, success, danger, secondary |
+| CharactersList.tsx:145 | `text-${textColor()}` | light, dark |
+| CharactersList.tsx:90,92,94,96 | 字面量 | bg-secondary, text-white-50, bg-white, bg-light, border-primary, active |
+| PlayerCity.tsx:128-131 | 字面量 | bg-primary, bg-info, border-light, border |
+| SeatPanel.tsx:208 / PlayerCity.tsx:189 | 字面量 | bg-warning, text-white |
+| App.tsx:48 | 字面量 | text-reset |
+
+## D. 删除前 BS 变量引用清单
+
+- `main.scss:1` `@import './bootstrap'`
+- `main.scss:83` `$purple` → 改 `var(--c-purple)`
+- `main.scss:87` `$black` → 改 `var(--c-black)`
+- `main.scss:100-102` `@each $size,$length in $spacers` 生成 `.gap-*` → 删除（已在 _utilities 生成）
+- `_bootstrap.scss` 整文件（含 `$enable-gradients: true`）
+- `vite.config.ts:88-101` `css.preprocessorOptions.scss`（`quietDeps` + `silenceDeprecations`）
+- `package.json:15` `"bootstrap": "^4.6.2"`

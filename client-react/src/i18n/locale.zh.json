@@ -163,6 +163,7 @@
             "autoplay_on": "已托管",
             "autoplay_enable": "托管（系统代打）",
             "autoplay_cancel": "取消托管",
+            "autoplay_locked": "托管已锁定",
             "character_unknown": "未知角色",
             "character_face_up": "正面朝上弃置（天绝/公开）",
             "character_face_down": "背面朝上弃置（未公开）",

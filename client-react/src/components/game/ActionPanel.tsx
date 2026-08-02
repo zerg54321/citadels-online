@@ -14,6 +14,8 @@ interface ActionPanelProps {
   countdownUrgent: boolean;
   isAutoplay: boolean;
   autoplayBusy: boolean;
+  /** 超时触发托管累计达阈值后被锁定,无法手动取消 */
+  autoplayLocked: boolean;
   onAction?: (move: Move, target?: HTMLElement) => void;
   onToggleAutoplay?: () => void;
 }
@@ -33,6 +35,7 @@ export default function ActionPanel({
   countdownUrgent,
   isAutoplay,
   autoplayBusy,
+  autoplayLocked,
   onAction,
   onToggleAutoplay,
 }: ActionPanelProps) {
@@ -77,10 +80,12 @@ export default function ActionPanel({
             <button
               type="button"
               className="board-table__action-btn"
-              disabled={autoplayBusy}
+              disabled={autoplayBusy || (isAutoplay && autoplayLocked)}
               onClick={onToggleAutoplay}
             >
-              {isAutoplay ? t('ui.game.autoplay_cancel') : t('ui.game.autoplay_enable')}
+              {isAutoplay
+                ? (autoplayLocked ? t('ui.game.autoplay_locked') : t('ui.game.autoplay_cancel'))
+                : t('ui.game.autoplay_enable')}
             </button>
           )}
           {isAutoplay && <div className="board-table__meta-line">{t('ui.game.autoplay_on')}</div>}

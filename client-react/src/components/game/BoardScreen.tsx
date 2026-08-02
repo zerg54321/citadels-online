@@ -159,6 +159,8 @@ export default function BoardScreen() {
   const getPlayer = selectPlayerFromId(gameState);
   const selfMeta = self ? getPlayer(self) : undefined;
   const selfIsAutoplay = Boolean(selfMeta?.isAutoplay);
+  const AUTOPLAY_TIMEOUT_LOCK_THRESHOLD = 3;
+  const selfAutoplayLocked = (selfMeta?.autoplayTimeoutCount ?? 0) >= AUTOPLAY_TIMEOUT_LOCK_THRESHOLD;
 
   const countdownSecondsLeft = useMemo(() => {
     const deadline = gameState?.turnDeadlineAt;
@@ -322,6 +324,8 @@ export default function BoardScreen() {
 
   const toggleAutoplay = async () => {
     if (autoplayBusy) return;
+    // 锁定托管时按钮已禁用,此处二次防护避免绕过
+    if (selfIsAutoplay && selfAutoplayLocked) return;
     setAutoplayBusy(true);
     try {
       await setAutoplayStore(!selfIsAutoplay);
@@ -373,6 +377,8 @@ export default function BoardScreen() {
           robMode={modeFlags.rob}
           chooseCharacterMode={modeFlags.chooseChar}
           eventBanner={eventBanner}
+          countdownText={countdownText}
+          countdownUrgent={countdownUrgent}
           onSelectCharacter={onCenterCharacterClick}
         />
 
@@ -467,6 +473,7 @@ export default function BoardScreen() {
               countdownUrgent={countdownUrgent}
               isAutoplay={selfIsAutoplay}
               autoplayBusy={autoplayBusy}
+              autoplayLocked={selfAutoplayLocked}
               onAction={sendMove}
               onToggleAutoplay={toggleAutoplay}
             />

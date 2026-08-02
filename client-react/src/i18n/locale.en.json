@@ -163,6 +163,7 @@
             "autoplay_on": "Autoplay on",
             "autoplay_enable": "Enable autoplay",
             "autoplay_cancel": "Cancel autoplay",
+            "autoplay_locked": "Autoplay locked",
             "character_unknown": "Unknown",
             "character_face_up": "Discarded face up (public)",
             "character_face_down": "Discarded face down (hidden)",

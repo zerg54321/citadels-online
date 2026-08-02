@@ -188,6 +188,9 @@ export type ClientGameState = {
     /** player is in autoplay / hosted mode */
     isAutoplay?: boolean
     hadEffectiveAiControl?: boolean
+    /** 本局因超时/掉线被强制托管的累计次数。达阈值(服务端 AUTOPLAY_TIMEOUT_LOCK_THRESHOLD=3)
+     *  后锁定托管,玩家无法手动取消。用于前端提示/置灰取消按钮。 */
+    autoplayTimeoutCount?: number
     avatar?: Avatar
   }>
   self: PlayerId

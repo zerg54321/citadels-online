@@ -53,6 +53,12 @@ header {
     .header-brand {
       text-align: left;
       flex: 0 1 auto;
+      // 游戏界面与首页顶栏解耦：不复用首页的基线缩进（padding-left）与
+      // flex 行布局（用于排金币图标），标题纯文本贴左显示，复原重构前。
+      padding-left: 0;
+      h1 {
+        display: block;
+      }
     }
     // GameStage downscales the whole shell on smaller iPads (scale < 1).
     // Pre-enlarge the right-cluster controls ~1.3× so that after scaling

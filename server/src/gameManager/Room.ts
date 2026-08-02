@@ -77,11 +77,16 @@ export default class Room implements Observer {
 
   update(): void {
     this.tryPersistMatch();
-    this.sendRoomStateToAllClients();
-    // Re-arm deadline / AI after every state push (incl. async phase setTimeouts)
+    // Re-arm deadline / AI BEFORE sending state so the emitted turnDeadlineAt
+    // reflects the freshly armed deadline. Previously send ran before arm,
+    // which meant a state push carried the *previous* arm's deadline: entering
+    // the choose-characters phase sent null (→ clients showed a dash) and the
+    // newly armed deadline only went out on the next push. (pushUpdate calls
+    // update with suppressArm=true, so onStateChanged is a no-op there.)
     if (this.gameState.progress === GameProgress.IN_GAME) {
       getTurnTimer(this).onStateChanged(false);
     }
+    this.sendRoomStateToAllClients();
   }
 
   private tryPersistMatch() {

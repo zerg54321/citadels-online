@@ -21,6 +21,10 @@ export class TurnTimer {
   private disposed = false;
   private suppressArm = false;
   private running = false;
+  // 标识上次 arm 时的行动主体(玩家id 或选角者 PlayerPosition),用于区分
+  // "同一 turn 内的玩家操作"与"turn 切换":前者复用 deadline,后者刷新。
+  // 见 arm()。
+  private lastArmedActor: string | null = null;
 
   constructor(room: Room) {
     this.room = room;
@@ -47,10 +51,6 @@ export class TurnTimer {
     this.arm(refreshDeadline);
   }
 
-  resetDeadlineAfterHumanMove() {
-    this.onStateChanged(true);
-  }
-
   private shouldDriveNow(): boolean {
     const gs = this.room.gameState;
     if (!gs.board || gs.progress !== GameProgress.IN_GAME) return false;
@@ -65,6 +65,7 @@ export class TurnTimer {
     if (gs.progress !== GameProgress.IN_GAME) {
       this.clearTimers();
       gs.clearTurnDeadline();
+      this.lastArmedActor = null;
       return;
     }
 
@@ -72,6 +73,7 @@ export class TurnTimer {
 
     if (this.shouldDriveNow()) {
       gs.clearTurnDeadline();
+      this.lastArmedActor = null;
       const actorId = gs.board?.getCurrentPlayerId();
       const actor = actorId ? gs.players.get(actorId) : undefined;
       const delay = (actor && (actor.isAi || actor.isAutoplay) && !this.needsSystemWork())
@@ -82,15 +84,24 @@ export class TurnTimer {
     }
 
     if (gs.needsActionTimer()) {
-      if (refreshDeadline || !gs.turnDeadlineAt || gs.turnDeadlineAt <= Date.now()) {
+      // 同一行动主体(同一玩家的同一 turn)内的操作不刷新 deadline:玩家所有
+      // 操作必须在该 turn 起始时设定的 120s 内完成,防止"建→取消→建→取消"
+      // 无限刷新。仅当行动主体切换(turn 切换)或 deadline 不存在/已过期时
+      // 才重新计时。refreshDeadline 显式 true 仅用于显式刷新入口。
+      const actorId = gs.board?.getCurrentPlayerId();
+      const actorKey = actorId ? String(actorId) : null;
+      const actorChanged = actorKey !== this.lastArmedActor;
+      if (refreshDeadline || actorChanged || !gs.turnDeadlineAt || gs.turnDeadlineAt <= Date.now()) {
         gs.refreshTurnDeadline();
       }
+      this.lastArmedActor = actorKey;
       const ms = Math.max(50, (gs.turnDeadlineAt || Date.now()) - Date.now());
       this.timer = setTimeout(() => this.onTimeout(), ms);
       return;
     }
 
     gs.clearTurnDeadline();
+    this.lastArmedActor = null;
   }
 
   /** human-vs-AI pacing: longer when pure AI seats act so players can read the board */
@@ -229,12 +240,14 @@ export class TurnTimer {
   private pushUpdate() {
     this.suppressArm = true;
     try {
+      // arm first so the deadline is set before state is sent (mirrors the
+      // order now used in Room.update); suppressArm keeps update()'s
+      // onStateChanged call from re-arming.
+      this.arm(false);
       this.room.update();
     } finally {
       this.suppressArm = false;
     }
-    // immediately arm next work (AI chains without waiting for heartbeat)
-    this.arm(false);
   }
 }
 

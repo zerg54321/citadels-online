@@ -38,6 +38,8 @@ interface CenterPanelProps {
   robMode: boolean;
   chooseCharacterMode: boolean;
   eventBanner?: string;
+  countdownText?: string;
+  countdownUrgent?: boolean;
   onSelectCharacter?: (ch: CenterCharacter & { current: boolean }, index: number) => void;
 }
 
@@ -52,6 +54,8 @@ export default function CenterPanel({
   robMode,
   chooseCharacterMode,
   eventBanner = '',
+  countdownText,
+  countdownUrgent = false,
   onSelectCharacter,
 }: CenterPanelProps) {
   const { t } = useTranslation();
@@ -120,6 +124,12 @@ export default function CenterPanel({
             ? t(statusBar.message, Object.fromEntries(statusBar.args.map((v, i) => [String(i), v])) as Record<string, string>) as string
             : t(statusBar.message) as string}
         </div>
+
+        {gameProgress === 'IN_GAME' && (chooseCharacterMode || killMode || robMode) && countdownText && countdownText !== '—' && (
+          <div className={`board-table__timer${countdownUrgent ? ' board-table__timer--urgent' : ''}`}>
+            {countdownText}
+          </div>
+        )}
 
         {eventBanner && <div className="board-table__banner board-table__banner--warn">{eventBanner}</div>}
 

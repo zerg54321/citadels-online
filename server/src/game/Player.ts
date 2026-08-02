@@ -18,6 +18,10 @@ export default class Player {
   isAutoplay: boolean;
   /** P4: AI actually took at least one action for this player */
   hadEffectiveAiControl: boolean;
+  /** 超时/掉线触发强制的托管次数(本局累积,每局 setupGame 重置)。
+   *  达到 AUTOPLAY_TIMEOUT_LOCK_THRESHOLD 后锁定为托管,玩家无法手动取消,
+   *  防止恶意消极游戏或反复掉线拖累其他玩家。仅 forceAutoplayForTimeout 递增。 */
+  autoplayTimeoutCount: number;
   /** Avatar from the user record; undefined for AI / anonymous spectators. */
   avatar?: Avatar;
 
@@ -41,6 +45,7 @@ export default class Player {
     this.isAi = false;
     this.isAutoplay = false;
     this.hadEffectiveAiControl = false;
+    this.autoplayTimeoutCount = 0;
     this.avatar = avatar;
   }
 
@@ -56,6 +61,7 @@ export default class Player {
     p.isAi = this.isAi;
     p.isAutoplay = this.isAutoplay;
     p.hadEffectiveAiControl = this.hadEffectiveAiControl;
+    p.autoplayTimeoutCount = this.autoplayTimeoutCount;
     return p;
   }
 }

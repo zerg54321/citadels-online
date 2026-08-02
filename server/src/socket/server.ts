@@ -570,7 +570,12 @@ export function initSocket(io: Server) {
           callback({ status: 'error', message: 'spectators cannot autoplay' });
           return;
         }
-        room.gameState.setAutoplay(player.id, Boolean(enabled));
+        const ok = room.gameState.setAutoplay(player.id, Boolean(enabled));
+        if (!ok) {
+          // 仅在"取消托管被锁定"时发生(超时触发托管累计达阈值)。
+          callback({ status: 'error', message: 'autoplay locked due to repeated timeouts' });
+          return;
+        }
         getTurnTimer(room).onStateChanged();
         room.update();
         callback({ status: 'ok', isAutoplay: player.isAutoplay });
@@ -646,7 +651,9 @@ export function initSocket(io: Server) {
         }
 
         room.gameState.step();
-        getTurnTimer(room).resetDeadlineAfterHumanMove();
+        // 整个回合共享一个 deadline:玩家操作不应重置计时,否则"建→取消→
+        // 建→取消"可无限刷新 120s。room.update() 内部已用 onStateChanged(false)
+        // 重新 arm timer(仅当旧 deadline 过期/不存在时才刷新),故此处无需再调。
         room.update();
         callback({ status: 'ok' });
       } catch (err) {

@@ -31,6 +31,10 @@ import { MAX_CHARACTER_SKIP_ATTEMPTS } from '../utils/schedule';
 // while bounding memory/payload for abandoned games.
 const ACTION_FEED_MAX_LENGTH = 2000;
 
+/** 玩家因超时/掉线被强制托管达到此次数后,锁定为托管至本局结束,无法手动取消。
+ *  阈值给网络波动留余量,同时阻止恶意消极游戏(故意超时)或反复掉线拖累他人。 */
+const AUTOPLAY_TIMEOUT_LOCK_THRESHOLD = 3;
+
 export default class GameState implements Subject {
   progress: GameProgress;
   gameMode: GameMode;
@@ -340,6 +344,7 @@ export default class GameState implements Subject {
           isAi: player.isAi,
           isAutoplay: player.isAutoplay,
           hadEffectiveAiControl: player.hadEffectiveAiControl,
+          autoplayTimeoutCount: player.autoplayTimeoutCount,
           avatar: player.avatar,
         }]),
       ),
@@ -441,6 +446,7 @@ export default class GameState implements Subject {
       if (p) {
         p.isAutoplay = p.isAi;
         p.hadEffectiveAiControl = false;
+        p.autoplayTimeoutCount = 0;
       }
     });
     this.board = new BoardState(pickOrder);
@@ -449,13 +455,17 @@ export default class GameState implements Subject {
   /** true if current actor needs a human action timer */
   needsActionTimer(): boolean {
     if (this.progress !== GameProgress.IN_GAME || !this.board) return false;
-    if (this.board.gamePhase === GamePhase.INITIAL) return false;
     const actorId = this.board.getCurrentPlayerId();
     if (!actorId) return false;
     const actor = this.players.get(actorId);
     if (!actor || actor.role !== PlayerRole.PLAYER) return false;
     if (actor.isAi || actor.isAutoplay) return false;
     // only when someone must choose / act
+    if (this.board.gamePhase === GamePhase.INITIAL) {
+      // 首轮二选一手牌:选牌队列未空时,当前选牌者需人类操作。超时后由
+      // forceAutoplayForTimeout → AI 选牌托管,避免掉线/暂离卡死。
+      return this.board.initialCardSelectionQueue.length > 0;
+    }
     if (this.board.gamePhase === GamePhase.CHOOSE_CHARACTERS) {
       const t = this.board.characterManager.choosingState.getState().type;
       return t === CCST.CHOOSE_CHARACTER
@@ -485,6 +495,11 @@ export default class GameState implements Subject {
       player.isAutoplay = true;
       return true;
     }
+    // 锁定托管:超时/掉线触发托管累计达阈值后,拒绝手动取消,强制 AI 代打到
+    // 本局结束。只拦"取消"(enabled=false),不影响手动开启托管。
+    if (!enabled && player.autoplayTimeoutCount >= AUTOPLAY_TIMEOUT_LOCK_THRESHOLD) {
+      return false;
+    }
     player.isAutoplay = enabled;
     if (!enabled) {
       // cancel only clears autoplay flag; hadEffectiveAiControl stays if AI already acted
@@ -510,6 +525,9 @@ export default class GameState implements Subject {
     const player = this.players.get(playerId);
     if (!player || player.role !== PlayerRole.PLAYER) return false;
     player.isAutoplay = true;
+    // 累计超时/掉线触发的托管次数。达阈值后 setAutoplay 会拒绝手动取消,
+    // 玩家被锁定为托管至本局结束。计数只升不降,每局 setupGame 重置。
+    player.autoplayTimeoutCount += 1;
     return true;
   }
 

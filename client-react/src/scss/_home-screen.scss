@@ -5,13 +5,60 @@
 // Fits an iPad Pro landscape viewport with no page scroll; the room list is
 // the only internally scrollable region.
 
-.home {
+// Full-screen wrapper: background effects span the entire viewport while
+// content stays centered within max-width.
+.home-wrapper {
+  position: relative;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  display: flex;
   font-family: var(--font-readable);
   background: var(--bg-void);
+}
+
+// ── Full-viewport background layers ──────────────────────────────────────────
+.home-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  &__gradient {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 92% 70% at 20% 14%, rgba(212, 175, 55, 0.12), transparent 58%),
+      radial-gradient(ellipse 74% 62% at 88% 84%, rgba(122, 82, 40, 0.2), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 70% 8%, rgba(212, 175, 55, 0.07), transparent 60%),
+      linear-gradient(152deg, #0d0b08 0%, #1a1410 48%, #0a0806 100%);
+  }
+
+  &__veil {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 120% 100% at 50% 42%, transparent 52%, rgba(8, 6, 4, 0.6) 100%),
+      linear-gradient(0deg, rgba(13, 11, 8, 0.5) 0%, rgba(13, 11, 8, 0) 26%);
+  }
+
+  &__glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 58% 46% at 26% 34%, rgba(212, 175, 55, 0.2), transparent 70%);
+    mix-blend-mode: screen;
+  }
+}
+
+.home {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  // Constrain on ultra-wide monitors; center with side whitespace.
+  max-width: 1560px;
+  margin: 0 auto;
 }
 
 // ── Left hero stage ────────────────────────────────────────────────────────
@@ -23,41 +70,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-
-  // Black-gold gradient base (no photo art) — sets a mysterious, candle-lit
-  // mood that the particle field drifts over.
-  &__bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background:
-      radial-gradient(ellipse 92% 70% at 20% 14%, rgba(212, 175, 55, 0.12), transparent 58%),
-      radial-gradient(ellipse 74% 62% at 88% 84%, rgba(122, 82, 40, 0.2), transparent 60%),
-      radial-gradient(ellipse 60% 50% at 70% 8%, rgba(212, 175, 55, 0.07), transparent 60%),
-      linear-gradient(152deg, #0d0b08 0%, #1a1410 48%, #0a0806 100%);
-  }
-
-  // Soft vignette to deepen the edges and focus the center.
-  &__veil {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background:
-      radial-gradient(ellipse 120% 100% at 50% 42%, transparent 52%, rgba(8, 6, 4, 0.6) 100%),
-      linear-gradient(0deg, rgba(13, 11, 8, 0.5) 0%, rgba(13, 11, 8, 0) 26%);
-    pointer-events: none;
-  }
-
-  // Warm gold bloom behind the headline.
-  &__glow {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    background:
-      radial-gradient(ellipse 58% 46% at 26% 34%, rgba(212, 175, 55, 0.2), transparent 70%);
-    mix-blend-mode: screen;
-    pointer-events: none;
-  }
 
   &__inner {
     position: relative;
@@ -134,7 +146,7 @@
     position: relative;
     z-index: 3;
     flex: 0 0 auto;
-    padding: 0.6rem clamp(1.5rem, 3.4vw, 3rem) clamp(0.8rem, 1.8vh, 1.2rem);
+    padding: 0.6rem clamp(1.5rem, 3.4vw, 3rem) clamp(2rem, 5vh, 3.2rem);
   }
   &__cast-head {
     display: flex;

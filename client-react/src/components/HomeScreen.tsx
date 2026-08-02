@@ -110,13 +110,18 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <div className="home">
-      {/* ── Left: cinematic hero + character cast ─────────────────────── */}
-      <section className="home-stage">
-        <div className="home-stage__bg" />
+    <div className="home-wrapper">
+      {/* Full-viewport background layers (span entire screen on ultra-wide). */}
+      <div className="home-bg" aria-hidden>
+        <div className="home-bg__gradient" />
         <ParticleField />
-        <div className="home-stage__veil" />
-        <div className="home-stage__glow" />
+        <div className="home-bg__veil" />
+        <div className="home-bg__glow" />
+      </div>
+
+      {/* Constrained content. */}
+      <div className="home">
+      <section className="home-stage">
 
         <div className="home-stage__inner">
           <p className="home-stage__eyebrow">{t('ui.subtitle1')} · {t('ui.subtitle2')}</p>
@@ -269,6 +274,7 @@ export default function HomeScreen() {
           ))}
         </section>
       </aside>
+      </div>
     </div>
   );
 }

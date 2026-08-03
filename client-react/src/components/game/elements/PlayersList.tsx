@@ -34,12 +34,19 @@ export default function PlayersList() {
     return Object.values(gameState.players).filter((p) => p.role === PlayerRole.PLAYER);
   }, [gameState]);
 
-  const makeRows = (filterFn: (_: unknown, i: number) => boolean) => seatedOrder
-    .filter(filterFn)
-    .map((p) => ({ ...p, seatNo: seatedOrder.indexOf(p) + 1 }));
+  // 固定 3 个插槽/队：A 队 = 座位 1/3/5，B 队 = 座位 2/4/6。
+  // 空位显示占位符（与已入位玩家同等视觉权重）。
+  const teamASlots = useMemo(() => {
+    const slots: (typeof seatedOrder[0] | null)[] = [null, null, null];
+    seatedOrder.forEach((p, i) => { if (i % 2 === 0) slots[i / 2] = p; });
+    return slots.map((p, idx) => (p ? { ...p, seatNo: idx * 2 + 1 } : { seatNo: idx * 2 + 1 }));
+  }, [seatedOrder]);
 
-  const teamARows = useMemo(() => makeRows((_, i) => i % 2 === 0), [seatedOrder]);
-  const teamBRows = useMemo(() => makeRows((_, i) => i % 2 === 1), [seatedOrder]);
+  const teamBSlots = useMemo(() => {
+    const slots: (typeof seatedOrder[0] | null)[] = [null, null, null];
+    seatedOrder.forEach((p, i) => { if (i % 2 === 1) slots[Math.floor(i / 2)] = p; });
+    return slots.map((p, idx) => (p ? { ...p, seatNo: idx * 2 + 2 } : { seatNo: idx * 2 + 2 }));
+  }, [seatedOrder]);
 
   const spectators = useMemo(() => (gameState
     ? Object.values(gameState.players).filter((p) => p.role === PlayerRole.SPECTATOR)
@@ -126,7 +133,6 @@ export default function PlayersList() {
         <span className="seat-card__name-text text-truncate">{row.username}</span>
         <span className="seat-card__tags">
           {row.id === self?.id && <span className="tag tag--you">{t('ui.lobby.you')}</span>}
-          {row.isAi && <span className="tag tag--ai">AI</span>}
           {row.manager && <span className="tag tag--mgr">{t('ui.lobby.manager')}</span>}
         </span>
       </span>
@@ -142,26 +148,39 @@ export default function PlayersList() {
     </li>
   );
 
+  const renderEmptySlot = (seatNo: number, teamClass: string) => (
+    <li key={`empty-${seatNo}`} className="seat-card seat-card--empty">
+      <span className={`seat-card__no ${teamClass}`}>{seatNo}</span>
+      <span className="seat-card__avatar seat-card__avatar--empty" aria-hidden>·</span>
+      <span className="seat-card__name">
+        <span className="seat-card__name-text text-truncate">—</span>
+      </span>
+    </li>
+  );
+
   return (
     <div className="players-list">
       <div className="players-list__header">
         <span className="players-list__title">{t('ui.lobby.players')}</span>
-        <span className="players-list__subtitle">{t('ui.lobby.team_preview_hint')}</span>
       </div>
 
       <div className="players-list__teams">
         <div className="players-list__team players-list__team--a">
           <div className="players-list__team-head">{t('ui.team.a')}</div>
           <ul className="players-list__seats">
-            {teamARows.map((r) => renderRow(r, 'team-a'))}
-            {!teamARows.length && <li className="players-list__empty">—</li>}
+            {teamASlots.map((slot) => {
+              if ('id' in slot) return renderRow(slot as SeatRow, 'team-a');
+              return renderEmptySlot(slot.seatNo, 'team-a');
+            })}
           </ul>
         </div>
         <div className="players-list__team players-list__team--b">
           <div className="players-list__team-head">{t('ui.team.b')}</div>
           <ul className="players-list__seats">
-            {teamBRows.map((r) => renderRow(r, 'team-b'))}
-            {!teamBRows.length && <li className="players-list__empty">—</li>}
+            {teamBSlots.map((slot) => {
+              if ('id' in slot) return renderRow(slot as SeatRow, 'team-b');
+              return renderEmptySlot(slot.seatNo, 'team-b');
+            })}
           </ul>
         </div>
       </div>
@@ -188,10 +207,12 @@ export default function PlayersList() {
       <div className="players-list__footer">
         <div className="players-list__counts">
           <span className="players-list__count"><strong>{counts.players}</strong> {t('ui.lobby.players')}</span>
-          <span className="players-list__dot">·</span>
-          <span className="players-list__count"><strong>{counts.spectators}</strong> {t('ui.lobby.spectator')}</span>
-          <span className="players-list__dot">·</span>
-          <span className="players-list__count"><strong>{counts.ai}</strong> AI</span>
+          {counts.spectators > 0 && (
+            <>
+              <span className="players-list__dot">·</span>
+              <span className="players-list__count"><strong>{counts.spectators}</strong> {t('ui.lobby.spectator')}</span>
+            </>
+          )}
         </div>
 
         {inLobby && self && (

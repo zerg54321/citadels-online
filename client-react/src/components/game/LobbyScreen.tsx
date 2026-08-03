@@ -4,25 +4,30 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PlayerRole } from 'citadels-common';
 import { useAppStore, useGameSetupData, selectPlayerFromId } from '@/store';
+import ParticleField from '@/components/common/ParticleField';
+import TimeoutSelect from './elements/TimeoutSelect';
 import PlayersList from './elements/PlayersList';
 import RoomChat from './RoomChat';
 
-// Mirrors Vue LobbyScreen.vue. The setup-confirm modal uses createPortal. Vue
-// data() (startingGame/completeCitySize/actionTimeoutSeconds/showSetupConfirm)
-// → useState. Vue computed (isManager/isSixPlayers/hasAiPlayers/validation) →
-// useMemo. The Vue :deep() badge overrides for the modal are scoped under
-// .lobby-modal in _lobby-screen.scss.
+// 重构后的大厅页：主辅双栏布局，视觉对齐 HomeScreen。
+//   全屏 wrapper（背景渐变 + 粒子）→ 居中内容区
+//   内容区 = 主体（主区 PlayersList + 辅栏 设置卡/聊天卡）+ 底部条（离开 / 校验 / 开局）
+// 全局 header（App.tsx）已处理标题/导航，本页不再重复渲染。
+// 零行为回归：所有 store action / socket 事件 / validation 逻辑不动。
 export default function LobbyScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const gameState = useAppStore((s) => s.gameState);
   const gameSetupData = useGameSetupData();
   const prepareGameSetupConfirmation = useAppStore((s) => s.prepareGameSetupConfirmation);
+  const updateGameSetup = useAppStore((s) => s.updateGameSetup);
   const startGameAction = useAppStore((s) => s.startGame);
   const leaveRoomAction = useAppStore((s) => s.leaveRoom);
 
   const [startingGame, setStartingGame] = useState(false);
-  const [actionTimeoutSeconds, setActionTimeoutSeconds] = useState(120);
+  const [actionTimeoutSeconds, setActionTimeoutSeconds] = useState(
+    gameState?.settings?.actionTimeoutSeconds ?? 120,
+  );
   const [showSetupConfirm, setShowSetupConfirm] = useState(false);
 
   const getPlayer = selectPlayerFromId(gameState);
@@ -37,10 +42,20 @@ export default function LobbyScreen() {
     return Object.values(gameState.players).filter((p) => p.role === PlayerRole.PLAYER).length === 6;
   }, [gameState]);
 
-  const hasAiPlayers = useMemo(() => {
-    if (!gameState) return false;
-    return Object.values(gameState.players).some((p) => p.isAi && p.role === PlayerRole.PLAYER);
-  }, [gameState]);
+  // 当前回合限时：房主用本地状态，其他玩家从游戏状态读取（服务端同步）
+  const currentTimeout = isManager
+    ? actionTimeoutSeconds
+    : (gameState?.settings?.actionTimeoutSeconds ?? 120);
+
+  const handleTimeoutChange = async (value: number) => {
+    const prevValue = actionTimeoutSeconds;
+    setActionTimeoutSeconds(value);
+    try {
+      await updateGameSetup({ actionTimeoutSeconds: value });
+    } catch {
+      setActionTimeoutSeconds(prevValue);
+    }
+  };
 
   const validation = useMemo(() => {
     if (!gameState) return { disabled: true, message: '' };
@@ -61,7 +76,7 @@ export default function LobbyScreen() {
   const showConfirmationModal = () => {
     prepareGameSetupConfirmation({
       completeCitySize: 8,
-      actionTimeoutSeconds,
+      actionTimeoutSeconds: currentTimeout,
     });
     setShowSetupConfirm(true);
   };
@@ -96,12 +111,12 @@ export default function LobbyScreen() {
           <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div className="modal-content lobby-modal">
               <div className="modal-header border-0 pb-2">
-                <h5 className="modal-title text-gold lobby-modal-title">
+                <h5 className="modal-title lobby-modal-title">
                   {t('ui.lobby.start_game')}
                 </h5>
                 <button
                   type="button"
-                  className="close text-gold"
+                  className="close"
                   aria-label={t('ui.cancel') as string}
                   onClick={() => setShowSetupConfirm(false)}
                 >
@@ -109,37 +124,30 @@ export default function LobbyScreen() {
                 </button>
               </div>
               <div className="modal-body">
-                <table className="table lobby-table">
-                  <tbody>
-                    {isSixPlayers && (
-                      <tr>
-                        <td className="text-muted-gold">{t('ui.lobby.settings.game_mode')}</td>
-                        <td className="text-gold">{t('ui.lobby.settings.mode_team6')}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="text-muted-gold">{t('ui.lobby.settings.complete_city_size')}</td>
-                      <td className="text-gold">{isSixPlayers ? 8 : gameSetupData.completeCitySize}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-muted-gold">{t('ui.lobby.settings.action_timeout')}</td>
-                      <td className="text-gold">{`${gameSetupData.actionTimeoutSeconds}s`}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div className="card lobby-modal-card">
-                  <div className="card-header text-gold lobby-modal-card-header">
-                    {t('ui.lobby.players')}
+                {/* 卡片式设置行 */}
+                <div className="lobby-setup-rows">
+                  <div className="lobby-setup-row">
+                    <span className="lobby-setup-row__label">{t('ui.lobby.settings.complete_city_size')}</span>
+                    <span className="lobby-setup-row__value">{isSixPlayers ? 8 : gameSetupData.completeCitySize}</span>
                   </div>
-                  <ul className="list-group list-group-flush">
+                  <div className="lobby-setup-row">
+                    <span className="lobby-setup-row__label">{t('ui.lobby.settings.action_timeout')}</span>
+                    <span className="lobby-setup-row__value">{`${currentTimeout}s`}</span>
+                  </div>
+                </div>
+                {/* 玩家清单（卡片式行布局） */}
+                <div className="lobby-setup-players">
+                  <div className="lobby-setup-players__head">{t('ui.lobby.players')}</div>
+                  <ul className="lobby-setup-players__list">
                     {gameSetupData.players.map((playerId) => {
                       const p = getPlayer(playerId);
+                      const offline = p && !p.online;
                       return (
                         <li
                           key={playerId}
-                          className={`list-group-item d-flex justify-content-between align-items-center${p && !p.online ? ' text-muted-gold' : ''}`}
+                          className={`lobby-setup-players__item${offline ? ' lobby-setup-players__item--offline' : ''}`}
                         >
-                          <span className="text-parchment">{p?.username}</span>
+                          <span className="lobby-setup-players__name">{p?.username}</span>
                           {playerId === gameState?.self && (
                             <span className="badge badge-info">{t('ui.lobby.you')}</span>
                           )}
@@ -174,68 +182,92 @@ export default function LobbyScreen() {
         document.body,
       )}
 
-      <div className="medieval-panel lobby-screen">
-        <div className="lobby-screen__header">
-          <h5 className="mb-0 text-gold lobby-title">
-            {t('ui.lobby.title')}
-          </h5>
-          <span className="lobby-screen__mode-tag">{t('ui.lobby.settings.mode_team6')}</span>
+      <div className="lobby-wrapper">
+        {/* 背景渐变层 + 粒子（与 HomeScreen 同款） */}
+        <div className="lobby-bg" aria-hidden>
+          <div className="lobby-bg__gradient" />
+          <ParticleField />
+          <div className="lobby-bg__veil" />
+          <div className="lobby-bg__glow" />
         </div>
-        <div className="card-body lobby-body p-0">
-          <div className="row no-gutters lobby-players-area">
-            {isManager && (
-              <div className="col-auto p-3 lobby-settings-col">
-                <div className="lobby-alert-info mb-2">
-                  {t('ui.lobby.settings.mode_team6_only')}
-                </div>
-                {hasAiPlayers && (
-                  <div className="lobby-alert-warn mb-2">
-                    {t('ui.lobby.settings.ai_practice_hint')}
-                  </div>
-                )}
-                <div className="form-group">
-                  <label htmlFor="actionTimeoutSeconds" className="text-gold lobby-label">
-                    {t('ui.lobby.settings.action_timeout')}
-                  </label>
-                  <select
-                    className="form-control"
-                    id="actionTimeoutSeconds"
-                    value={actionTimeoutSeconds}
-                    onChange={(e) => setActionTimeoutSeconds(Number(e.target.value))}
-                  >
-                    <option value={10}>10s（测试）</option>
-                    <option value={60}>60s</option>
-                    <option value={90}>90s</option>
-                    <option value={120}>120s</option>
-                    <option value={180}>180s</option>
-                  </select>
-                  <small className="text-muted-gold">{t('ui.lobby.settings.action_timeout_hint')}</small>
-                </div>
-              </div>
-            )}
-            <div className="col p-3 lobby-players-col">
+
+        {/* 居中内容区 */}
+        <div className="lobby">
+          {/* 主体：主区 PlayersList + 辅栏 设置卡/聊天卡 */}
+          <div className="lobby-body">
+            {/* 主区：PlayersList 自带金属边框即为主视觉 */}
+            <div className="lobby-main">
               <PlayersList />
             </div>
+
+            {/* 辅栏 */}
+            <div className="lobby-side">
+              {/* 设置卡（所有玩家可见，非房主只读） */}
+              <div className="lobby-card lobby-card--settings">
+                <div className="lobby-card__header">
+                  <h6 className="lobby-card__title">{t('ui.lobby.settings.card_title')}</h6>
+                </div>
+                <div className="lobby-card__body">
+                  <div className="lobby-settings__group">
+                    <label htmlFor="actionTimeoutSeconds" className="lobby-settings__label">
+                      {t('ui.lobby.settings.action_timeout')}
+                    </label>
+                    {isManager ? (
+                      <TimeoutSelect
+                        value={actionTimeoutSeconds}
+                        options={[
+                          { value: 10, label: '10s' },
+                          { value: 60, label: '60s' },
+                          { value: 90, label: '90s' },
+                          { value: 120, label: '120s' },
+                          { value: 180, label: '180s' },
+                        ]}
+                        onChange={handleTimeoutChange}
+                      />
+                    ) : (
+                      <div className="lobby-settings__readonly">
+                        <span className="lobby-settings__readonly-value">
+                          {currentTimeout}s
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 聊天卡：固定高度、消息可滚动 */}
+              <div className="lobby-card lobby-card--chat">
+                <div className="lobby-card__header">
+                  <h6 className="lobby-card__title">{t('ui.lobby.chat_title')}</h6>
+                </div>
+                <div className="lobby-card__body">
+                  <RoomChat />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="lobby-chat-area px-3 pb-2">
-            <RoomChat />
-          </div>
-        </div>
-        <div className="lobby-screen__footer">
-          <div className="d-flex gap-2">
-            <input
+
+          {/* 底部条：离开 + 校验信息 + 开局 */}
+          <div className="lobby-footer">
+            <button
               type="button"
-              className="btn btn-outline-gold btn-lg"
+              className="btn btn-outline-gold btn-lg lobby-footer__leave"
               onClick={leaveRoom}
-              value={t('ui.score.leave_room') as string}
-            />
-            <input
+            >
+              {t('ui.score.leave_room')}
+            </button>
+            <div className="lobby-footer__validation">
+              {validation.disabled ? validation.message : ''}
+            </div>
+            <button
               type="button"
-              className="btn btn-gold btn-lg flex-fill"
+              className="btn btn-gold btn-lg lobby-footer__start"
               onClick={showConfirmationModal}
               disabled={validation.disabled}
-              value={validation.message}
-            />
+            >
+              <span className="lobby-footer__start-icon" aria-hidden>▶</span>
+              {t('ui.lobby.start_game')}
+            </button>
           </div>
         </div>
       </div>

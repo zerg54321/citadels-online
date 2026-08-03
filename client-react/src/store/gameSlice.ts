@@ -42,6 +42,8 @@ export interface GameSlice {
   removePlayer: (playerId: PlayerId) => void;
   setPlayerOnline: (online: boolean, playerId?: PlayerId) => void;
   prepareGameSetupConfirmation: (cfg: { completeCitySize?: number; actionTimeoutSeconds?: number }) => void;
+  setGameSetupData: (data: Partial<GameSetupData>) => void;
+  updateGameSetup: (setupData: { actionTimeoutSeconds?: number }) => Promise<void>;
   setSelectedCards: (cards: DistrictId[]) => void;
   setSeenCharacterIds: (updater: number[] | ((prev: number[]) => number[])) => void;
   resetSeenCharacterIds: () => void;
@@ -123,6 +125,19 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
       },
     };
   }),
+
+  setGameSetupData: (data) => set((state) => ({
+    gameSetupData: { ...state.gameSetupData, ...data },
+  })),
+
+  updateGameSetup: async (setupData) => {
+    if (!socket.connected) return;
+    try {
+      await api.updateGameSetup(socket, setupData);
+    } catch (e) {
+      console.error('update game setup failed', e);
+    }
+  },
   setSelectedCards: (cards) => set({ selectedCards: cards }),
   setSeenCharacterIds: (updater) => set((state) => ({
     seenCharacterIds: typeof updater === 'function' ? updater(state.seenCharacterIds) : updater,

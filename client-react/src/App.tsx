@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
+import {
+  Outlet, useLocation, Link, useNavigate,
+} from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import AuthPanel from './components/AuthPanel';
@@ -26,6 +28,9 @@ export default function App() {
   // shares the /room path and the in-game header styling, but it is a normal
   // responsive page and must not be forced into the 1366×1024 scaled canvas.
   const inPlay = inGame && (gameProgress === 'IN_GAME' || gameProgress === 'FINISHED');
+  // Lobby: same /room path but pre-game. Header should match the home page
+  // (coin + linked title, stats/about visible) for visual continuity.
+  const inLobby = inGame && !inPlay;
 
   const leaveRoom = async () => {
     try {
@@ -37,13 +42,13 @@ export default function App() {
   };
 
   const header = (
-    <header className={inGame ? 'header--game' : undefined}>
+    <header className={inPlay ? 'header--game' : undefined}>
       <div className="container-fluid">
         <div className="header-row">
             <div className="header-brand">
               <h1>
-                {!inGame && <img src="/svg/1fa99.svg" alt="" className="header-brand__coin" />}
-                {inGame ? (
+                {(inLobby || !inGame) && <img src="/svg/1fa99.svg" alt="" className="header-brand__coin" />}
+                {inPlay ? (
                   t('ui.title')
                 ) : (
                   <a href="/" className="text-reset">{t('ui.title')}</a>
@@ -51,17 +56,19 @@ export default function App() {
               </h1>
 
             </div>
-          {inGame && <GameTopBar />}
+          {inPlay && <GameTopBar />}
           <div className="header-actions">
-            {inGame && gameProgress === 'IN_GAME' && (
+            {inPlay && gameProgress === 'IN_GAME' && (
               <button type="button" className="header-leave-btn" onClick={leaveRoom}>
                 {t('ui.score.leave_room')}
               </button>
             )}
-            <div className={`header-extra${inGame ? ' header-extra--hidden' : ''}`}>
-              <Link className="hdr-link" to="/stats">
-                {t('ui.stats.title')}
-              </Link>
+            <div className={`header-extra${inPlay ? ' header-extra--hidden' : ''}`}>
+              {!inLobby && (
+                <Link className="hdr-link" to="/stats">
+                  {t('ui.stats.title')}
+                </Link>
+              )}
               <button
                 type="button"
                 className="hdr-link"
@@ -79,7 +86,7 @@ export default function App() {
   );
 
   const body = (
-    <div className={`body flex-fill${inGame ? ' body--game' : ''}`}>
+    <div className={`body flex-fill${inPlay ? ' body--game' : ''}`}>
       <Outlet />
     </div>
   );
@@ -119,7 +126,7 @@ export default function App() {
   }
 
   return (
-    <div className="d-flex flex-column h-100">
+    <div className="d-flex flex-column h-100 app-shell">
       {header}
       {body}
       {aboutModal}

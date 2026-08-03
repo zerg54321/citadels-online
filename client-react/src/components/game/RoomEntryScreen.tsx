@@ -186,6 +186,12 @@ export default function RoomEntryScreen() {
     doJoin('', true);
   };
 
+  const isRoomNotFound = errorMessage === 'ui.room.error_does_not_exist';
+
+  const handleReturnHome = () => {
+    navigate('/');
+  };
+
   return (
     <div className="container-fluid d-flex justify-content-center align-items-center">
       {loading && (
@@ -193,7 +199,31 @@ export default function RoomEntryScreen() {
           <LoadingSpinner />
         </div>
       )}
-      {!loading && error && (
+      {!loading && error && isRoomNotFound && (
+        <div className="room-entry-error">
+          <div className="room-entry-error__icon" aria-hidden>
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="72" height="72">
+              <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="2" fill="none" />
+              <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth="1" fill="none" opacity="0.4" />
+              <line x1="22" y1="22" x2="42" y2="42" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h2 className="room-entry-error__title">
+            {t(errorMessage || 'ui.unknown_error')}
+          </h2>
+          <p className="room-entry-error__desc">
+            {t('ui.room.error_does_not_exist_desc')}
+          </p>
+          <div className="room-entry-error__id">
+            <span className="room-entry-error__id-label">{t('ui.room.room_id_label')}</span>
+            <code className="room-entry-error__id-value">{roomId}</code>
+          </div>
+          <button type="button" className="btn btn-gold room-entry-error__btn" onClick={handleReturnHome}>
+            {t('ui.room.return_home')}
+          </button>
+        </div>
+      )}
+      {!loading && error && !isRoomNotFound && (
         <div className="text-center text-gold">
           {t(errorMessage || 'ui.unknown_error', { msg: errorReason })}
         </div>

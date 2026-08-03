@@ -3,6 +3,8 @@
 // .hdr-link / .locale-select, all gold-themed, same font + size + spacing.
 
 header {
+  position: relative;
+  z-index: 2;
   background: linear-gradient(180deg, rgba(13, 11, 8, 0.97) 0%, rgba(26, 20, 16, 0.95) 100%);
   color: var(--parchment);
   margin: 0;
@@ -406,6 +408,12 @@ html[lang="en"] .header--game {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+// App shell: sits above any fixed full-viewport backgrounds (e.g. lobby).
+.app-shell {
+  position: relative;
+  z-index: 1;
 }
 
 // ── Shared app modal (About / Login / Register / Profile) ─────────────────

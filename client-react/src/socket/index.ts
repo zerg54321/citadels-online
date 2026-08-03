@@ -54,7 +54,16 @@ socket.on('update game state', (data: unknown) => {
   // repopulate gameState with the old (often FINISHED) state — causing a
   // freshly-joined lobby to show the previous game's scoreboard.
   if (!useAppStore.getState().currentRoomId) return;
-  useAppStore.getState().setGameState(parseClientGameState(data));
+  const newGameState = parseClientGameState(data);
+  useAppStore.getState().setGameState(newGameState);
+  // Sync gameSetupData with server-side settings so non-manager players
+  // see the latest action timeout chosen by the manager in the lobby.
+  if (newGameState?.settings?.actionTimeoutSeconds) {
+    const state = useAppStore.getState();
+    if (state.gameSetupData.actionTimeoutSeconds !== newGameState.settings.actionTimeoutSeconds) {
+      state.setGameSetupData({ actionTimeoutSeconds: newGameState.settings.actionTimeoutSeconds });
+    }
+  }
 });
 
 socket.on('chat message', (msg: { playerId: string; username: string; text: string; ts: number }) => {

@@ -66,4 +66,13 @@ export default {
       });
     });
   },
+
+  updateGameSetup(s: Socket, setupData: { actionTimeoutSeconds?: number }) {
+    return new Promise<{ status: string; message?: string }>((resolve, reject) => {
+      s.emit('set game setup', setupData, (data: any) => {
+        if (data?.status === 'ok') return resolve(data);
+        reject(new Error(data?.message || 'update game setup failed'));
+      });
+    });
+  },
 };

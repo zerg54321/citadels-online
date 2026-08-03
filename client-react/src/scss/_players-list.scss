@@ -19,22 +19,23 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 0.5rem;
-    padding: 0.7rem 0.95rem;
-    background: rgba(13, 11, 8, 0.5);
-    border-bottom: 1px solid rgba(212, 175, 55, 0.28);
+    padding: 0.85rem 1rem;
+    background: linear-gradient(180deg, rgba(13, 11, 8, 0.75) 0%, rgba(13, 11, 8, 0.4) 100%);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.35);
   }
   &__title {
     font-family: var(--font-display);
     color: var(--gold-bright);
-    letter-spacing: 0.1em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
+    font-weight: 700;
   }
   &__subtitle {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     font-family: var(--font-display);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
   }
 
   // ── Teams grid ─────────────────────────────────────────────
@@ -53,11 +54,11 @@
   &__team-head {
     font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     text-align: center;
-    padding: 0.4rem 0;
+    padding: 0.5rem 0;
   }
   &__team--a &__team-head {
     color: #b8c8d8;
@@ -79,6 +80,8 @@
     gap: 0.35rem;
     overflow-y: auto;
     min-height: 0;
+    // 预留额外行数空间（每行约 3.2rem × 4 行 ≈ 12.8rem）供将来扩展
+    padding-bottom: 1rem;
   }
   &__seats--spec {
     flex-direction: row;
@@ -110,29 +113,33 @@
 
   // ── Footer ─────────────────────────────────────────────────
   &__footer {
-    padding: 0.65rem 0.95rem;
-    background: rgba(13, 11, 8, 0.4);
-    border-top: 1px solid rgba(212, 175, 55, 0.25);
+    padding: 0.8rem 1rem;
+    background: rgba(13, 11, 8, 0.45);
+    border-top: 1px solid rgba(212, 175, 55, 0.3);
   }
   &__counts {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.78rem;
+    gap: 0.5rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.6rem;
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
     strong {
       color: var(--gold-bright);
-      font-size: 0.9rem;
-      font-family: var(--font-body);
+      font-size: 1rem;
+      font-family: var(--font-display);
+      font-weight: 700;
     }
   }
   &__dot { opacity: 0.5; }
   &__ai-hint {
-    font-size: 0.72rem;
+    font-family: var(--font-readable);
+    font-size: 0.78rem;
     color: var(--text-muted);
-    margin-top: 0.35rem;
-    line-height: 1.4;
+    margin-top: 0.4rem;
+    line-height: 1.5;
   }
 }
 
@@ -140,12 +147,13 @@
 .seat-card {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.45rem 0.55rem;
-  border-radius: 9px;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
   border: 1px solid rgba(212, 175, 55, 0.14);
-  background: rgba(13, 11, 8, 0.3);
+  background: rgba(13, 11, 8, 0.35);
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  min-height: 3.8rem;
 
   &:hover {
     background: rgba(20, 16, 10, 0.5);
@@ -169,6 +177,22 @@
   &--spec {
     flex: 0 0 auto;
     padding: 0.3rem 0.5rem;
+  }
+
+  // Empty slot placeholder
+  &--empty {
+    border-style: dashed;
+    border-color: rgba(212, 175, 55, 0.18);
+    background: transparent;
+    &:hover {
+      background: transparent;
+      border-color: rgba(212, 175, 55, 0.28);
+    }
+    .seat-card__name-text {
+      color: var(--text-muted);
+      font-style: italic;
+      font-weight: 400;
+    }
   }
 
   &__no {
@@ -230,6 +254,14 @@
     height: 1.7rem;
     font-size: 0.85rem;
   }
+  .seat-card--empty &__avatar {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    font-style: italic;
+    background: transparent;
+    border-color: rgba(212, 175, 55, 0.15);
+    box-shadow: none;
+  }
 
   // Name + tags — ENLARGED per request
   &__name {
@@ -237,14 +269,14 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
   }
   &__name-text {
     font-family: var(--font-display);
-    font-size: 1.1rem;       // ↑ enlarged from 0.85rem
+    font-size: 1.15rem;
     font-weight: 700;
     line-height: 1.2;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
     color: var(--parchment);
     max-width: 100%;
   }

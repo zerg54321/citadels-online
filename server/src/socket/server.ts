@@ -492,6 +492,39 @@ export function initSocket(io: Server) {
       }
     });
 
+    socket.on('set game setup', (setupData: { actionTimeoutSeconds?: number }, callback) => {
+      try {
+        const room = gameStore.findRoom(socket.roomId);
+        if (!room) {
+          callback({ status: 'error', message: 'room id is invalid' });
+          return;
+        }
+        const player = room.gameState.getPlayer(socket.playerId);
+        if (!player) {
+          callback({ status: 'error', message: 'player id is invalid' });
+          return;
+        }
+        if (!player.manager) {
+          callback({ status: 'error', message: 'you must be a manager' });
+          return;
+        }
+        if (room.gameState.progress !== GameProgress.IN_LOBBY) {
+          callback({ status: 'error', message: 'game already started' });
+          return;
+        }
+        if (typeof setupData?.actionTimeoutSeconds === 'number') {
+          room.gameState.actionTimeoutSeconds = GameSetupData.clampTimeout(
+            setupData.actionTimeoutSeconds,
+          );
+        }
+        room.update();
+        callback({ status: 'ok' });
+      } catch (err) {
+        console.error('[set game setup] handler failed', err);
+        callback({ status: 'error', message: 'internal server error' });
+      }
+    });
+
     socket.on('set lobby role', (roleRaw: string, callback) => {
       try {
         const room = gameStore.findRoom(socket.roomId);

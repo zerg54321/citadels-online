@@ -58,7 +58,7 @@ export interface GameSlice {
   sendMove: (move: Move) => Promise<void>;
   setAutoplay: (enabled: boolean) => Promise<any>;
   setLobbyRole: (role: 'player' | 'spectator') => Promise<any>;
-  reorderLobbySeat: (payload: { playerId: string; direction: number }) => Promise<any>;
+  moveLobbySeat: (payload: { playerId: string; targetSlot: number }) => Promise<any>;
   addAiPlayer: () => Promise<any>;
   removeAiPlayer: (playerId: PlayerId) => Promise<any>;
 }
@@ -258,12 +258,12 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
     });
   },
 
-  reorderLobbySeat(payload) {
+  moveLobbySeat(payload) {
     return new Promise((resolve, reject) => {
       if (!socket.connected) return reject(new Error('You must be connected'));
-      socket.emit('reorder lobby seat', payload, (res: any) => {
+      socket.emit('move lobby seat', payload, (res: any) => {
         if (res?.status === 'ok') return resolve(res);
-        reject(new Error(res?.message || 'reorder failed'));
+        reject(new Error(res?.message || 'move seat failed'));
       });
     });
   },

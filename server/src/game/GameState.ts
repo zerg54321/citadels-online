@@ -12,6 +12,7 @@ import {
   PlayerId,
   ActionFeedLine,
   Avatar,
+  MAX_LOBBY_SEATS,
 } from 'citadels-common';
 import { Observer, Subject } from '../utils/observerPattern';
 import BoardState from './BoardState';
@@ -61,6 +62,13 @@ export default class GameState implements Subject {
   roundNumber: number;
   /** lobby seat order for 3v3 team preview (even=A, odd=B) */
   lobbyPlayerOrder: PlayerId[];
+  /**
+   * Lobby seats with holes (length MAX_LOBBY_SEATS, `null` = empty).
+   * Editable during lobby; `setupGame()` collapses it into `lobbyPlayerOrder`
+   * + `BoardState.playerOrder`. Game-time logic reads `lobbyPlayerOrder`, not
+   * this field, so the two-layer split keeps the game flow untouched.
+   */
+  lobbySeats: (PlayerId | null)[];
   /** rolling action log for clients; structured { kind, params } entries
    *  localized client-side via formatActionFeedLine() */
   actionFeed: ActionFeedLine[];
@@ -91,6 +99,7 @@ export default class GameState implements Subject {
     gs.lastRoundSummary = this.lastRoundSummary;
     gs.roundNumber = this.roundNumber;
     gs.lobbyPlayerOrder = [...this.lobbyPlayerOrder];
+    gs.lobbySeats = [...this.lobbySeats];
     gs.actionFeed = [...this.actionFeed.map((a) => ({ ...a }))];
     gs.emptySince = this.emptySince;
     gs.fastMode = this.fastMode;
@@ -122,6 +131,7 @@ export default class GameState implements Subject {
     this.lastRoundSummary = null;
     this.roundNumber = 0;
     this.lobbyPlayerOrder = [];
+    this.lobbySeats = new Array(MAX_LOBBY_SEATS).fill(null);
     this.actionFeed = [];
     this.emptySince = null;
     this.fastMode = options?.fastMode ?? false;
@@ -167,6 +177,23 @@ export default class GameState implements Subject {
     return this.players.get(playerId);
   }
 
+  /** Place a player into the first empty lobby slot. Returns false if full. */
+  private seatPlayerInLobby(id: PlayerId): boolean {
+    const slot = this.lobbySeats.findIndex((s) => s === null);
+    if (slot < 0) return false;
+    this.lobbySeats[slot] = id;
+    return true;
+  }
+
+  /** Team derived from seat parity: even slot → A, odd → B.
+   *  Single source of truth shared by refreshLobbyTeams() (lobby live
+   *  preview) and setupGame() (game start) so the two never drift —
+   *  lobby-preview teams must match in-game teams, the feature's core
+   *  invariant. */
+  private teamForSlot(slot: number): TeamId {
+    return slot % 2 === 0 ? TeamId.A : TeamId.B;
+  }
+
   addPlayer(
     id: PlayerId,
     username: string,
@@ -179,7 +206,7 @@ export default class GameState implements Subject {
     const player = new Player(id, username, manager, online, role, userId, TeamId.NONE, avatar);
     this.players.set(id, player);
     if (role === PlayerRole.PLAYER) {
-      if (!this.lobbyPlayerOrder.includes(id)) this.lobbyPlayerOrder.push(id);
+      this.seatPlayerInLobby(id);
     }
     this.refreshLobbyTeams();
     return player;
@@ -194,12 +221,12 @@ export default class GameState implements Subject {
   /** P5: add AI seat in lobby only (cap 6 for 3v3-only product) */
   addAiPlayer(id: PlayerId, username: string): Player | null {
     if (this.progress !== GameProgress.IN_LOBBY) return null;
-    if (this.getSeatedPlayerCount() >= 6) return null;
+    if (this.getSeatedPlayerCount() >= MAX_LOBBY_SEATS) return null;
     const player = new Player(id, username, false, true, PlayerRole.PLAYER);
     player.isAi = true;
     player.isAutoplay = true;
     this.players.set(id, player);
-    if (!this.lobbyPlayerOrder.includes(id)) this.lobbyPlayerOrder.push(id);
+    this.seatPlayerInLobby(id);
     this.refreshLobbyTeams();
     return player;
   }
@@ -210,7 +237,6 @@ export default class GameState implements Subject {
     const player = this.players.get(playerId);
     if (!player || !player.isAi) return false;
     this.players.delete(playerId);
-    this.lobbyPlayerOrder = this.lobbyPlayerOrder.filter((id) => id !== playerId);
     this.refreshLobbyTeams();
     return true;
   }
@@ -225,13 +251,12 @@ export default class GameState implements Subject {
     if (!player || player.isAi) return false;
     if (player.manager && this.progress === GameProgress.IN_LOBBY) {
       player.manager = false;
-      const next = this.lobbyPlayerOrder
-        .map((id) => this.players.get(id))
+      const next = this.lobbySeats
+        .map((id) => (id ? this.players.get(id) : undefined))
         .find((p) => p && p.id !== playerId && !p.isAi && p.role === PlayerRole.PLAYER);
       if (next) next.manager = true;
     }
     this.players.delete(playerId);
-    this.lobbyPlayerOrder = this.lobbyPlayerOrder.filter((id) => id !== playerId);
     if (this.progress === GameProgress.IN_LOBBY) {
       this.refreshLobbyTeams();
     }
@@ -254,15 +279,15 @@ export default class GameState implements Subject {
     if (role === player.role) return true;
 
     if (role === PlayerRole.PLAYER) {
-      if (this.getSeatedPlayerCount() >= 6) return false;
+      if (this.getSeatedPlayerCount() >= MAX_LOBBY_SEATS) return false;
       player.role = PlayerRole.PLAYER;
-      if (!this.lobbyPlayerOrder.includes(playerId)) this.lobbyPlayerOrder.push(playerId);
+      this.seatPlayerInLobby(playerId);
     } else if (role === PlayerRole.SPECTATOR) {
       // manager stepping out: transfer manager to first remaining seated human
       if (player.manager) {
         player.manager = false;
-        const next = this.lobbyPlayerOrder
-          .map((id) => this.players.get(id))
+        const next = this.lobbySeats
+          .map((id) => (id ? this.players.get(id) : undefined))
           .find((p) => p && p.id !== playerId && !p.isAi && p.role === PlayerRole.PLAYER);
         if (next) next.manager = true;
         else {
@@ -272,7 +297,6 @@ export default class GameState implements Subject {
       }
       player.role = PlayerRole.SPECTATOR;
       player.team = TeamId.NONE;
-      this.lobbyPlayerOrder = this.lobbyPlayerOrder.filter((id) => id !== playerId);
     } else {
       return false;
     }
@@ -280,35 +304,62 @@ export default class GameState implements Subject {
     return true;
   }
 
-  /** Manager reorders lobby seats (affects A/B team assignment). */
-  moveLobbySeat(playerId: PlayerId, direction: -1 | 1): boolean {
+  /**
+   * Lobby seat move/swap (affects A/B team assignment).
+   * targetSlot empty → move; occupied → swap (manager only). Same slot →
+   * no-op. Validates slot range and that playerId is currently seated.
+   *
+   * Defense in depth: the manager-only-swap rule is enforced HERE (state
+   * layer), not solely in the socket handler, so any caller is safe. A
+   * non-manager attempting an occupied-target swap is rejected.
+   */
+  moveLobbySeat(
+    playerId: PlayerId,
+    targetSlot: number,
+    actorId?: PlayerId,
+    isManager = false,
+  ): boolean {
     if (this.progress !== GameProgress.IN_LOBBY) return false;
-    const idx = this.lobbyPlayerOrder.indexOf(playerId);
-    if (idx < 0) return false;
-    const j = idx + direction;
-    if (j < 0 || j >= this.lobbyPlayerOrder.length) return false;
-    const order = [...this.lobbyPlayerOrder];
-    [order[idx], order[j]] = [order[j], order[idx]];
-    this.lobbyPlayerOrder = order;
+    if (!Number.isInteger(targetSlot)
+        || targetSlot < 0 || targetSlot >= MAX_LOBBY_SEATS) return false;
+    const src = this.lobbySeats.indexOf(playerId);
+    if (src < 0) return false;
+    if (src === targetSlot) return true;
+    const occupant = this.lobbySeats[targetSlot];
+    // Occupied target = swap: only the manager may swap. The actor must be
+    // the one initiating (actorId defaults to playerId for self-moves).
+    if (occupant !== null && !isManager) return false;
+    // A non-manager may only move themselves (not drag another player).
+    if (!isManager && actorId !== undefined && actorId !== playerId) return false;
+    this.lobbySeats[targetSlot] = playerId;
+    // null occupant → move; another player → swap (their seat stays filled)
+    this.lobbySeats[src] = occupant;
     this.refreshLobbyTeams();
     return true;
   }
 
-  /** even index → Team A, odd → Team B (preview + start order) */
+  /** even slot → Team A, odd → Team B. lobbySeats is the source of truth;
+   *  lobbyPlayerOrder is rebuilt as its compact projection so game-time
+   *  viewers (spectator boardLayout) keep reading a hole-free array. */
   refreshLobbyTeams() {
-    // drop stale ids
-    this.lobbyPlayerOrder = this.lobbyPlayerOrder.filter((id) => {
+    // drop stale ids (player removed / became spectator) → null their slots
+    this.lobbySeats = this.lobbySeats.map((id) => {
+      if (id === null) return null;
       const p = this.players.get(id);
-      return p && p.role === PlayerRole.PLAYER;
+      return p && p.role === PlayerRole.PLAYER ? id : null;
     });
+    this.lobbyPlayerOrder = this.lobbySeats.filter(
+      (id): id is PlayerId => id !== null,
+    );
     this.players.forEach((p) => {
       if (p.role !== PlayerRole.PLAYER) {
         p.team = TeamId.NONE; // eslint-disable-line no-param-reassign
       }
     });
-    this.lobbyPlayerOrder.forEach((id, index) => {
+    this.lobbySeats.forEach((id, slot) => {
+      if (id === null) return;
       const p = this.players.get(id);
-      if (p) p.team = index % 2 === 0 ? TeamId.A : TeamId.B;
+      if (p) p.team = this.teamForSlot(slot);
     });
 
     if (this.hasHumanPlayers()) {
@@ -360,6 +411,7 @@ export default class GameState implements Subject {
       lastRoundSummary: this.lastRoundSummary,
       roundNumber: this.roundNumber,
       lobbyPlayerOrder: [...this.lobbyPlayerOrder],
+      lobbySeats: [...this.lobbySeats],
       actionFeed: this.actionFeed,
     };
   }
@@ -417,13 +469,15 @@ export default class GameState implements Subject {
     this.gameMode = this.hasAiPlayers ? GameMode.CASUAL : GameMode.COMPETITIVE_TEAM6;
     this.completeCitySize = 8;
 
-    // 队伍分配基于原始大厅顺序（与大厅预览一致：偶数位=A队，奇数位=B队）
-    // 不受洗牌影响，保证玩家在大厅看到的队伍与结算画面一致
+    // 队伍分配基于大厅座位奇偶（与大厅预览一致：偶数slot=A队，奇数slot=B队）
+    // 不受洗牌影响，保证玩家在大厅看到的队伍与结算画面一致。按 slot 而非
+    // 紧凑投影索引分队，确保空位不连续时（玩家选座）开局队伍仍与大厅一致。
     this.lobbyPlayerOrder = [...stablePlayers];
-    stablePlayers.forEach((playerId, index) => {
-      const player = this.players.get(playerId);
+    this.lobbySeats.forEach((id, slot) => {
+      if (id === null) return;
+      const player = this.players.get(id);
       if (player) {
-        player.team = index % 2 === 0 ? TeamId.A : TeamId.B;
+        player.team = this.teamForSlot(slot);
       }
     });
 

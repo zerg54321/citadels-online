@@ -21,6 +21,7 @@ import type { ClientGameState } from '../index';
  *       turnDeadlineAt    → null
  *       lastRoundSummary  → null
  *       lobbyPlayerOrder  → []
+ *       lobbySeats        → []
  *       actionFeed        → []
  *     `teamScores` and `matchResult` are passed through unchanged
  *     (undefined is a meaningful "not yet set" state for downstream logic).
@@ -46,6 +47,7 @@ export function parseClientGameState(data: unknown): ClientGameState {
     lastRoundSummary: d.lastRoundSummary ?? null,
     roundNumber: typeof d.roundNumber === 'number' ? d.roundNumber : 1,
     lobbyPlayerOrder: d.lobbyPlayerOrder || [],
+    lobbySeats: Array.isArray(d.lobbySeats) ? d.lobbySeats : [],
     actionFeed: d.actionFeed || [],
   };
 }

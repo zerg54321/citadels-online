@@ -42,6 +42,9 @@ export type PlayerId = string;
 export type RoomId = string;
 export { DistrictId };
 
+/** Max fixed lobby seats (Team A = slots 0,2,4; Team B = slots 1,3,5). */
+export const MAX_LOBBY_SEATS = 6;
+
 export enum GameProgress {
   IN_LOBBY = 1,
   IN_GAME,
@@ -234,6 +237,15 @@ export type ClientGameState = {
   roundNumber?: number
   /** lobby seat order for 3v3 team preview */
   lobbyPlayerOrder?: PlayerId[]
+  /**
+   * Lobby seats with holes (length = MAX_LOBBY_SEATS). `null` = empty slot.
+   * Editable during lobby: manager drags players between slots (move/swap),
+   * players pick an empty slot on join. Team is derived from slot parity
+   * (even index → A, odd → B). `setupGame()` filters out nulls to build
+   * `lobbyPlayerOrder` + `BoardState.playerOrder`; game-time logic never
+   * touches `lobbySeats`.
+   */
+  lobbySeats?: (PlayerId | null)[]
   /** recent action feed for UI log. The server pushes structured
    *  { kind, params } entries (no localized text); the client renders them
    *  via formatActionFeedLine() with the current i18n language. `text` is an

@@ -558,31 +558,52 @@ export function initSocket(io: Server) {
       }
     });
 
-    socket.on('reorder lobby seat', (payload: { playerId: string; direction: number }, callback) => {
+    socket.on('move lobby seat', (payload: { playerId: string; targetSlot: number }, callback) => {
       try {
         const room = gameStore.findRoom(socket.roomId);
         if (!room) {
           callback({ status: 'error', message: 'room id is invalid' });
           return;
         }
-        const manager = room.gameState.getPlayer(socket.playerId);
-        if (!manager?.manager) {
-          callback({ status: 'error', message: 'you must be a manager' });
+        const actor = room.gameState.getPlayer(socket.playerId);
+        if (!actor) {
+          callback({ status: 'error', message: 'player id is invalid' });
           return;
         }
         if (room.gameState.progress !== GameProgress.IN_LOBBY) {
           callback({ status: 'error', message: 'game already started' });
           return;
         }
-        const dir = payload?.direction < 0 ? -1 : 1;
-        if (!room.gameState.moveLobbySeat(payload?.playerId, dir as -1 | 1)) {
+        const targetPlayerId = payload?.playerId;
+        const targetSlot = payload?.targetSlot;
+        if (!targetPlayerId || typeof targetSlot !== 'number') {
+          callback({ status: 'error', message: 'invalid payload' });
+          return;
+        }
+        // 权限：房主可移动/交换任意玩家；普通玩家只能移动自己到空位（不可交换）。
+        if (!actor.manager) {
+          if (targetPlayerId !== actor.id) {
+            callback({ status: 'error', message: 'you can only move yourself' });
+            return;
+          }
+          if (room.gameState.lobbySeats[targetSlot] != null) {
+            callback({ status: 'error', message: 'seat is occupied' });
+            return;
+          }
+        }
+        if (!room.gameState.moveLobbySeat(
+          targetPlayerId,
+          targetSlot,
+          actor.id,
+          Boolean(actor.manager),
+        )) {
           callback({ status: 'error', message: 'cannot move seat' });
           return;
         }
         room.update();
         callback({ status: 'ok' });
       } catch (err) {
-        console.error('[reorder lobby seat] handler failed', err);
+        console.error('[move lobby seat] handler failed', err);
         callback({ status: 'error', message: 'internal server error' });
       }
     });

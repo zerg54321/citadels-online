@@ -216,7 +216,7 @@ export default function LobbyScreen() {
                       <TimeoutSelect
                         value={actionTimeoutSeconds}
                         options={[
-                          { value: 10, label: '10s' },
+                          { value: 30, label: '30s' },
                           { value: 60, label: '60s' },
                           { value: 90, label: '90s' },
                           { value: 120, label: '120s' },

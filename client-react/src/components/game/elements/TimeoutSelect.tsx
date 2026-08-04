@@ -19,7 +19,7 @@ export default function TimeoutSelect({ value, options, onChange }: TimeoutSelec
       position: 'fixed',
       top: `${rect.bottom + 4}px`,
       left: `${rect.left}px`,
-      width: `${rect.width}px`,
+      minWidth: `${Math.max(rect.width, 120)}px`,
     });
   };
 

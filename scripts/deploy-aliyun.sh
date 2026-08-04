@@ -276,13 +276,25 @@ update_cors_origin() {
 # 构建（共享）
 # -----------------------------------------------------------------------------
 
+# 安装依赖：优先使用 npm ci（可重复构建），失败则回退到 npm install
+npm_install() {
+  local dir="$1"
+  cd "$dir"
+  if npm ci 2>/dev/null; then
+    return 0
+  fi
+  warn "npm ci 失败（lock 文件可能过期），回退到 npm install..."
+  rm -rf node_modules package-lock.json
+  npm install
+}
+
 build_app() {
   log "构建 common"
-  ( cd "$REPO_DIR/common" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/common" && npm run build )
   log "构建 client-react"
-  ( cd "$REPO_DIR/client-react" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/client-react" && npm run build )
   log "构建 server"
-  ( cd "$REPO_DIR/server" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/server" && npm run build )
 }
 
 # -----------------------------------------------------------------------------

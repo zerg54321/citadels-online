@@ -267,13 +267,25 @@ update_cors_origin() {
 # Build (shared)
 # -----------------------------------------------------------------------------
 
+# Install deps: try npm ci first (reproducible), fall back to npm install
+npm_install() {
+  local dir="$1"
+  cd "$dir"
+  if npm ci 2>/dev/null; then
+    return 0
+  fi
+  warn "npm ci failed (lock file may be stale), falling back to npm install..."
+  rm -rf node_modules package-lock.json
+  npm install
+}
+
 build_app() {
   log "构建 common"
-  ( cd "$REPO_DIR/common" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/common" && npm run build )
   log "构建 client-react"
-  ( cd "$REPO_DIR/client-react" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/client-react" && npm run build )
   log "构建 server"
-  ( cd "$REPO_DIR/server" && npm ci && npm run build )
+  ( npm_install "$REPO_DIR/server" && npm run build )
 }
 
 # -----------------------------------------------------------------------------

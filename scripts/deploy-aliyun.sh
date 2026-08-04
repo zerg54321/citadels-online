@@ -209,7 +209,10 @@ ensure_env() {
   local admin_token
   admin_token="$(openssl rand -hex 32)"
   local origin="http://localhost:${APP_PORT}"
-  [ -n "$DOMAIN" ] && origin="https://${DOMAIN}"
+  # 同时放行 www 与裸域名（后端 CORS_ORIGIN 支持逗号分隔多个 origin）
+  if [ -n "$DOMAIN" ]; then
+    origin="https://www.${DOMAIN},https://${DOMAIN}"
+  fi
   log "生成 .env: $env_file"
   cat > "$env_file" <<EOF
 PORT=${APP_PORT}
@@ -294,9 +297,10 @@ setup_firewall() {
 
 update_cors_origin() {
   [ -z "$DOMAIN" ] && return 0
+  local new_origin="https://www.${DOMAIN},https://${DOMAIN}"
   if [ -f "$REPO_DIR/.env" ] && grep -q '^CORS_ORIGIN=' "$REPO_DIR/.env"; then
-    sed -i "s|^CORS_ORIGIN=.*|CORS_ORIGIN=https://${DOMAIN}|" "$REPO_DIR/.env"
-    log "已更新 CORS_ORIGIN=https://${DOMAIN}"
+    sed -i "s|^CORS_ORIGIN=.*|CORS_ORIGIN=${new_origin}|" "$REPO_DIR/.env"
+    log "已更新 CORS_ORIGIN=${new_origin}"
   fi
 }
 

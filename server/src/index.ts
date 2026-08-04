@@ -52,8 +52,15 @@ app.use('/api/admin', createAdminRouter());
 const io = new Server(http, {
   path: '/s/',
   cors: {
+    // Production: CORS_ORIGIN may be a single origin or a comma-separated
+    // list (e.g. "https://www.example.com,https://example.com") to cover both
+    // the www and bare domains behind a reverse proxy. Falls back to a
+    // localhost default for IP-only HTTP deploys.
     origin: process.env.NODE_ENV === 'production'
       ? (process.env.CORS_ORIGIN || 'http://localhost:8081')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
       : ['http://localhost:3010', 'http://127.0.0.1:3010'],
     credentials: true,
   },

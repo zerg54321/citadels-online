@@ -28,12 +28,11 @@ set -euo pipefail
 # 后续更新（在服务器上执行）：
 #
 #   cd /opt/citadels/citadels-online
-#   bash scripts/deploy-aliyun.sh
+#   bash scripts/update-aliyun.sh
 #
 # 参数说明：
 #   --install           强制完整安装（幂等，可重复执行）
-#   --skip-backup       跳过 SQLite 备份
-#   --skip-build        跳过 npm 构建步骤（更新模式）
+#   --skip-build        跳过 npm 构建步骤
 #   --domain DOMAIN     域名，用于 Caddy 自动 HTTPS
 #   --email EMAIL       Let's Encrypt 邮箱（可选）
 #   --git-url URL       Git 仓库地址（默认 GitHub，可改为 Gitee 镜像）
@@ -47,6 +46,7 @@ DATA_DIR="${INSTALL_ROOT}/data"
 BACKUP_DIR="${INSTALL_ROOT}/backups"
 DEFAULT_REPO_DIR="${INSTALL_ROOT}/citadels-online"
 DB_PATH="${DATA_DIR}/citadels.sqlite"
+AVATAR_DIR="${DATA_DIR}/avatars"
 SERVICE_NAME="citadels"
 APP_PORT="8081"
 HEALTH_URL="http://127.0.0.1:${APP_PORT}"
@@ -59,7 +59,6 @@ NPM_REGISTRY="https://registry.npmmirror.com"
 NODE_SOURCE_MIRROR="https://mirrors.tuna.tsinghua.edu.cn/nodesource/deb"
 
 MODE=""
-SKIP_BACKUP=false
 SKIP_BUILD=false
 DOMAIN=""
 EMAIL=""
@@ -70,7 +69,6 @@ ASSUME_YES=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --install) MODE="install"; shift ;;
-    --skip-backup) SKIP_BACKUP=true; shift ;;
     --skip-build) SKIP_BUILD=true; shift ;;
     --yes) ASSUME_YES=true; shift ;;
     -h|--help) sed -n '2,42p' "$0"; exit 0 ;;
@@ -99,9 +97,17 @@ fi
 
 service_installed() { systemctl list-unit-files "${SERVICE_NAME}.service" >/dev/null 2>&1 && systemctl is-enabled "${SERVICE_NAME}.service" >/dev/null 2>&1; }
 
-# 自动检测模式：如果 systemd 服务不存在，则为首次安装
+# 自动检测模式：如果 systemd 服务不存在，则为首次安装；
+# 若服务已存在且未显式给定模式，提示改用专门的更新脚本 update-aliyun.sh
+# （更新只涉及拉代码、构建、重启，不应重复执行系统依赖/Caddy/防火墙安装）。
 if [ -z "$MODE" ]; then
-  if service_installed; then MODE="update"; else MODE="install"; fi
+  if service_installed; then
+    log "检测到已部署服务。日常更新请使用:"
+    log "  cd $REPO_DIR && bash scripts/update-aliyun.sh"
+    log "如需强制重新完整部署，请加 --install 参数。"
+    exit 0
+  fi
+  MODE="install"
 fi
 
 log "mode=${MODE} repo=${REPO_DIR}$( [ -n "$DOMAIN" ] && echo " domain=${DOMAIN}" )"
@@ -171,6 +177,27 @@ ensure_repo() {
   git clone --branch "$BRANCH" "$GIT_URL" "$REPO_DIR"
 }
 
+ensure_avatar_dir_env() {
+  local env_file="$REPO_DIR/.env"
+  if [ -f "$env_file" ] && ! grep -q '^AVATAR_DIR=' "$env_file"; then
+    echo "AVATAR_DIR=${DATA_DIR}/avatars" >> "$env_file"
+    log "已追加 AVATAR_DIR=${DATA_DIR}/avatars 到 .env"
+  fi
+}
+
+# 将旧仓库内 data/avatars 迁移到统一数据目录 /opt/citadels/data/avatars，
+# 保证既有上传头像在更新后不丢失（仅迁移一次，新增文件不动）。
+migrate_avatars() {
+  local old_dir="${REPO_DIR}/data/avatars"
+  if [ -d "$old_dir" ]; then
+    mkdir -p "$AVATAR_DIR"
+    log "迁移用户头像: $old_dir -> $AVATAR_DIR"
+    cp -an "$old_dir"/. "$AVATAR_DIR"/ || true
+    rm -rf "$old_dir"
+    log "旧头像目录已迁移并清理"
+  fi
+}
+
 ensure_env() {
   local env_file="$REPO_DIR/.env"
   if [ -f "$env_file" ]; then
@@ -188,6 +215,7 @@ ensure_env() {
 PORT=${APP_PORT}
 NODE_ENV=production
 DATABASE_PATH=${DB_PATH}
+AVATAR_DIR=${DATA_DIR}/avatars
 JWT_SECRET=${jwt_secret}
 CORS_ORIGIN=${origin}
 ENFORCE_HTTPS=0
@@ -301,20 +329,6 @@ build_app() {
 # 服务控制与健康检查
 # -----------------------------------------------------------------------------
 
-backup_db() {
-  if [ "$SKIP_BACKUP" = true ]; then log "跳过数据库备份"; return; fi
-  mkdir -p "$BACKUP_DIR"
-  if [ -f "$DB_PATH" ]; then
-    local backup_file="${BACKUP_DIR}/citadels-$(date +%F_%H%M%S).sqlite"
-    log "备份数据库: $DB_PATH -> $backup_file"
-    cp "$DB_PATH" "$backup_file"
-    # 只保留最近 30 个备份
-    ls -t "$BACKUP_DIR"/citadels-*.sqlite 2>/dev/null | tail -n +31 | xargs -r rm -f
-  else
-    log "警告: 数据库文件不存在，跳过备份"
-  fi
-}
-
 start_service() {
   log "启动服务: $SERVICE_NAME"
   systemctl enable "${SERVICE_NAME}.service" >/dev/null 2>&1 || true
@@ -347,6 +361,8 @@ if [ "$MODE" = "install" ]; then
   git checkout "$BRANCH" 2>/dev/null || true
   git pull --ff-only 2>/dev/null || true
   ensure_env
+  ensure_avatar_dir_env
+  migrate_avatars
   if [ "$SKIP_BUILD" = false ]; then
     build_app
   else
@@ -365,32 +381,6 @@ if [ "$MODE" = "install" ]; then
   [ -n "$DOMAIN" ] && log "  公网访问:   https://${DOMAIN}"
   log "  应用日志:   journalctl -u $SERVICE_NAME -f"
   log "  反代日志:   journalctl -u caddy -f"
-  log "  更新部署:   cd $REPO_DIR && bash scripts/deploy-aliyun.sh"
+  log "  更新部署:   cd $REPO_DIR && bash scripts/update-aliyun.sh"
   exit 0
 fi
-
-# ---- 更新模式 ----
-[ -d "$REPO_DIR" ] || fail "代码目录不存在: $REPO_DIR"
-cd "$REPO_DIR"
-backup_db
-log "停止服务: $SERVICE_NAME"
-systemctl stop "$SERVICE_NAME" || true
-log "git pull"
-git fetch --all >/dev/null 2>&1 || true
-git checkout "$BRANCH" 2>/dev/null || true
-git pull --ff-only || fail "git pull 失败，请手动解决冲突"
-if [ "$SKIP_BUILD" = false ]; then
-  build_app
-else
-  log "跳过构建步骤"
-fi
-ensure_env
-write_systemd_unit
-if [ -f "$CADDY_CONF" ]; then
-  caddy validate --config "$CADDY_CONF" --adapter caddyfile && systemctl reload caddy || true
-fi
-start_service
-health_check
-log "部署完成 ✓"
-log "  首页: $HEALTH_URL"
-log "  日志: journalctl -u $SERVICE_NAME -f"

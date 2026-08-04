@@ -7,7 +7,8 @@
 | 脚本 | 适用环境 | 说明 |
 |------|----------|------|
 | `deploy.sh` | Vultr / Debian 12 (海外) | 通用部署脚本 |
-| `deploy-aliyun.sh` | 阿里云 Debian 12 (国内) | 阿里云专用，自动配置国内镜像源加速 |
+| `deploy-aliyun.sh` | 阿里云 Debian 12 (国内) | 阿里云专用，**首次完整部署**，自动配置国内镜像源加速 |
+| `update-aliyun.sh` | 阿里云 Debian 12 (国内) | **日常游戏更新**，仅拉代码、构建、迁移数据、重启，不含系统依赖/Caddy/防火墙 |
 
 ---
 
@@ -40,11 +41,26 @@ curl -fsSL https://gitee.com/<your-gitee-id>/citadels-online/raw/main/scripts/de
 bash -s -- --install --git-url https://gitee.com/<your-gitee-id>/citadels-online.git
 ```
 
-#### 4. 后续更新
+#### 4. 后续更新（日常更新，推荐）
 
 ```bash
 cd /opt/citadels/citadels-online
-bash scripts/deploy-aliyun.sh
+bash scripts/update-aliyun.sh
+```
+
+`update-aliyun.sh` 只执行：备份(数据库+头像) → 停止服务 → `git pull` → 构建 → 数据迁移 → 重启 → 健康检查，
+**不会**重复执行系统依赖安装、Node/Caddy 安装、Caddyfile 配置和防火墙设置（这些仅在首次部署时执行一次）。
+
+> 若误运行 `deploy-aliyun.sh` 且未加 `--install`，当检测到已部署服务时会提示改用
+> `update-aliyun.sh` 并退出，不会触发全量部署。
+
+#### 5. 首次部署脚本参数
+
+如需强制重新完整部署：
+
+```bash
+cd /opt/citadels/citadels-online
+bash scripts/deploy-aliyun.sh --install
 ```
 
 ---
@@ -53,10 +69,11 @@ bash scripts/deploy-aliyun.sh
 
 ### `deploy-aliyun.sh` 参数
 
+> 该脚本仅用于**首次完整部署**（未加 `--install` 时：若服务未部署则安装，若已部署则提示改用 `update-aliyun.sh`）。
+
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--install` | 强制完整安装模式（幂等） | 自动检测 |
-| `--skip-backup` | 跳过数据库备份 | 禁用 |
 | `--skip-build` | 跳过 npm 构建步骤 | 禁用 |
 | `--domain DOMAIN` | 域名，用于 Caddy 自动 HTTPS | 无 |
 | `--email EMAIL` | Let's Encrypt 证书到期通知邮箱 | 无 |
@@ -65,9 +82,19 @@ bash scripts/deploy-aliyun.sh
 | `--yes` | 跳过交互确认 | 禁用 |
 | `-h`, `--help` | 显示帮助 | - |
 
+### `update-aliyun.sh` 参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--skip-backup` | 跳过数据库/头像备份 | 禁用 |
+| `--skip-build` | 跳过 npm 构建步骤 | 禁用 |
+| `--branch NAME` | 分支或标签名 | `main` |
+| `--yes` | 跳过交互确认 | 禁用 |
+| `-h`, `--help` | 显示帮助 | - |
+
 ### `deploy.sh` 参数
 
-与 `deploy-aliyun.sh` 相同。
+Vultr/海外通用脚本，仍为「安装 + 更新」合一的旧版流程（不设 `AVATAR_DIR`，头像位于仓库内 `data/avatars`）。参数同原版 `deploy-aliyun.sh`，并保留 `--skip-backup`。
 
 ---
 
@@ -116,13 +143,24 @@ systemctl restart citadels
 systemctl stop citadels
 ```
 
-### 4. 数据库备份
+### 4. 数据备份
 
-脚本会自动备份数据库到 `/opt/citadels/backups/`，保留最近 30 个备份。
+`update-aliyun.sh` 每次更新前会自动备份**数据库和用户上传头像**到 `/opt/citadels/backups/`，各保留最近 30 份：
+
+```bash
+ls -lt /opt/citadels/backups/
+# citadels-<时间戳>.sqlite       数据库备份
+# avatars-<时间戳>.tar.gz        用户头像备份
+```
 
 手动备份：
+
 ```bash
+# 数据库
 cp /opt/citadels/data/citadels.sqlite /opt/citadels/backups/manual-backup-$(date +%F).sqlite
+
+# 头像
+tar -czf /opt/citadels/backups/avatars-manual-$(date +%F).tar.gz -C /opt/citadels/data avatars
 ```
 
 ---
@@ -134,16 +172,22 @@ cp /opt/citadels/data/citadels.sqlite /opt/citadels/backups/manual-backup-$(date
 ```
 /opt/citadels/
 ├── citadels-online/          # 项目源码
-│   ├── .env                  # 环境变量（JWT_SECRET 等）
+│   ├── .env                  # 环境变量（JWT_SECRET、DATABASE_PATH、AVATAR_DIR 等）
 │   ├── common/               # 公共模块
 │   ├── client-react/         # 前端代码
 │   ├── server/               # 服务端代码
 │   └── scripts/              # 部署脚本
 ├── data/
-│   └── citadels.sqlite       # SQLite 数据库
+│   ├── citadels.sqlite       # SQLite 数据库
+│   └── avatars/              # 用户上传头像（{userId}.webp）
 └── backups/
-    └── citadels-*.sqlite     # 数据库备份
+    ├── citadels-*.sqlite     # 数据库备份
+    └── avatars-*.tar.gz      # 用户头像备份
 ```
+
+> 数据库与用户上传头像均存放在 git 仓库**外部**的 `/opt/citadels/data/`，因此
+> `git pull` / 重新 clone / `git clean` 仓库都不会影响用户数据，且两者都会被更新脚本备份。
+> 旧版部署若头像曾存于仓库内 `data/avatars`，首次执行 `update-aliyun.sh` 时会自动迁移到 `/opt/citadels/data/avatars`。
 
 ---
 
@@ -179,15 +223,19 @@ npm config set registry https://registry.npmmirror.com --global
 2. 确保 80 端口已开放（Let's Encrypt 需要验证）
 3. 查看 Caddy 日志：`journalctl -u caddy -n 50`
 
-### Q: 更新后数据库丢失？
+### Q: 更新后数据丢失？
 
-脚本默认会在更新前自动备份数据库到 `/opt/citadels/backups/`。如需手动恢复：
+`update-aliyun.sh` 默认会在更新前自动备份数据库到 `/opt/citadels/backups/`（头像打包为 `avatars-*.tar.gz`）。如需手动恢复：
 ```bash
 # 列出所有备份
 ls -lt /opt/citadels/backups/
 
-# 恢复指定备份
+# 恢复数据库
 cp /opt/citadels/backups/citadels-2024-01-01_120000.sqlite /opt/citadels/data/citadels.sqlite
+
+# 恢复用户头像
+tar -xzf /opt/citadels/backups/avatars-2024-01-01_120000.tar.gz -C /opt/citadels/data
+
 systemctl restart citadels
 ```
 
@@ -198,9 +246,9 @@ systemctl restart citadels
 #    主机记录: @
 #    记录值: <服务器公网 IP>
 
-# 2. 重新运行部署脚本（会更新 Caddy 配置）
+# 2. 重新运行完整部署脚本（会更新 Caddy 配置，需加 --install）
 cd /opt/citadels/citadels-online
-bash scripts/deploy-aliyun.sh --domain your.domain.com --email admin@example.com
+bash scripts/deploy-aliyun.sh --install --domain your.domain.com --email admin@example.com
 ```
 
 ---

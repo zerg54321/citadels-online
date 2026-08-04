@@ -9,11 +9,15 @@ import { isPresetAvatar, PRESET_AVATARS, updateAvatar } from '../db/users';
 
 // Avatar upload + preset-selection routes. Uploaded files are processed with
 // sharp (strip EXIF, crop to square, resize 256×256, convert WebP) and stored
-// in the project-root data/avatars/ dir — the same persistent area as the
-// SQLite DB (database.ts resolves to ../../../data from dist/db, so we match
-// with ../../../data/avatars from dist/auth). Served via the /api/avatar/:userId
-// route below.
-const UPLOAD_DIR = path.resolve(__dirname, '../../../data/avatars');
+// in the avatar upload dir. Defaults to the project-root data/avatars/ dir —
+// the same persistent area as the SQLite DB (database.ts resolves to
+// ../../../data from dist/db, so we match with ../../../data/avatars from
+// dist/auth). Production deployments override AVATAR_DIR to a path outside the
+// git repo (see scripts/deploy-aliyun.sh) so uploads survive updates and are
+// covered by the deploy backup.
+const UPLOAD_DIR = process.env.AVATAR_DIR
+  ? path.resolve(process.env.AVATAR_DIR)
+  : path.resolve(__dirname, '../../../data/avatars');
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB pre-processing cap
 const AVATAR_SIZE = 256;
 

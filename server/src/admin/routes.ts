@@ -30,11 +30,14 @@ import {
   AdminMatchItem,
 } from '../db/matches';
 
-// Mirror of avatarRoutes' UPLOAD_DIR (same relative resolution from dist/):
-// data/avatars/{userId}.webp. Kept local so the admin module does not depend
-// on the player-facing avatar router. Used only to clean up uploaded avatar
-// files when a user with avatar_type='upload' is deleted.
-const AVATAR_UPLOAD_DIR = path.resolve(__dirname, '../../../data/avatars');
+// Mirror of avatarRoutes' UPLOAD_DIR (same override/env resolution). Defaults
+// to data/avatars/{userId}.webp and honors AVATAR_DIR so the admin module stays
+// in sync with the player-facing avatar router without depending on it. Used
+// only to clean up uploaded avatar files when a user with avatar_type='upload'
+// is deleted.
+const AVATAR_UPLOAD_DIR = process.env.AVATAR_DIR
+  ? path.resolve(process.env.AVATAR_DIR)
+  : path.resolve(__dirname, '../../../data/avatars');
 
 function cleanAvatarUploads(rows: AdminUserRow[]): void {
   rows.forEach((u) => {

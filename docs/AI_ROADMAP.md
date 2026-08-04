@@ -41,7 +41,7 @@
 
 #### 轨 C：对人类复盘一致性（衡量对人类竞争力的直接代理指标）
 
-复用 `server/src/engine/replay/ReplayRecorder` 录制人类真实 3v3 对局；在人类每个决策点跑 AI 策略，统计 AI 选择与人类一致的比例。
+录制人类真实 3v3 对局（当前 `server/src/engine/replay` 尚无 `ReplayRecorder`，需先行实现局录制模块）；在人类每个决策点跑 AI 策略，统计 AI 选择与人类一致的比例。
 
 | 指标 | 含义 | 目标值 |
 |------|------|:------:|

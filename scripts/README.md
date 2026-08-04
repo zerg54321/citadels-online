@@ -1,233 +1,214 @@
-# 本地调试脚本说明
+# 部署脚本
 
-Windows 下一键启停开发环境（游戏服 + React 前端），以及自动模拟与 VPS 部署脚本。
+本目录包含 Citadels Online 的一键部署脚本。
 
-| 脚本 | 作用 |
-|---|---|
-| `dev-start.cmd` | 编译 common/server，后台启动后端（8081）+ React 前端（3010） |
-| `dev-stop.cmd` | 停止后端 + 前端，并释放 8081 / 3010 端口 |
-| `dev-status.cmd` | 查看 pid、端口监听、访问地址 |
-| `dev-restart.cmd` | 先 stop 再 start（全栈） |
-| `sim-6p.cmd` / `sim-6p.js` | 6 人 3v3 自动入座开局 + L0 合法着法推进（端到端在线栈冒烟） |
-| `deploy.sh` | VPS（Vultr / Debian 12）一键部署与更新 |
+## 脚本列表
 
-> 旧的 Vue 前端开发脚本与遗留 `test-*.js` 冒烟脚本已移除：逻辑测试已迁至 `server` 的 `vitest` 套件，端到端在线冒烟由 `sim-6p.js` 覆盖。
+| 脚本 | 适用环境 | 说明 |
+|------|----------|------|
+| `deploy.sh` | Vultr / Debian 12 (海外) | 通用部署脚本 |
+| `deploy-aliyun.sh` | 阿里云 Debian 12 (国内) | 阿里云专用，自动配置国内镜像源加速 |
 
 ---
 
-## 前置条件
+## 快速开始
 
-1. 已安装 **Node.js 20.x**，且 `node`、`npm.cmd` 在 PATH 中
-2. 已安装依赖：
+### 阿里云部署（推荐国内用户）
 
-```bat
-cd common && npm install && npm run build
-cd ..\server && npm install
-cd ..\client-react && npm install
+#### 1. 一键安装（全新服务器）
+
+```bash
+# 无域名部署（通过 IP 直接访问）
+apt-get update && apt-get install -y curl && \
+curl -fsSL https://raw.githubusercontent.com/zerg54321/citadels-online/main/scripts/deploy-aliyun.sh | \
+bash -s -- --install
 ```
 
-3. 在**仓库根目录**执行脚本（或双击 `scripts` 下的 cmd；脚本会自行切到根目录）
+#### 2. 带域名部署（自动 HTTPS）
 
----
-
-## 常用命令
-
-### 仓库根目录
-
-**CMD：**
-
-```bat
-scripts\dev-start.cmd
-scripts\dev-status.cmd
-scripts\dev-stop.cmd
-scripts\dev-restart.cmd
+```bash
+apt-get update && apt-get install -y curl && \
+curl -fsSL https://raw.githubusercontent.com/zerg54321/citadels-online/main/scripts/deploy-aliyun.sh | \
+bash -s -- --install --domain your.domain.com --email admin@example.com
 ```
 
-**PowerShell（必须带路径前缀）：**
+#### 3. 使用 Gitee 镜像（GitHub 访问慢时）
 
-```powershell
-.\scripts\dev-start.cmd
-.\scripts\dev-status.cmd
-.\scripts\dev-stop.cmd
-.\scripts\dev-restart.cmd
+```bash
+apt-get update && apt-get install -y curl && \
+curl -fsSL https://gitee.com/<your-gitee-id>/citadels-online/raw/main/scripts/deploy-aliyun.sh | \
+bash -s -- --install --git-url https://gitee.com/<your-gitee-id>/citadels-online.git
 ```
 
-### 已在 `scripts` 目录内
+#### 4. 后续更新
 
-PowerShell **不会**自动执行当前目录下的命令，不要写 `dev-start.cmd`，应写：
-
-```powershell
-.\dev-start.cmd
+```bash
+cd /opt/citadels/citadels-online
+bash scripts/deploy-aliyun.sh
 ```
 
-CMD 在 `scripts` 目录下可直接：`dev-start.cmd`。
+---
+
+## 参数说明
+
+### `deploy-aliyun.sh` 参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--install` | 强制完整安装模式（幂等） | 自动检测 |
+| `--skip-backup` | 跳过数据库备份 | 禁用 |
+| `--skip-build` | 跳过 npm 构建步骤 | 禁用 |
+| `--domain DOMAIN` | 域名，用于 Caddy 自动 HTTPS | 无 |
+| `--email EMAIL` | Let's Encrypt 证书到期通知邮箱 | 无 |
+| `--git-url URL` | Git 仓库地址 | GitHub 仓库 |
+| `--branch NAME` | 分支或标签名 | `main` |
+| `--yes` | 跳过交互确认 | 禁用 |
+| `-h`, `--help` | 显示帮助 | - |
+
+### `deploy.sh` 参数
+
+与 `deploy-aliyun.sh` 相同。
 
 ---
 
-## 访问地址
+## 部署后配置
 
-| 服务 | 地址 |
-|---|---|
-| 前端（日常开发） | http://127.0.0.1:3010/ |
-| 后端 API / Socket | http://127.0.0.1:8081/ |
-| 健康检查 | http://127.0.0.1:8081/api/health |
+### 1. 阿里云安全组
 
-- 前端通过 Vite 代理：`/s/`（Socket）、`/api`（账号等）→ 后端 8081
-- 浏览器请优先用前端地址玩；登录后创建房间 / 入座
+部署完成后，需在阿里云控制台开放以下端口：
+
+| 端口 | 协议 | 用途 |
+|------|------|------|
+| 22 | TCP | SSH 远程登录 |
+| 80 | TCP | HTTP 访问（会重定向到 HTTPS） |
+| 443 | TCP | HTTPS 访问 |
+
+**配置路径**：阿里云控制台 → ECS → 实例 → 安全组 → 配置规则 → 入方向
+
+### 2. 管理后台
+
+管理后台仅允许通过 **SSH 隧道**访问，不可直接暴露到公网：
+
+```bash
+# 在本地机器执行（将 8081 端口转发到服务器）
+ssh -L 8081:127.0.0.1:8081 root@<服务器IP>
+
+# 然后在本地浏览器访问
+open http://127.0.0.1:8081/admin
+```
+
+### 3. 服务管理
+
+```bash
+# 查看服务状态
+systemctl status citadels
+
+# 查看应用日志
+journalctl -u citadels -f
+
+# 查看 Caddy 反代日志
+journalctl -u caddy -f
+
+# 重启服务
+systemctl restart citadels
+
+# 停止服务
+systemctl stop citadels
+```
+
+### 4. 数据库备份
+
+脚本会自动备份数据库到 `/opt/citadels/backups/`，保留最近 30 个备份。
+
+手动备份：
+```bash
+cp /opt/citadels/data/citadels.sqlite /opt/citadels/backups/manual-backup-$(date +%F).sqlite
+```
 
 ---
 
-## 各脚本行为
+## 目录结构
 
-### `dev-start.cmd`
+部署完成后的目录结构：
 
-1. 检查 `node` / `npm.cmd` / `client-react\node_modules`
-2. 若已有 `.dev-pids\*.pid`，提示先执行 `dev-stop`
-3. `common`：`npm run build`
-4. `server`：`npx tsc`
-5. 后台启动：
-   - `server`：`node dist/index.js`（端口 **8081**，`CITADELS_FAST=1` 缩短计时便于 sim-6p；人类对局可去掉）
-   - `client-react`：`npm run dev -- --host 127.0.0.1 --port 3010`
-6. 写入 pid 到 `.dev-pids\`，日志到 `.dev-logs\`
-
-**不会**自动 `npm install`。依赖变更后请手动安装。
-
-### `dev-stop.cmd`
-
-1. 按 `.dev-pids` 中的 pid 结束 server 与 client-react 进程（含子进程尝试）
-2. 若 8081 / 3010 仍被占用，强制结束监听进程
-3. 清理 pid 文件
-
-### `dev-status.cmd`
-
-- 打印 server / client-react pid 文件内容
-- 检查 8081、3010 是否 LISTEN
-- 打印常用 URL
-
-### `dev-restart.cmd`
-
-等价于 `dev-stop` → `dev-start`（全栈）。
+```
+/opt/citadels/
+├── citadels-online/          # 项目源码
+│   ├── .env                  # 环境变量（JWT_SECRET 等）
+│   ├── common/               # 公共模块
+│   ├── client-react/         # 前端代码
+│   ├── server/               # 服务端代码
+│   └── scripts/              # 部署脚本
+├── data/
+│   └── citadels.sqlite       # SQLite 数据库
+└── backups/
+    └── citadels-*.sqlite     # 数据库备份
+```
 
 ---
 
-## 日志与 pid 目录
+## 国内镜像源
 
-| 路径 | 说明 |
-|---|---|
-| `.dev-pids\server.pid` | 后端主进程 pid |
-| `.dev-pids\client-react.pid` | 前端 npm 进程 pid（子进程可能另有监听 pid） |
-| `.dev-logs\server.out.log` / `server.err.log` | 后端标准输出 / 错误 |
-| `.dev-logs\client-react.out.log` / `client-react.err.log` | 前端输出 / 错误 |
+`deploy-aliyun.sh` 已自动配置以下国内镜像：
 
-上述目录已在根 `.gitignore` 中忽略，不会提交。
+| 资源 | 镜像源 | 用途 |
+|------|--------|------|
+| npm 包 | `registry.npmmirror.com` | 加速 npm install |
+| Node.js | `mirrors.tuna.tsinghua.edu.cn` | 加速 Node.js 安装 |
+| Caddy | Cloudsmith 官方 | 反代服务器 |
 
-查日志示例：
-
-```bat
-type .dev-logs\server.err.log
-type .dev-logs\client-react.out.log
+如需手动配置：
+```bash
+# 设置 npm 淘宝源
+npm config set registry https://registry.npmmirror.com --global
 ```
 
 ---
 
 ## 常见问题
 
-### 1. `ERROR: node not found` / `npm.cmd not found`
+### Q: 部署完成后无法访问？
 
-把 Node 安装目录加入 PATH，或用「Node.js command prompt」再执行脚本。
+1. 检查阿里云安全组是否开放 80/443 端口
+2. 检查服务是否启动：`systemctl status citadels`
+3. 查看日志排查问题：`journalctl -u citadels -n 50`
 
-### 2. `pid file exists - run dev-stop first`
+### Q: HTTPS 证书申请失败？
 
-先：
+1. 确保域名已解析到服务器 IP
+2. 确保 80 端口已开放（Let's Encrypt 需要验证）
+3. 查看 Caddy 日志：`journalctl -u caddy -n 50`
 
-```bat
-scripts\dev-stop.cmd
+### Q: 更新后数据库丢失？
+
+脚本默认会在更新前自动备份数据库到 `/opt/citadels/backups/`。如需手动恢复：
+```bash
+# 列出所有备份
+ls -lt /opt/citadels/backups/
+
+# 恢复指定备份
+cp /opt/citadels/backups/citadels-2024-01-01_120000.sqlite /opt/citadels/data/citadels.sqlite
+systemctl restart citadels
 ```
 
-再 start。若 stop 后仍提示，可手动删 `.dev-pids\` 下 pid 文件，并确认 8081/3010 无残留进程。
-
-### 3. 端口已被占用
-
-`dev-stop` 会尝试释放 8081/3010。仍占用时：
-
-```bat
-netstat -ano | findstr ":8081"
-netstat -ano | findstr ":3010"
-```
-
-用任务管理器结束对应 PID，或再执行一次 `dev-stop`。
-
-### 4. 改了 TypeScript / 依赖后
-
-- 只改 server 源码：可 `dev-restart`（start 会 tsc）
-- 改了 `common`：restart 会 rebuild common
-- 新增 npm 包：在对应包目录 `npm install` 后再 start
-- 改了 client-react 源码：Vite 一般热更新，不必重启；大改配置可 `dev-restart`
-
-### 5. PowerShell：`The term 'dev-start.cmd' is not recognized`
-
-PowerShell 默认**不从当前目录**加载命令。在 `scripts` 目录下用 `.\dev-start.cmd`；在仓库根目录用 `.\scripts\dev-start.cmd`，或 `cmd /c scripts\dev-start.cmd`。
-
-### 6. 登录 / 数据库
-
-开发默认 SQLite：`data\citadels.sqlite`（见 `.env.example`）。创建房间与入座需要先注册登录（P1）。
-
----
-
-## 六人自动对局 `sim-6p`
-
-**前置：** 后端已在 8081 运行（`dev-start` 或仅 server）。
-
-```bat
-REM 仓库根目录 PowerShell
-.\scripts\sim-6p.cmd
-
-REM 可选：限制最大行动尝试次数（默认 4000）
-node scripts\sim-6p.js --max-steps 800
-
-REM 观战模式：放慢出牌，并打印房间链接（需前端 dev 也在跑）
-node scripts\sim-6p.js --watch
-node scripts\sim-6p.js --watch --delay 800 --max-steps 2000
-```
-
-`sim-6p.js` 通过 `client-react/node_modules/socket.io-client` 连接，无需 Vue 客户端。
-
-### 用浏览器观战 sim-6p
-
-1. `.\scripts\dev-start.cmd`
-2. 另开终端：`node scripts\sim-6p.js --watch`
-3. 浏览器打开 http://127.0.0.1:3010/ ，在 **当前房间** 列表看到该局
-4. 点 **观战**（对局中）或 **加入**（仍在大厅时）
-
-注意：
-
-- 必须在 **脚本仍在运行** 时观战；脚本结束则机器人断开，房间从内存消失
-- 开局后房间状态为 closed，仍可 **观战**，不能再当玩家加入
-- 未登录也可观战；加入对战需登录
-
-脚本会：
-
-1. 注册 6 个测试帐号并 Socket 登录
-2. 创建房间、6 人入座、开局
-3. 断言 `gameMode=competitive_team6`、城建 8、座位 0/2/4=队 A、1/3/5=队 B
-4. 用 **L0 合法着法**（优先收租/盖房、再拿资源、结束回合）自动推进
-5. 若打到 `FINISHED`：断言队总分与胜/负/平一致
-
-说明：L0 不追求最优，但会尝试盖房；**模式与分队**是必过项，打完终局为增强断言。
-
----
-
-## VPS 部署 `deploy.sh`
-
-见根 [README.md](../README.md#vps-部署vultr--debian-12) 的 VPS 部署章节。要点：
+### Q: 如何使用自定义域名？
 
 ```bash
-# 首次（fresh Vultr Debian 12，root）
-bash scripts/deploy.sh --install
-# 带域名 —— Caddy 自动签发并续期 HTTPS 证书
-bash scripts/deploy.sh --install --domain citadels.example.com
-# 后续更新
-bash scripts/deploy.sh
+# 1. 在阿里云域名解析添加 A 记录
+#    主机记录: @
+#    记录值: <服务器公网 IP>
+
+# 2. 重新运行部署脚本（会更新 Caddy 配置）
+cd /opt/citadels/citadels-online
+bash scripts/deploy-aliyun.sh --domain your.domain.com --email admin@example.com
 ```
 
-`--install` 自动安装依赖 / Node 20 / Caddy / 构建 / systemd / Caddy 反代（自动 `/s/` WebSocket + HTTPS）/ ufw。脚本幂等。
+---
+
+## 系统要求
+
+- **操作系统**: Debian 12 (Bookworm) / Ubuntu 22.04+
+- **架构**: x86_64 / ARM64
+- **内存**: ≥ 1GB
+- **磁盘**: ≥ 5GB 可用空间
+- **网络**: 需要访问 GitHub 和 npm 镜像源

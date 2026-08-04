@@ -12,7 +12,7 @@
         "unknown_error": "Unknown error.",
         "about": {
             "title": "About",
-            "text": "Original board game created by <a target='_blank' href='http://faidutti.com'>Bruno Faidutti</a>.<br> Unofficial online version developped by <a target='_blank' href='https://brule.info'>Antoine Brûlé</a>.<br> This implementation of the game is <a target='_blank' href='https://github.com/antbrl/citadels-online'>open source</a>.<br> Emoji CC-BY 4.0 <a target='_blank' href='https://twemoji.twitter.com/'>Twemoji</a>",
+            "text": "<div class='about-attribution'>Original board game <em>Citadels</em> designed by <a target='_blank' href='https://en.wikipedia.org/wiki/Bruno_Faidutti'>Bruno Faidutti</a>; the game and its rights belong to the original designer and publishers.<br>This project is for personal learning, technical exploration, and is non-commercial.</div><ul class='about-credits'><li>Forked from the open-source <a target='_blank' href='https://github.com/antbrl/citadels-online'>online version</a> by <a target='_blank' href='https://github.com/antbrl/citadels-online'>Antoine Brûlé</a> (MIT).</li><li>Maintained and developed by <a target='_blank' href='https://github.com/zerg54321/citadels-online'>zerg</a> (MIT).</li><li>Card and character artwork is AI-generated original material, not taken from the original game.</li><li>Emoji from <a target='_blank' href='https://emojipedia.org/twitter'>Twemoji</a> (CC-BY 4.0).</li><li>Fonts from Google Fonts: Cinzel, EB Garamond, Noto Sans SC, Noto Serif SC (SIL Open Font License 1.1).</li></ul>",
             "picture_credits": "Picture credits",
             "by": "by"
         },

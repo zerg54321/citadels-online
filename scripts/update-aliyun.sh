@@ -20,6 +20,9 @@ set -euo pipefail
 #   --branch NAME       分支/标签名（默认 main）
 #   --yes               跳过交互确认
 #   -h, --help          显示帮助
+#
+# 说明：拉取前会自动清理已跟踪文件的本地漂移（先备份 diff 到 backups/ 再重置），
+#       以免 package-lock.json 等漂移阻塞 git pull；未跟踪文件（含 .env、data/）不触碰。
 # =============================================================================
 
 INSTALL_ROOT="/opt/citadels"
@@ -122,6 +125,38 @@ migrate_avatars() {
 }
 
 # -----------------------------------------------------------------------------
+# 拉取前清理工作区
+# -----------------------------------------------------------------------------
+# 部署服务器上的 git 仓库本不应有本地改动。但 npm install/ci 失败回退时可能
+# 重写 package-lock.json，导致下一次 git pull --ff-only 被"本地修改"阻塞而卡住。
+# 这里在任何 git 写操作前，把已跟踪文件的本地漂移【先备份 diff 再重置】，避免卡住；
+# 未跟踪文件（?? 开头，例如仓库内可能残留的数据）一律不删，只提示。
+prepare_worktree() {
+  local porcelain
+  porcelain="$(git -c core.quotepath=false status --porcelain 2>/dev/null || true)"
+
+  local untracked
+  untracked="$(printf '%s\n' "$porcelain" | awk '/^\?\?/ { print substr($0,4) }')"
+  if [ -n "$untracked" ]; then
+    warn "检测到未跟踪文件（保留不动、不处理）："
+    printf '%s\n' "$untracked" | sed 's/^/    /'
+  fi
+
+  local tracked
+  tracked="$(printf '%s\n' "$porcelain" | awk '/^\?\?/ { next } NF { print }')"
+  if [ -n "$tracked" ]; then
+    local stamp diff_file
+    stamp="$(date +%F_%H%M%S)"
+    diff_file="${BACKUP_DIR}/worktree-${stamp}.diff"
+    mkdir -p "$BACKUP_DIR"
+    log "检测到已跟踪文件改动，备份到 $diff_file 后重置工作区"
+    git -c core.quotepath=false diff HEAD > "$diff_file" 2>/dev/null || true
+    git reset --hard HEAD || fail "无法重置工作区，请手动处理后重试"
+    log "已重置已跟踪文件到 HEAD（部署目录应保持干净）"
+  fi
+}
+
+# -----------------------------------------------------------------------------
 # 构建
 # -----------------------------------------------------------------------------
 npm_install() {
@@ -176,6 +211,8 @@ confirm "确认更新游戏到 ${BRANCH} 分支并重启服务？" || { echo "�
 backup_data
 log "停止服务: $SERVICE_NAME"
 systemctl stop "$SERVICE_NAME" || true
+
+prepare_worktree
 
 log "git pull"
 git fetch --all >/dev/null 2>&1 || true

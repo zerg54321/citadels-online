@@ -48,8 +48,12 @@ cd /opt/citadels/citadels-online
 bash scripts/update-aliyun.sh
 ```
 
-`update-aliyun.sh` 只执行：备份(数据库+头像) → 停止服务 → `git pull` → 构建 → 数据迁移 → 重启 → 健康检查，
+`update-aliyun.sh` 只执行：备份(数据库+头像) → 停止服务 → 清理工作区 → `git pull` → 构建 → 数据迁移 → 重启 → 健康检查，
 **不会**重复执行系统依赖安装、Node/Caddy 安装、Caddyfile 配置和防火墙设置（这些仅在首次部署时执行一次）。
+
+更新前会自动清理已跟踪文件的本地漂移（例如 `npm ci` 失败回退产生的 `package-lock.json` 改动），
+先将其 diff 备份到 `/opt/citadels/backups/worktree-*.diff` 再 `git reset --hard`，避免 `git pull` 被本地改动阻塞而卡住；
+未跟踪与 gitignored 文件（`.env`、`data/` 用户数据）一律不触碰。
 
 > 若误运行 `deploy-aliyun.sh` 且未加 `--install`，当检测到已部署服务时会提示改用
 > `update-aliyun.sh` 并退出，不会触发全量部署。

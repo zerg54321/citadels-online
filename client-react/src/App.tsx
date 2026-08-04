@@ -103,7 +103,7 @@ export default function App() {
           </div>
           <div className="modal-body app-modal__about">
             {/* eslint-disable-next-line react/no-danger */}
-            <p dangerouslySetInnerHTML={{ __html: t('ui.about.text') as string }} />
+            <div dangerouslySetInnerHTML={{ __html: t('ui.about.text') as string }} />
           </div>
         </div>
       </div>

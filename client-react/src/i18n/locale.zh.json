@@ -12,7 +12,7 @@
         "unknown_error": "未知错误。",
         "about": {
             "title": "关于",
-            "text": "原版桌游由 <a target='_blank' href='http://faidutti.com'>Bruno Faidutti</a> 创作。<br> 非官方在线版本由 <a target='_blank' href='https://brule.info'>Antoine Brûlé</a> 开发。<br> 本项目为 <a target='_blank' href='https://github.com/antbrl/citadels-online'>开源</a>。<br> Emoji CC-BY 4.0 <a target='_blank' href='https://twemoji.twitter.com/'>Twemoji</a>",
+            "text": "<div class='about-attribution'>原版桌游《富饶之城》由 <a target='_blank' href='https://zh.wikipedia.org/wiki/布魯諾·法伊杜蒂'>Bruno Faidutti</a> 设计，版权归原作者及发行方所有。<br>本项目仅作学习交流与技术探索，非商业用途。</div><ul class='about-credits'><li>Fork 自 <a target='_blank' href='https://github.com/antbrl/citadels-online'>Antoine Brûlé</a> 的开源在线版 (MIT)，特此致谢。</li><li>由 <a target='_blank' href='https://github.com/zerg54321/citadels-online'>zerg</a> 维护与二次开发 (MIT)。</li><li>卡牌与角色美术为 AI 生成原创素材，未使用原版游戏原画。</li><li>Emoji 资源来自 <a target='_blank' href='https://emojipedia.org/twitter'>Twemoji</a> (CC-BY 4.0)。</li><li>字体来自 Google Fonts：Cinzel、EB Garamond、Noto Sans SC、Noto Serif SC（SIL Open Font License 1.1）。</li></ul>",
             "picture_credits": "图片来源",
             "by": "作者"
         },

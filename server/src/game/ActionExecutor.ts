@@ -30,18 +30,12 @@ export default class ActionExecutor {
     }
 
     switch (cm.getClientTurnState()) {
+      // 取消目标选择：回到行动界面，但保留技能（可再次发动）
       case ClientTurnState.ASSASSIN_KILL:
-        cm.canDoSpecialAction[CharacterType.ASSASSIN] = false;
-        break;
       case ClientTurnState.THIEF_ROB:
-        cm.canDoSpecialAction[CharacterType.THIEF] = false;
-        break;
       case ClientTurnState.MAGICIAN_EXCHANGE_HAND:
       case ClientTurnState.MAGICIAN_DISCARD_CARDS:
-        cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
-        break;
       case ClientTurnState.WARLORD_DESTROY_DISTRICT:
-        cm.canDoSpecialAction[CharacterType.WARLORD] = false;
         break;
       case ClientTurnState.BUILD_DISTRICT:
       case ClientTurnState.GRAVEYARD_RECOVER_DISTRICT:

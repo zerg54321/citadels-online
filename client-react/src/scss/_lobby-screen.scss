@@ -573,13 +573,21 @@
 }
 
 // ── 响应式断点 ─────────────────────────────────────────────────────────────
+// PC / iPad 横屏（>900px）走默认布局：主辅栏横排，内容撑满视口，不触发以下规则。
 @media (max-width: 900px) {
+  .lobby-wrapper {
+    overflow-y: auto;           // 竖屏允许页面滚动，不再裁剪内容
+  }
+  .lobby {
+    height: auto;               // 内容自然撑开，不强制视口高度
+    min-height: 100%;           // 内容不足时仍撑满视口
+  }
   .lobby-body {
     flex-direction: column;
   }
   .lobby-main {
     flex: 0 0 auto;
-    min-height: 22rem;
+    min-height: 0;              // 移除固定最小高度，让座位列表自适应
   }
   .lobby-side {
     flex: 0 0 auto;
@@ -598,9 +606,6 @@
   .lobby-bar {
     flex-wrap: wrap;
     gap: 0.3rem;
-  }
-  .lobby-main {
-    min-height: 18rem;
   }
   .lobby-footer {
     flex-wrap: wrap;

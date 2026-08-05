@@ -1,0 +1,170 @@
+// Mobile overrides for elements that PORTAL TO <body> and therefore render
+// OUTSIDE .game-stage--mobile (Bootstrap modals, the endgame overlay). These
+// are scoped under .is-mobile on <body> (set once in main.tsx) so they only
+// apply on phones and never affect PC/iPad.
+//
+// Elements that live INSIDE the game canvas (board table, action log overlay,
+// self panel) are handled in _game-stage-mobile.scss under .game-stage--mobile.
+
+// ── Bootstrap modal (lobby start-game confirmation) ─────────────────────
+// On a phone landscape the centered+scrollable modal dialog can exceed the
+// short viewport height, pushing the footer (start button) below the screen
+// where it can't be tapped. Fix: allow the dialog to scroll and cap it to
+// the viewport so the footer is always reachable; also enlarge tap targets.
+.is-mobile {
+  .modal.show {
+    // Ensure the modal backdrop covers the full viewport including notch.
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .modal-dialog {
+    // Cap to viewport height so the scrollable body keeps the footer visible.
+    max-height: 100vh;
+    margin: 0 auto;
+  }
+  .modal-dialog-centered {
+    // On short viewports, align to top so the footer isn't pushed off-screen;
+    // the body scrolls internally.
+    align-items: flex-start;
+  }
+  .modal-content {
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .modal-footer {
+    flex-shrink: 0;
+  }
+  // Larger buttons for touch.
+  .modal-footer .btn {
+    font-size: 1rem;
+    padding: 0.6rem 1.2rem;
+  }
+  .lobby-setup-players__list {
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+}
+
+// ── Endgame overlay (portal to body) ────────────────────────────────────
+// Phone landscape viewport is 844×390 CSS (often less once Safari's chrome
+// is counted). Goal: the WHOLE card fits with NO scrollbar, even in the
+// 6-player team-mode worst case (subtitle + team badges + team column).
+//
+// Strategy — CONCENTRATE + CONTENT-DRIVEN HEIGHT:
+// • Width: moderate fixed 30rem (capped by 92vw) → a compact centred panel,
+//   not a full-screen slab.
+// • Height: dialog has NO max-height and body overflow:visible, so the card
+//   is exactly as tall as its content — no inner scrollbar ever appears.
+//   The 6-player budget is engineered to ~280px, safely under even a short
+//   ~320px landscape viewport.
+// • overlay padding zeroed (the base 1rem×2 = 32px was eating the budget).
+// • Fonts stay readable (0.8–1.15rem); savings come from tight padding/gap
+//   and a slightly smaller avatar (1.1rem) so it no longer inflates row
+//   height above the text line.
+// • Column widths overridden for the narrow table so the player column
+//   (rank + avatar + name + tags) keeps enough room.
+.is-mobile {
+  // Reclaim the 32px the base overlay padding consumes.
+  .endgame-overlay {
+    padding: 0;
+  }
+  .endgame-dialog {
+    width: min(30rem, 92vw);
+    max-width: min(30rem, 92vw);
+    // No max-height: the card grows to fit its content. The 6-player budget
+    // below stays under a short viewport, so no scrollbar is needed.
+    max-height: none;
+  }
+  .endgame-header {
+    padding: 0.45rem 0.8rem;
+  }
+  .endgame-title {
+    font-size: 1.1rem;
+  }
+  .endgame-close {
+    font-size: 1.7rem;
+  }
+  .endgame-body {
+    // visible, NOT auto: never scroll inside the card.
+    overflow: visible;
+    padding: 0.5rem 0.7rem;
+  }
+  .endgame-subtitle {
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+  }
+  .endgame-team-scores {
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .endgame-team-badge {
+    padding: 0.2rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  // Compact-but-readable table. Override the base fixed column widths
+  // (3.5rem / 7rem) so the narrow 30rem table gives the player column room.
+  .endgame-th {
+    padding: 0.25rem 0.35rem;
+    font-size: 0.65rem;
+    &--num { width: 2.4rem; }
+    &--bonus { width: 5rem; }
+  }
+  .endgame-td {
+    padding: 0.25rem 0.35rem;
+    font-size: 0.85rem;
+    &--total { font-size: 1.05rem; }
+  }
+  // Avatar kept just under the text line height (0.85rem × ~1.4 ≈ 16.8px) so
+  // it doesn't inflate row height beyond what the text already needs.
+  .endgame-rank {
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 0.65rem;
+  }
+  .endgame-avatar {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .endgame-name {
+    font-size: 0.85rem;
+  }
+  .endgame-tag {
+    font-size: 0.55rem;
+    padding: 0.06rem 0.25rem;
+  }
+  .endgame-team-tag {
+    font-size: 0.6rem;
+    padding: 0.06rem 0.35rem;
+  }
+  .endgame-bonus-item {
+    font-size: 0.6rem;
+  }
+  .endgame-footer {
+    padding: 0.45rem 0.7rem;
+    gap: 0.4rem;
+  }
+  .endgame-btn {
+    font-size: 0.9rem;
+    padding: 0.45rem 1rem;
+  }
+
+  // ── In-game top bar (score board + turn order) ─────────────────────────
+  // The top bar lives in the App <header>, OUTSIDE the scaled canvas, so it
+  // is styled here under .is-mobile (not .game-stage--mobile). The global
+  // rule pins the score board left (game-top-bar justify-content:flex-start)
+  // and the turn-order right (margin-left:auto) so the score never jumps as
+  // chips shrink. On phone the score board then sits hard against the brand,
+  // looking cramped-left. Shift it toward centre with a FIXED percentage
+  // left margin — fixed (not auto) so it stays put regardless of how many
+  // turn-order chips remain (no jumping); turn-order keeps margin-left:auto
+  // and stays at the far right.
+  .board-table__score-bar {
+    margin-left: 16%;
+  }
+}

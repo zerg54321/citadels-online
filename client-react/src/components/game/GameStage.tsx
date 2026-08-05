@@ -3,12 +3,26 @@ import {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isMobile } from '@/utils/isMobile';
 import { GameStageContext, type GameStageContextValue } from './gameStageContext';
 
 // Design baseline — iPad Pro 12.9" landscape. The whole game shell (header +
 // board) is laid out for this size and scaled as a unit to fit any viewport.
 export const DESIGN_WIDTH = 1366;
 export const DESIGN_HEIGHT = 1024;
+// Phone landscape baseline. The phone viewport (iPhone 12 Pro landscape =
+// 844×390 CSS) is far wider-aspect than the iPad (≈2.16:1 vs 1.33:1). Using a
+// canvas of the full phone aspect ratio (2216×1024, ≈2.16:1) scales to fill
+// the full 844 width — but the phone has a screen notch that then OBSCURES
+// the board edges. Instead we design on a NARROWER canvas whose aspect ratio
+// matches the SAFE area (2232×1170 physical → 744×390 CSS ≈ 1.908:1), so
+// when scaled to the phone height it lands at 744 CSS wide and centres with
+// ≈50px gap each side — exactly covering the notch zone without any env()
+// safe-area detection. Keeping designH=1024 (same as the iPad branch) means
+// the downscale factor (≈0.381) is unchanged, so every rem-based size renders
+// at the SAME screen px as before — only the horizontal canvas is narrower.
+export const MOBILE_DESIGN_WIDTH = 1954;
+export const MOBILE_DESIGN_HEIGHT = 1024;
 // Viewport width at/above which the action log docks beside the canvas (PC)
 // instead of overlaying it (iPad). Below this the right side has no room for
 // a native-width log panel, so the log becomes a floating drawer over the
@@ -52,16 +66,23 @@ export default function GameStage({ children }: GameStageProps) {
   const { w: vw, h: vh } = useViewportSize();
 
   const isLandscape = vw >= vh;
-  const isWide = vw >= LOG_BREAKPOINT;
+  // Phones never dock the log — there's no room beside a width-limited phone
+  // canvas, so the log stays an overlay drawer over the board's right edge.
+  const isWide = !isMobile && vw >= LOG_BREAKPOINT;
+
+  const designW = isMobile ? MOBILE_DESIGN_WIDTH : DESIGN_WIDTH;
+  const designH = isMobile ? MOBILE_DESIGN_HEIGHT : DESIGN_HEIGHT;
 
   // Dock mode: reserve LOG_DOCK_MIN beside the canvas, so the canvas shrinks
   // to leave room for the native-width log panel. Overlay mode: contain
   // within the full viewport (log floats over the board, no side room).
   const availW = isWide ? vw - LOG_DOCK_MIN : vw;
-  const scale = Math.min(availW / DESIGN_WIDTH, vh / DESIGN_HEIGHT, 1);
+  const scale = Math.min(availW / designW, vh / designH, 1);
 
-  const canvasW = DESIGN_WIDTH * scale;
-  const canvasH = DESIGN_HEIGHT * scale;
+  const canvasW = designW * scale;
+  const canvasH = designH * scale;
+
+  const stageClass = isMobile ? 'game-stage game-stage--mobile' : 'game-stage';
 
   const logDockRef = useRef<HTMLDivElement | null>(null);
   const logOverlayRef = useRef<HTMLDivElement | null>(null);
@@ -97,14 +118,14 @@ export default function GameStage({ children }: GameStageProps) {
   if (isWide) {
     // Dock mode: scaled canvas on the left, native-width log on the right.
     return (
-      <div className="game-stage game-stage--dock">
+      <div className={`${stageClass} game-stage--dock`}>
         <GameStageContext.Provider value={ctx}>
           <div className="game-stage__canvas-outer" style={{ width: canvasW, height: canvasH }}>
             <div
               className="game-stage__canvas"
               style={{
-                width: DESIGN_WIDTH,
-                height: DESIGN_HEIGHT,
+                width: designW,
+                height: designH,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
               }}
@@ -121,14 +142,14 @@ export default function GameStage({ children }: GameStageProps) {
   // Overlay mode: canvas contains the board; the log floats over its right
   // edge when expanded.
   return (
-    <div className="game-stage game-stage--overlay">
+    <div className={`${stageClass} game-stage--overlay`}>
       <GameStageContext.Provider value={ctx}>
         <div className="game-stage__canvas-outer" style={{ width: canvasW, height: canvasH }}>
           <div
             className="game-stage__canvas"
             style={{
-              width: DESIGN_WIDTH,
-              height: DESIGN_HEIGHT,
+              width: designW,
+              height: designH,
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
             }}

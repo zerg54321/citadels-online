@@ -9,10 +9,18 @@ import StatsScreen from './components/StatsScreen';
 import AdminScreen from './components/AdminScreen';
 import './i18n';
 import { useAppStore } from './store';
+import { isMobile } from './utils/isMobile';
 import './scss/main.scss';
 
 // Restore auth token from localStorage before mounting.
 useAppStore.getState().initAuth();
+
+// Tag <body> once so portal-to-body elements (Bootstrap modals, endgame
+// overlay) — which render OUTSIDE .game-stage--mobile — can still be styled
+// for mobile via a .is-mobile root scope.
+if (isMobile) {
+  document.body.classList.add('is-mobile');
+}
 
 // Data router (createBrowserRouter) is required because RoomScreen uses
 // useBlocker for the leave-room confirmation guard; BrowserRouter does not

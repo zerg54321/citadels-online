@@ -122,6 +122,11 @@ export default function SeatPanel({
 
   const exchangeHand = async () => {
     if (!exchangeHandMode) return;
+    // Defense-in-depth: never swap with the Magician's own hand. BoardScreen
+    // already excludes the self seat from exchange mode, but guard here too
+    // so a self-swap can never fire from any caller — it is a no-op that
+    // would waste the Magician's special action.
+    if (relation === 'self') return;
     try {
       const move: Move = {
         type: MoveType.MAGICIAN_EXCHANGE_HAND,
@@ -136,12 +141,16 @@ export default function SeatPanel({
   const city = board.city || [];
 
   return (
-    <div className={cn('seat-panel', {
-      'seat-panel--ally': relation === 'ally' || relation === 'self',
-      'seat-panel--enemy': relation === 'enemy',
-      'seat-panel--active': isCurrentPlayer,
-      'seat-panel--acting': isActingNow,
-    })}>
+    <div
+      className={cn('seat-panel', {
+        'seat-panel--ally': relation === 'ally' || relation === 'self',
+        'seat-panel--enemy': relation === 'enemy',
+        'seat-panel--active': isCurrentPlayer,
+        'seat-panel--acting': isActingNow,
+        'seat-panel--exchange': exchangeHandMode,
+      })}
+      onClick={exchangeHandMode ? exchangeHand : undefined}
+    >
       <div className="seat-panel__main">
         <div className="seat-panel__banner">
           <span className="seat-panel__pick-no" title={t('ui.game.pick_order_tip')}>{pickOrder}</span>
@@ -159,7 +168,6 @@ export default function SeatPanel({
           <span
             className={cn('seat-panel__chip seat-panel__chip--hand', { 'seat-panel__chip--click': exchangeHandMode })}
             title={t('ui.game.stat_hand')}
-            onClick={exchangeHand}
           >
             <span className="card-back-icon" />
             <span className="seat-panel__chip-val">{(board.hand || []).length}</span>

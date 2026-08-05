@@ -1,0 +1,392 @@
+// Mobile (phone) landscape board overrides. Scoped under .game-stage--mobile
+// (added by GameStage when isMobile is true). Authored for the 1954×1024
+// design canvas — the SAFE-area aspect ratio of a phone (2232×1170 physical
+// ≈ 1.908:1), NOT the full-screen aspect ratio. GameStage scales it down
+// ≈0.381 to fit the phone height; the narrower canvas lands ~744 CSS wide
+// inside the ~844 CSS viewport, centred with ≈50px gap each side. That gap
+// physically covers the screen notch zone, so NO env(safe-area-inset-*)
+// detection is needed — the board simply never reaches the notched edge.
+//
+// Design strategy — MINIMAL OVERRIDE:
+// Design on a large canvas of the phone's SAFE aspect ratio and let the
+// uniform transform scale do the work. The shared fr-based grid + native
+// 7rem district tiles wrap 4-per-row (4×2) naturally on the wide canvas;
+// the role card stays; card internals shrink in lockstep (proportions
+// identical to iPad native). See commit history / MOBILE_BOARD_PLAN.md for
+// the prior failed approaches that this replaces.
+//
+// IMPORTANT: no `@media (max-width:…)` layout rules — they evaluate against
+// the physical viewport, not the scaled canvas, and misfire on iPad mini.
+
+.game-stage--mobile {
+  // No safe-area padding: the narrower canvas (1954 vs full 2216) reserves
+  // the notch zone via centring alone. env() padding would double-offset.
+
+  // ── Larger character cards ────────────────────────────────────────────
+  // Opponent seat role uses --medium (5.8×8rem) natively — widen the reserved
+  // slot and the card together.
+  .seat-panel__role {
+    width: 9rem;
+    min-width: 9rem;
+  }
+  .char-card--medium {
+    width: 9rem;
+    height: 12.5rem;
+  }
+
+  // Enlarge the killed/robbed stamps (💀 / 💰) on character cards. With the
+  // cards themselves enlarged above, the native 2rem/2.4rem stamp looked
+  // relatively small — bumped further so the kill/rob status is readable at
+  // a glance on small phone screens. The persistent 💰 (server keeps
+  // robbedCharacter until round end) replaces the central name-call banner
+  // (hidden below) as the robbery cue.
+  .char-card--medium .char-card__stamp { font-size: 3.4rem; }
+  .char-card--large .char-card__stamp { font-size: 4.2rem; }
+
+  // Enlarge the character name (职业) below the role art. The medium card
+  // (seat panels) uses 0.72rem and large (center grid) 0.85rem natively —
+  // both too small to read on a phone. Bump both.
+  .char-card--medium .char-card__name { font-size: 1.0rem; }
+  .char-card--large .char-card__name { font-size: 1.15rem; }
+
+  // ── Hand-count icon (hand-drawn card-back, NOT emoji) ─────────────────
+  // .card-back-icon is a pure-CSS card-back graphic (repeating-linear-gradient
+  // stripes + border), sized 0.82×1.15rem natively — far smaller than the
+  // gold emoji (1.5rem) next to it in the banner. Enlarged further so the
+  // hand count reads clearly on a phone. Keeps the 5:7 card ratio.
+  .card-back-icon {
+    width: 1.4rem;
+    height: 1.96rem;
+  }
+
+  // Self role card: decoupled from the body row (see self-panel section
+  // below) — placed absolutely at the panel's right edge. Its height is set
+  // there to match the city area, NOT to drive the body height.
+  .board-table__self-role-empty {
+    width: 9rem;
+    height: 12.5rem;
+  }
+
+  // Center panel: title + msg are now merged into ONE line (see CenterPanel),
+  // and the timer is removed (the self action area has its own). This frees
+  // vertical space for the card grid. Cards keep their native 5:7 ratio
+  // (aspect-ratio:5/7) — never override to a fixed height, the art must stay
+  // proportional. The grid uses align-content:start + a fixed gap so removed
+  // cards don't shift neighbours; the merged title line has a min-height so
+  // the grid space is stable even when the assassin/thief hint toggles.
+  .board-table__center-panel {
+    overflow: hidden;
+    // Compress vertical padding/gap so the merged title line + draft grid
+    // shift UP and the character cards' 2nd-row bottom no longer overlaps
+    // the self panel below. (Base: padding 0.6rem, gap 0.5rem.)
+    padding: 0.3rem;
+    gap: 0.2rem;
+  }
+  // Hide the transient kill/rob name-call banner ("XX被刺杀不能行动") on
+  // mobile — the enlarged 💀/💰 stamps on the character cards (which now
+  // persist for the whole action round) plus the right-side action log make
+  // the redundant text banner unnecessary and it consumed vertical space.
+  .board-table__banner {
+    display: none;
+  }
+  .board-table__center-title,
+  .board-table__aside-row {
+    flex: 0 0 auto;
+  }
+  // ── Merge title + message into ONE line (mobile only) ──────────────────
+  // The original structure is two block elements — <h3 class="center-title">
+  // followed by <div class="center-msg">. On the narrow phone canvas the
+  // two-line stack wastes vertical space the draft grid needs, so on mobile
+  // we make BOTH inline and insert a "·" separator via ::after on the title.
+  // PC/iPad keep the original two-line layout (this rule is scoped to
+  // .game-stage--mobile). Both are enlarged + bolded for legibility.
+  .board-table__center-title {
+    display: inline;
+    font-size: 1.4rem;
+    line-height: 1.1;
+    font-weight: 700;
+
+    &::after {
+      content: ' · ';
+      opacity: 0.6;
+      font-weight: 700;
+    }
+  }
+  .board-table__center-msg {
+    display: inline;
+    font-size: 1.4rem;
+    line-height: 1.1;
+    font-weight: 600;
+    opacity: 1; // full opacity — the hint must be clearly readable
+    // Base has padding 0.35rem 0.5rem — strip it now that the msg is inline
+    // (it would add a full line of vertical space otherwise).
+    padding: 0;
+  }
+  // Hide the CENTRE countdown on mobile — the self action area has its own
+  // timer, and the centre one would duplicate it / eat vertical space. Scoped
+  // to .board-table__center-panel so the self-actions timer is unaffected.
+  .board-table__center-panel .board-table__timer {
+    display: none;
+  }
+  .board-table__aside-row {
+    min-height: 1.5rem;
+    font-size: 0.85rem;
+  }
+  .board-table__draft-grid {
+    max-width: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-content: start;
+    gap: 0.4rem;
+    // Base padding 0.4rem 0.2rem 0.5rem — trim so cards sit higher.
+    padding: 0.2rem 0.1rem 0.3rem;
+  }
+  .board-table__draft-grid .char-card,
+  .board-table__draft-grid .char-card--medium {
+    width: 100%;
+    max-width: 11rem;
+    // Native 5:7 ratio preserved — the art resource must stay proportional.
+    height: auto;
+    aspect-ratio: 5 / 7;
+  }
+
+  // ── Enlarged player panel banner (name / gold / hand / score / pick) ───
+  .seat-panel__banner,
+  .board-table__self-banner {
+    gap: 0.4rem;
+    padding: 0.18rem 0.5rem;
+    font-size: 1.0rem;
+  }
+
+  .seat-panel__name,
+  .board-table__self-name {
+    font-size: 1.6rem;
+  }
+
+  .seat-panel__chip-val,
+  .board-table__self-banner .seat-panel__chip-val {
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+
+  .seat-panel__chip-icon {
+    font-size: 1.5rem;
+  }
+
+  .seat-panel__pick-no,
+  .board-table__self-pick {
+    min-width: 1.8rem;
+    height: 1.8rem;
+    font-size: 1.1rem;
+  }
+
+  .seat-panel__avatar {
+    width: 2.0rem;
+    height: 2.0rem;
+  }
+
+  .seat-panel__status {
+    font-size: 0.8rem;
+    padding: 0.04rem 0.4rem;
+  }
+
+  // "你 / 队友 / 对手" tag at the far right of the player banner. Native
+  // 0.65rem is too small after the banner enlargement — match the banner
+  // scale (banner went 0.68→1.0rem, so ~+47%).
+  .seat-panel__tag {
+    font-size: 1.0rem;
+  }
+
+  // ── Self panel: role card decoupled, placed at far right ──────────────
+  // Problem fixed: previously .board-table__self-body was a row with city
+  // (flex:1) + role (height 11rem) side by side. The role's 11rem height
+  // drove the body row height, and the hand below it was pushed down so its
+  // bottom edge (and the lowest coins) were clipped. Decouple by making the
+  // role card absolutely positioned at the panel's right edge, so the body
+  // row height is driven only by the CITY (2 rows of 7:4 tiles), and the
+  // hand gets the full remaining vertical space.
+  .board-table__self-panel {
+    position: relative;
+    padding-right: 9.3rem; // role card width 9rem + a small gutter
+  }
+
+  .board-table__self-body {
+    // City now occupies the full body width (minus the reserved role gutter
+    // on the panel). Role no longer a flex child here.
+    gap: 0;
+  }
+
+  .board-table__self-role {
+    position: absolute;
+    top: 0;
+    right: 0.3rem;
+    // Height tracks the panel content (banner + body), not the other way
+    // around. Use the city's natural 2-row height rather than a fixed rem so
+    // the hand area below is never squeezed by the role card.
+    height: auto;
+    max-height: 100%;
+    padding-left: 0;
+  }
+
+  // ── Self city: 4×2 wrap ───────────────────────────────────────────────
+  .board-table__self-city {
+    max-width: 28rem;
+  }
+
+  // ── Non-first-round 二选一 candidate cards: relocate from the hand row ─
+  // up into self-body, between the built-city (left) and the role card
+  // (right, absolute). On the narrow phone canvas the hand row is too short
+  // to hold both the hand cards and the 2 candidate cards — they overlapped.
+  // Here the candidates sit in the body row's free middle space. Hide the
+  // PlayerHand inline copy; show the self-body copy (default display:none).
+  .tmp-hand-pick--inline {
+    display: none;
+  }
+  .tmp-hand-pick--body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 0;
+    gap: 0.3rem;
+    // Keep clear of the absolutely-positioned role card on the right.
+    margin-right: 0.3rem;
+
+    .tmp-hand-pick__hint {
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .tmp-hand-pick__cards {
+      gap: 0.8rem;
+    }
+    // Candidate cards sized to fit the body row height (≈ city 2-row height)
+    // without overflowing — smaller than full but still tappable.
+    .tmp-hand-pick__slot .district-card {
+      width: 5rem;
+      height: 7rem;
+    }
+  }
+
+  // Hand + coins should sit at the panel's bottom edge, not float just under
+  // the body row. self-panel is a flex column; push the hand to the bottom.
+  .board-table__self-hand {
+    margin-top: auto;
+  }
+
+  // ── Self actions: widen + 2-column buttons + uniform button height
+  // The "操作" title is removed (ActionPanel no longer renders it) — the
+  // buttons are self-evident. Timer sits at top (moved up from below the
+  // removed title), enlarged. ALL buttons (primary actions + end-turn +
+  // autoplay) use the same padding so their heights match.
+  //
+  // Layout: the action area is a fixed 30rem tall. Primary action buttons
+  // fill a 2-col grid from the top (align-content:start). The footer
+  // (结束回合 / 托管) is absolutely pinned to the bottom so its position is
+  // STABLE regardless of how many primary buttons are present — the user
+  // builds muscle memory (end-turn bottom-left, autoplay bottom-right) and
+  // never mis-taps because the controls drifted.
+  .board-table__self-actions {
+    position: relative;
+    flex: 0 0 30rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    padding: 0.5rem;
+    align-content: start;
+
+    // Hide the "操作" panel title on mobile — it eats a grid row and the
+    // timer + buttons are self-explanatory. PC/iPad keep it (scoped rule).
+    > .board-table__actions-title {
+      display: none;
+    }
+
+    // Timer spans both columns (single full-width row at the top).
+    > .board-table__timer {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-bottom: 0.2rem;
+    }
+
+    // Footer is absolutely pinned to the bottom of the 30rem area (see note
+    // above). Reserve its height on the grid via padding-bottom so primary
+    // buttons never slide under it even when many are present.
+    padding-bottom: 4.2rem;
+    > .board-table__actions-footer {
+      position: absolute;
+      left: 0.5rem;
+      right: 0.5rem;
+      bottom: 0.5rem;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+
+      // Pin each control to a fixed corner so the layout is stable even when
+      // one is absent (e.g. no finish-turn during TAKE_RESOURCES): 结束回合
+      // always col 1 (left), 托管 always col 2 (right). Without explicit
+      // placement, grid auto-flow would slide 托管 into the left cell when
+      // finish-turn is missing.
+      .board-table__action-btn--finish {
+        grid-column: 1;
+        margin-bottom: 0;
+      }
+      .board-table__actions-footer-autoplay {
+        grid-column: 2;
+        display: flex;
+      }
+      .board-table__actions-footer-autoplay .board-table__action-btn {
+        width: 100%;
+      }
+      // "托管中" label is hidden — the autoplay button text already flips to
+      // "取消托管"/"已锁定" when active, so the label is redundant and would
+      // push the 托管 button up off the bottom-right corner.
+      .board-table__meta-line {
+        display: none;
+      }
+    }
+  }
+
+  // Uniform button sizing — every action button (primary / end-turn / autoplay)
+  // shares the same padding & font so heights are identical. Font enlarged to
+  // 1.5rem for readability on small phone screens.
+  .board-table__action-btn {
+    padding: 0.8rem 0.5rem;
+    font-size: 1.5rem;
+    border-radius: 10px;
+    line-height: 1.2;
+  }
+
+  .board-table__timer {
+    font-size: 1.6rem;
+  }
+
+  // ── District card title (built building name) ──────────────────────────
+  // The .title inside district-card is font-size:80% of its container — on
+  // the scaled-down phone canvas that renders too small. Bump to 110% so the
+  // built-building names are legible without overflowing the card.
+  .district-card .title {
+    font-size: 110%;
+  }
+
+  // ── Action log (overlay drawer, portaled inside canvas) ───────────────
+  // Enlarge log text for readability on phone. The overlay drawer width is
+  // shared 280px (max 90vw) — widen it a touch so larger text fits.
+  .board-table__log-popout-inner {
+    width: 22rem;
+  }
+  .board-table__log-title {
+    font-size: 0.9rem;
+  }
+  .board-table__log-item {
+    font-size: 1.0rem;
+    line-height: 1.4;
+    padding: 0.4rem 0.5rem;
+  }
+  .board-table__log-round-sep {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.3rem;
+  }
+  .board-table__log-tab-text {
+    font-size: 0.8rem;
+  }
+}

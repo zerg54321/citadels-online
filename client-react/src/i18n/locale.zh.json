@@ -165,7 +165,7 @@
             "countdown_label": "倒计时",
             "countdown_autoplay": "托管中",
             "autoplay_on": "已托管",
-            "autoplay_enable": "托管（系统代打）",
+            "autoplay_enable": "托管",
             "autoplay_cancel": "取消托管",
             "autoplay_locked": "托管已锁定",
             "character_unknown": "未知角色",

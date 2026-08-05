@@ -120,6 +120,12 @@ export default class CharacterManager {
   // special character attributes
   killedCharacter!: CharacterType;
   robbedCharacter!: CharacterType;
+  /** Whether the robbed gold has already been transferred to the thief this
+   *  round. robbedCharacter is NO LONGER cleared when the gold moves — the 💰
+   *  marker on the character card must persist through the whole action round
+   *  so players can recall who was robbed (e.g. after the magician acts).
+   *  This flag keeps moveRobbedGold idempotent without clearing the marker. */
+  robGoldTransferred!: boolean;
 
   // action restriction data
   hasTakenResources!: boolean;
@@ -144,6 +150,7 @@ export default class CharacterManager {
     this.turnState = TurnState.INITIAL;
     this.killedCharacter = CharacterType.NONE;
     this.robbedCharacter = CharacterType.NONE;
+    this.robGoldTransferred = false;
     this.hasTakenResources = false;
     this.goldFromResourcesThisTurn = 0;
     this.districtsToBuild = Array.from(
@@ -171,6 +178,7 @@ export default class CharacterManager {
     c.turnState = this.turnState;
     c.killedCharacter = this.killedCharacter;
     c.robbedCharacter = this.robbedCharacter;
+    c.robGoldTransferred = this.robGoldTransferred;
     c.hasTakenResources = this.hasTakenResources;
     c.goldFromResourcesThisTurn = this.goldFromResourcesThisTurn;
     c.districtsToBuild = [...this.districtsToBuild];

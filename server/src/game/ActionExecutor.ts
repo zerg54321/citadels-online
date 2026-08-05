@@ -404,6 +404,10 @@ export default class ActionExecutor {
     const cm = this.state.board.characterManager;
     const robbedRole = cm.robbedCharacter;
     if (robbedRole < 0 || robbedRole === CharacterType.NONE) return false;
+    // Idempotency: the gold transfers exactly once (when the robbed
+    // character's turn starts). robbedCharacter is intentionally NOT cleared
+    // here so the 💰 card marker persists for the rest of the action round.
+    if (cm.robGoldTransferred) return false;
 
     const thiefPos = cm.characters[CharacterType.THIEF];
     const robbedPos = cm.characters[robbedRole];
@@ -437,7 +441,7 @@ export default class ActionExecutor {
       }
     }
 
-    cm.robbedCharacter = CharacterType.NONE;
+    cm.robGoldTransferred = true;
     return true;
   }
 

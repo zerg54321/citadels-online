@@ -61,6 +61,9 @@
     flex: 0 1 auto;
     justify-content: center;
     min-width: 0;
+    // Pin to the far right of the top bar so the score board (left sibling)
+    // stays put regardless of how many chips remain. See .game-top-bar note.
+    margin-left: auto;
   }
 
   &__turn-label {
@@ -759,6 +762,23 @@
     z-index: 2;
   }
 
+  /* magician exchange-hand target — the WHOLE panel is the click target
+     (not just the hand icon), so signal that with a pointer cursor. By
+     default the other players look UNCHANGED (no purple border/glow on all
+     of them at once); the purple swap-themed highlight appears ONLY on the
+     one currently being hovered, so the player sees exactly which opponent
+     they are about to swap with. */
+  &--exchange {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+
+    &:hover {
+      border-color: rgba(167, 139, 250, 0.8);
+      box-shadow: 0 0 0 3px #a78bfa, 0 0 26px rgba(139, 92, 246, 0.6);
+      transform: translateY(-1px);
+    }
+  }
+
   &__banner {
     display: flex;
     align-items: center;
@@ -899,9 +919,15 @@
 
     &--click {
       cursor: pointer;
-      border-color: rgba(250, 204, 21, 0.85);
-      box-shadow: 0 0 11px rgba(250, 204, 21, 0.5);
-      &:hover { filter: brightness(1.12); }
+      // No persistent highlight by default — in exchange mode the OTHER
+      // players must look unchanged; the swap target is signalled only on
+      // hover (see seat-panel--exchange purple glow). The yellow chip accent
+      // appears solely to reinforce the hovered target.
+      &:hover {
+        border-color: rgba(250, 204, 21, 0.85);
+        box-shadow: 0 0 11px rgba(250, 204, 21, 0.5);
+        filter: brightness(1.12);
+      }
     }
   }
 
@@ -999,13 +1025,21 @@
 }
 
 // In-game top bar rendered inside the global App <header> row (score +
-// turn-order cluster, centered between brand and header-actions).
+// turn-order cluster, between brand and header-actions).
+//
+// Layout: the score board (我方/对方) is pinned to the LEFT — right after the
+// 富饶之城 brand — so it never shifts as the turn-order chips on the right
+// shrink over the round. Previously justify-content:center centred the whole
+// (score + turn-order) group, so when turn-order got narrower the group's
+// centre moved and the score board visibly jumped left. Now score-bar stays
+// fixed at flex-start, and turn-order is pushed to the far right with
+// margin-left:auto (see &__turn-order below). (Global fix — PC/iPad/mobile.)
 .game-top-bar {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.6rem;
 }
 

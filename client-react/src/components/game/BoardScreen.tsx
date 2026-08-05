@@ -361,7 +361,7 @@ export default function BoardScreen() {
               board={slot.board}
               pickOrder={slot.pickOrder}
               destroyMode={modeFlags.destroy}
-              exchangeHandMode={modeFlags.exchangeHand}
+              exchangeHandMode={modeFlags.exchangeHand && slot.relation !== 'self'}
               stash={(selfBoard.stash as number) || 0}
               relation={slot.relation}
               isSpectator={isSpectator}
@@ -432,6 +432,29 @@ export default function BoardScreen() {
                         {selfCity.map((id, i) => id && <DistrictCard key={`city-${i}`} districtId={id} small />)}
                         {!selfCity.length && <div className="seat-panel__city-empty">{t('ui.game.no_buildings')}</div>}
                       </div>
+                      {/* 非首轮二选一候选牌：放在已建建筑右侧、角色牌左侧（self-body 行内）。
+                          默认隐藏（PC/iPad 仍在手牌区内联展示，见 PlayerHand --inline），
+                          仅移动端经 .game-stage--mobile 作用域显示，避免手牌过多时叠加。 */}
+                      {(selfBoard.tmpHand || []).length > 0 && selfCity.length > 0 && (
+                        <div className="tmp-hand-pick tmp-hand-pick--body">
+                          <span className="tmp-hand-pick__hint">
+                            {t('ui.game.messages.choose_card_prompt')}
+                          </span>
+                          <div className="tmp-hand-pick__cards">
+                            {(selfBoard.tmpHand || []).map((id: string, i: number) => id && (
+                              <div key={i} className="tmp-hand-pick__slot">
+                                <DistrictCard
+                                  districtId={id as DistrictId}
+                                  selectable
+                                  onSelect={() => {
+                                    sendMove({ type: MoveType.DRAW_CARDS, data: id }).catch((e: unknown) => console.log('error when sending move', e));
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className="board-table__self-role">
                         {gameProgress === 'IN_GAME' && selfRoleCard.show && (
                           <CharacterCard
@@ -501,10 +524,10 @@ export default function BoardScreen() {
 
       {gameProgress === 'FINISHED' && !showEndModal && (
         <div className="board-table__end-bar">
-          <button type="button" className="btn btn-sm btn-warning mr-2" onClick={() => setShowEndModal(true)}>
+          <button type="button" className="endgame-btn endgame-btn--secondary" onClick={() => setShowEndModal(true)}>
             {t('ui.score.show_result')}
           </button>
-          <button type="button" className="btn btn-sm btn-outline-light" onClick={backToLobby}>
+          <button type="button" className="endgame-btn endgame-btn--primary" onClick={backToLobby}>
             {t('ui.score.leave_room')}
           </button>
         </div>

@@ -67,6 +67,14 @@
       }
     }
   }
+
+  // Body 模式：非首轮二选一候选牌放在 self-body 行内（已建建筑右侧、角色牌
+  // 左侧）。默认隐藏——PC/iPad 仍用手牌区内的 --inline 模式；仅移动端经
+  // .game-stage--mobile 作用域启用（见 _game-stage-mobile.scss），以避免
+  // 手机窄画布上手牌过多时候选牌叠加在手牌上。
+  &--body {
+    display: none;
+  }
 }
 .player-hand-stash,
 .district-card-wrapper .stash,

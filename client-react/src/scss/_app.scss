@@ -169,6 +169,67 @@ html[lang="en"] .header--game {
   }
 }
 
+// Server status indicator — a borderless two-line "HUD readout" in the header.
+// Uses the project's display serif (Cinzel) in caps + tracking: the font's
+// roman-inscription caps make SERVER STATUS read like an engraved plaque,
+// giving a technical-HUD feel WITHOUT introducing a second font (a neutral
+// sans like Arial would clash with the medieval theme). Fixed English copy —
+// technical status is conventionally not localized. Colors are hand-written
+// (no Tailwind): slate-400 label / emerald-600 online / red-600 offline.
+// No background or border — floats directly on the header for immersion;
+// the dot's glow is the only chrome. Shown only on non-game pages.
+.header-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0 0.3rem;
+  font-family: var(--font-display);
+  line-height: 1.2;
+  flex-shrink: 0;
+
+  &__label {
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 400;
+    color: #94a3b8; // slate-400
+  }
+
+  &__state {
+    display: flex;
+    align-items: center;
+    gap: 0.32rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #059669; // emerald-600
+  }
+
+  &__dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: #059669;
+    box-shadow: 0 0 6px rgba(5, 150, 105, 0.6);
+    flex-shrink: 0;
+  }
+
+  &--offline {
+    .header-status__state { color: #dc2626; } // red-600
+    .header-status__dot {
+      background: #dc2626;
+      box-shadow: 0 0 6px rgba(220, 38, 38, 0.6);
+      animation: header-status-pulse 1.8s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes header-status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(220, 38, 38, 0.6); }
+  50% { opacity: 0.45; box-shadow: 0 0 11px rgba(220, 38, 38, 0.95); }
+}
+
 // Stats / About links — text controls, not buttons.
 .hdr-link {
   font-family: var(--font-display);

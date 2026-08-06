@@ -8,7 +8,7 @@ import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
 import GameTopBar from './components/game/GameTopBar';
 import GameStage from './components/game/GameStage';
-import { useAppStore, useGameProgress } from './store';
+import { useAppStore, useGameProgress, useIsConnected } from './store';
 
 // Mirrors Vue App.vue. The About modal (Vue Bootstrap data-toggle) becomes a
 // createPortal + local state. Vue computed inGame ($route.name === 'room') →
@@ -22,6 +22,7 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false);
   const leaveRoomStore = useAppStore((s) => s.leaveRoom);
   const gameProgress = useGameProgress();
+  const isConnected = useIsConnected();
 
   const inGame = location.pathname.startsWith('/room');
   // GameStage (equal-ratio scaling) is only for an active board. The lobby
@@ -62,6 +63,18 @@ export default function App() {
               <button type="button" className="header-leave-btn" onClick={leaveRoom}>
                 {t('ui.score.leave_room')}
               </button>
+            )}
+            {!inPlay && (
+              <div
+                className={`header-status${isConnected ? '' : ' header-status--offline'}`}
+                title={isConnected ? undefined : t('ui.server_offline_hint', { defaultValue: 'Game server is unreachable. Please wait for it to come back online.' })}
+              >
+                <span className="header-status__label">SERVER STATUS</span>
+                <span className="header-status__state">
+                  <span className="header-status__dot" />
+                  {isConnected ? 'CONNECTED' : 'OFFLINE'}
+                </span>
+              </div>
             )}
             <div className={`header-extra${inPlay ? ' header-extra--hidden' : ''}`}>
               {!inLobby && (

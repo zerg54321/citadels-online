@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(useAppStore((s) => s.authToken && s.authUser));
   const createRoom = useAppStore((s) => s.createRoom);
+  const setConnected = useAppStore((s) => s.setConnected);
 
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -56,8 +57,14 @@ export default function HomeScreen() {
     setRoomsError('');
     try {
       setRooms(await roomsApi.list());
+      // Reuse the rooms poll as a liveness probe for the header status pill:
+      // a successful /api/rooms round-trip means the game server is up and
+      // reachable (Caddy alone returning a static SPA would not expose this
+      // route). Drive the same isConnected flag the header indicator reads.
+      setConnected(true);
     } catch (e) {
       setRoomsError(e instanceof Error ? e.message : String(e));
+      setConnected(false);
     } finally {
       setRoomsLoading(false);
     }

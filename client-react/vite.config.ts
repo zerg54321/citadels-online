@@ -81,7 +81,19 @@ export default defineConfig({
   server: {
     port: 3010,
     proxy: {
-      '/s/': 'http://localhost:8081/s/',
+      // Object form + ws:true is REQUIRED: the string shorthand only proxies
+      // HTTP requests, not the WebSocket Upgrade handshake. Socket.IO opens
+      // with HTTP polling (gets a sid) then upgrades to websocket reusing that
+      // sid — without ws:true the Upgrade hits the Vite server (which has no
+      // /s/ ws handler) and fails. The client silently falls back to polling
+      // so the game still works, but the console spams "WebSocket connection
+      // ... failed" on every reconnect. ws:true lets Vite forward the Upgrade
+      // to the backend on :8081. target is a bare host (no path): the request
+      // already carries /s/ and the server is configured with path:'/s/'.
+      '/s/': {
+        target: 'http://localhost:8081',
+        ws: true,
+      },
       '/api': 'http://localhost:8081',
     },
   },

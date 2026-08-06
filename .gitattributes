@@ -4,3 +4,24 @@
 # CRLF on checkout so git never re-normalizes them to LF.
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# All source code & config: force LF in the working tree AND the repo.
+# With core.autocrlf=true (common on Windows), .ts/.json/etc. would
+# otherwise oscillate between CRLF (checkout) and LF (commit) whenever a
+# tool (eslint --fix, an editor) writes LF — producing phantom "modified"
+# diffs with zero content change. Pinning eol=lf removes that ambiguity:
+# git stores LF and checks out LF regardless of autocrlf, so no tool can
+# re-introduce a CRLF-vs-LF noise diff.
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.json text eol=lf
+*.scss text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.html text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf

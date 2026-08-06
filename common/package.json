@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "npx tsc -p tsconfig.build.json",
-    "lint": "npx eslint --ext .ts --ignore-path .gitignore . --fix",
+    "lint": "npx eslint --ext .ts --ignore-path .gitignore .",
+    "lint:fix": "npx eslint --ext .ts --ignore-path .gitignore . --fix",
     "test": "vitest run"
   },
   "repository": "https://github.com/antbrl/citadels-online",

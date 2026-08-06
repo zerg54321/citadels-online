@@ -83,6 +83,13 @@ export default function GameStage({ children }: GameStageProps) {
   const canvasH = designH * scale;
 
   const stageClass = isMobile ? 'game-stage game-stage--mobile' : 'game-stage';
+  // The portrait "rotate to landscape" block is for PHONES only. A desktop
+  // browser (incl. an installed PWA window) may legitimately run in a tall
+  // window — e.g. a maximized side-by-side split where the browser pane is
+  // taller than wide. Forcing a rotate hint there is wrong: the scaled canvas
+  // already adapts to any aspect ratio, so just let it render. (iPad/iOS PWA
+  // are also non-phone — isMobile is false — so they keep playing as before.)
+  const showRotateHint = isMobile && !isLandscape;
 
   const logDockRef = useRef<HTMLDivElement | null>(null);
   const logOverlayRef = useRef<HTMLDivElement | null>(null);
@@ -94,17 +101,26 @@ export default function GameStage({ children }: GameStageProps) {
 
   // Publish portal targets once they mount. Re-publish when mode flips so
   // ActionLog re-portals to the correct host.
+  //
+  // `isLandscape` is also a dependency because the portrait early-return
+  // (above) unmounts the overlay host div entirely. On a phone isWide never
+  // changes (always overlay), so without isLandscape in the deps the effect
+  // would NOT re-fire after a portrait→landscape round-trip — ctx.logOverlayEl
+  // would keep pointing at the now-detached old host, and ActionLog would
+  // portal into a dead node (log disappears after rotating back). Re-running
+  // on isLandscape republishes the freshly re-mounted host.
   useEffect(() => {
     setCtx({
       mode: isWide ? 'dock' : 'overlay',
       logDockEl: isWide ? logDockRef.current : null,
       logOverlayEl: !isWide ? logOverlayRef.current : null,
     });
-  }, [isWide]);
+  }, [isWide, isLandscape]);
 
-  // Portrait: block the game with a rotate hint instead of rendering a
-  // squashed landscape layout.
-  if (!isLandscape) {
+  // Portrait: block the game with a rotate hint — but ONLY on phones (see
+  // showRotateHint). On a tall desktop/PWA window the scaled canvas adapts,
+  // so we render the game instead.
+  if (showRotateHint) {
     return (
       <div className="game-stage game-stage--portrait">
         <div className="game-stage__rotate-hint">

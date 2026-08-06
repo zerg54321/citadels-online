@@ -213,16 +213,19 @@ export default function SeatPanel({
       <Modal
         show={pendingDestroy !== null}
         title={t('ui.game.destroy_confirm_title')}
-        headerClass="bg-warning text-white"
+        dialogClass="modal-dialog-centered modal-destroy-confirm"
+        contentClass="lobby-modal destroy-confirm"
+        titleClass="text-gold lobby-modal-title"
+        headerClass="border-0 pb-2"
         onClose={() => setPendingDestroy(null)}
         footer={(
           <>
-            <button type="button" className="btn btn-secondary" onClick={() => setPendingDestroy(null)}>
+            <button type="button" className="btn btn-outline-gold" onClick={() => setPendingDestroy(null)}>
               {t('ui.cancel')}
             </button>
             <button
               type="button"
-              className="btn btn-danger"
+              className="btn btn-gold"
               onClick={() => {
                 if (pendingDestroy !== null) {
                   sendDestroyMove(pendingDestroy);
@@ -235,7 +238,7 @@ export default function SeatPanel({
           </>
         )}
       >
-        <p>{t('ui.game.warn_destroy_ally', { name: username })}</p>
+        <p className="text-parchment mb-0">{t('ui.game.warn_destroy_ally', { name: username })}</p>
       </Modal>
     </div>
   );

@@ -28,6 +28,10 @@
 
   &--current .char-card__inner {
     box-shadow: 0 0 0 2px #d4af37, 0 0 16px rgba(212, 175, 55, 0.6);
+    // Match the seat-panel--acting golden pulse so the currently-acting
+    // role in the centre grid is as obvious as the acting player's seat.
+    // The static gold border alone read as just "highlighted", not "live".
+    animation: char-card-current-pulse 1.4s ease-in-out infinite;
   }
 
   &__inner {
@@ -213,5 +217,19 @@
     border-radius: inherit;
     pointer-events: none;
     z-index: 4;
+  }
+}
+
+// Golden pulse for the currently-acting role in the centre draft grid.
+// Mirrors seat-acting-pulse (used on .seat-panel--acting) so the "whose
+// turn it is" cue is consistent between the centre role grid and the seat
+// panels. Kept as a separate keyframe name to stay self-contained in this
+// file (no cross-file dependency on _board-table.scss's animation).
+@keyframes char-card-current-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #d4af37, 0 0 0 4px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 2px #fde68a, 0 0 0 6px rgba(212, 175, 55, 0.45), 0 0 26px rgba(212, 175, 55, 0.7);
   }
 }

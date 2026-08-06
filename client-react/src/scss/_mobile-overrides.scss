@@ -49,6 +49,28 @@
     max-height: 40vh;
     overflow-y: auto;
   }
+
+  // ── Destroy-teammate confirmation: compact on phone landscape ──────────
+  // The dialog only holds a title + one warning line + 2 buttons, but the
+  // base .modal-md (500px) + lobby-modal padding make it look oversized on a
+  // 390px-tall phone. Narrow the dialog, tighten header/body/footer padding,
+  // shrink the title, and use compact (but still tappable) buttons.
+  .modal-destroy-confirm {
+    max-width: min(22rem, 88vw);
+    margin: 0 auto;
+  }
+  .destroy-confirm {
+    .modal-header { padding: 0.4rem 0.7rem; }
+    .modal-title { font-size: 0.95rem; }
+    .modal-body { padding: 0.5rem 0.7rem; }
+    .modal-footer {
+      padding: 0.4rem 0.6rem;
+      .btn {
+        font-size: 0.95rem;
+        padding: 0.45rem 1rem;
+      }
+    }
+  }
 }
 
 // ── Endgame overlay (portal to body) ────────────────────────────────────
@@ -166,5 +188,17 @@
   // and stays at the far right.
   .board-table__score-bar {
     margin-left: 16%;
+  }
+  // Enlarge the turn-order number chips on phone — native 2.4rem circles
+  // with 0.85rem digits are too small to read on a short phone header. Bump
+  // both the circle and the digit so the current-acting role number is
+  // legible at a glance. (Scoped to .is-mobile — PC/iPad unchanged.)
+  .board-table__char-chip {
+    width: 3.2rem;
+    height: 3.2rem;
+    font-size: 1.7rem;
+  }
+  .board-table__turn-label {
+    font-size: 1.1rem;
   }
 }

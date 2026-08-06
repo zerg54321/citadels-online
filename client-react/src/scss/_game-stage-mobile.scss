@@ -214,12 +214,29 @@
     // City now occupies the full body width (minus the reserved role gutter
     // on the panel). Role no longer a flex child here.
     gap: 0;
+    // Position context for the absolutely-positioned candidate pick block
+    // (see tmp-hand-pick--body below), which extends rightward over the role
+    // card slot via a negative right offset.
+    position: relative;
   }
 
   .board-table__self-role {
     position: absolute;
-    top: 0;
-    right: 0.3rem;
+    // self-body (not self-panel) is the positioning context, and self-body's
+    // right edge is the INNER edge of the panel's 9.3rem role gutter
+    // (padding-right:9.3rem lives on the panel). So to land the 9rem-wide role
+    // card in that gutter with a 0.3rem outer gap we offset -9rem from body's
+    // right edge: 9.3 (gutter) - 9 (card) - 0.3 (gap) → right edge at 0.3rem
+    // from the panel border, identical to the pre-relative-body placement.
+    right: -9rem;
+    // Top aligns with the panel's banner top, not the body's. self-body is the
+    // positioning context, so top:0 would sit at the body content top (just
+    // below the banner + the body's 1px border-top). Lift the card up by the
+    // banner height (avatar 2.0rem + banner padding 0.18rem×2 = 2.36rem) plus
+    // the body's 1px border-top so the card's top edge is flush with the
+    // banner's top edge — the banner's contents are left-aligned, leaving the
+    // right side free for the role card to occupy the top-right corner.
+    top: calc(-2.36rem - 1px);
     // Height tracks the panel content (banner + body), not the other way
     // around. Use the city's natural 2-row height rather than a fixed rem so
     // the hand area below is never squeezed by the role card.
@@ -234,44 +251,67 @@
   }
 
   // ── Non-first-round 二选一 candidate cards: relocate from the hand row ─
-  // up into self-body, between the built-city (left) and the role card
-  // (right, absolute). On the narrow phone canvas the hand row is too short
-  // to hold both the hand cards and the 2 candidate cards — they overlapped.
-  // Here the candidates sit in the body row's free middle space. Hide the
+  // up into self-body, sitting to the RIGHT of the 4-column built city. On the
+  // narrow phone canvas the hand row is too short to hold both the hand cards
+  // and the 2 candidate cards — they overlapped. Here the candidates are a
+  // normal flex child after the city (NOT absolute, NOT covering the role
+  // card), so the city and role stay fully visible during card-pick. Hide the
   // PlayerHand inline copy; show the self-body copy (default display:none).
   .tmp-hand-pick--inline {
     display: none;
   }
+  // ── Non-first-round draft candidates: normal 5:7 portrait cards to the
+  // right of the built city. The block is a plain flex child of self-body
+  // (which is display:flex; flex-direction:row): city (flex, max-width 28rem)
+  // then this block then the absolute role card in the panel's right gutter.
+  // Cards use a fixed 5:7 portrait size (7rem × 5rem) — the same ratio as hand
+  // cards and the first-round pick — NOT the 4rem landscape building tiles, so
+  // they read clearly as "draw choices" rather than built districts. Height is
+  // tuned to fit the 2-row city body (~8rem) with a compact hint above it.
   .tmp-hand-pick--body {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    flex: 0 0 auto;
+    gap: 0.2rem;
+    padding: 0 0.4rem;
     min-width: 0;
-    gap: 0.3rem;
-    // Keep clear of the absolutely-positioned role card on the right.
-    margin-right: 0.3rem;
 
     .tmp-hand-pick__hint {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       white-space: nowrap;
     }
     .tmp-hand-pick__cards {
-      gap: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
     }
-    // Candidate cards sized to fit the body row height (≈ city 2-row height)
-    // without overflowing — smaller than full but still tappable.
-    .tmp-hand-pick__slot .district-card {
-      width: 5rem;
-      height: 7rem;
+    .tmp-hand-pick__slot {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+
+      .district-card {
+        // Fixed 5:7 portrait, sized to fit the 2-row city body height.
+        height: 7rem;
+        width: 5rem;
+      }
+      &:hover {
+        transform: translateY(-0.3rem);
+      }
     }
   }
 
   // Hand + coins should sit at the panel's bottom edge, not float just under
   // the body row. self-panel is a flex column; push the hand to the bottom.
+  // Extra bottom padding lifts the coin stack: the 🪙 emoji's visual descender
+  // extends below its 0.8em line box, and the panel's overflow:hidden clips it,
+  // so the lowest coin used to lose ~half its body past the bottom edge.
   .board-table__self-hand {
     margin-top: auto;
+    padding-bottom: 0.7rem;
   }
 
   // ── Self actions: widen + 2-column buttons + uniform button height

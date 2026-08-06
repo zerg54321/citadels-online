@@ -6,6 +6,8 @@ interface ModalProps {
   title?: string;
   dialogClass?: string;
   headerClass?: string;
+  contentClass?: string;
+  titleClass?: string;
   onClose?: () => void;
   children?: ReactNode;
   footer?: ReactNode;
@@ -19,6 +21,8 @@ export default function Modal({
   title = '',
   dialogClass = 'modal-dialog-centered',
   headerClass = '',
+  contentClass = '',
+  titleClass = '',
   onClose,
   children,
   footer,
@@ -27,9 +31,9 @@ export default function Modal({
   return createPortal(
     <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
       <div className={`modal-dialog ${dialogClass}`}>
-        <div className="modal-content">
+        <div className={`modal-content ${contentClass}`}>
           <div className={`modal-header ${headerClass}`}>
-            <h5 className="modal-title mb-0">{title}</h5>
+            <h5 className={`modal-title mb-0 ${titleClass}`}>{title}</h5>
             <button type="button" className="close text-white" onClick={onClose} aria-label="close">
               <span aria-hidden="true">&times;</span>
             </button>

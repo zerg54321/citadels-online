@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Move } from 'citadels-common';
+import { playUi } from '@/utils/av';
 
 export interface ActionButton {
   title: string;
@@ -60,7 +61,7 @@ export default function ActionPanel({
           key={i}
           type="button"
           className={`board-table__action-btn${isPrimaryAction(action.title) ? ' board-table__action-btn--primary' : ''}${action.title === 'cancel' ? ' board-table__action-btn--danger' : ''}`}
-          onClick={(e) => onAction?.(action.move, e.currentTarget)}
+          onClick={(e) => { playUi('ui_click'); onAction?.(action.move, e.currentTarget); }}
         >
           {t(`ui.game.actions.${action.title}`, action.args ?? {})}
         </button>
@@ -70,7 +71,7 @@ export default function ActionPanel({
           <button
             type="button"
             className="board-table__action-btn board-table__action-btn--danger board-table__action-btn--finish"
-            onClick={(e) => onAction?.(finishTurnAction.move, e.currentTarget)}
+            onClick={(e) => { playUi('ui_click'); onAction?.(finishTurnAction.move, e.currentTarget); }}
           >
             {t(`ui.game.actions.${finishTurnAction.title}`, finishTurnAction.args ?? {})}
           </button>

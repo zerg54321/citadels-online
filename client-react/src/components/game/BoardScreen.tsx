@@ -24,7 +24,10 @@ import {
   selectPlayerFromId,
 } from '@/store';
 import { useTeamScores } from '@/hooks/useTeamScores';
+import { useAvFeedDispatch } from '@/hooks/useAvFeedDispatch';
+import { useAvStateDispatch } from '@/hooks/useAvStateDispatch';
 import { playTurnSound } from '@/utils/sound';
+import { playUi } from '@/utils/av';
 import SeatPanel from './elements/SeatPanel';
 import PlayerHand from './elements/PlayerHand';
 import DistrictCard from './elements/DistrictCard';
@@ -61,6 +64,12 @@ export default function BoardScreen() {
   const gameProgress = useGameProgress();
   const isCurrentPlayerSelf = useIsCurrentPlayerSelf();
   const charactersList = useCharactersList();
+
+  // D5: feed-driven AV dispatch (earn/build/destroy/settle/turn-handoff) and
+  // state-diff AV dispatch (draw + win/lose stinger). Both are edge-triggered
+  // and no-op until a genuinely new feed entry / state transition arrives.
+  useAvFeedDispatch();
+  useAvStateDispatch();
   const sendMoveStore = useAppStore((s) => s.sendMove);
   const leaveRoomStore = useAppStore((s) => s.leaveRoom);
   const setAutoplayStore = useAppStore((s) => s.setAutoplay);
@@ -178,6 +187,26 @@ export default function BoardScreen() {
   }, [selfIsAutoplay, countdownSecondsLeft, t]);
 
   const countdownUrgent = countdownSecondsLeft !== null && countdownSecondsLeft <= 15;
+
+  // --- self countdown tick (last 10s of the local player's turn) ---
+  // L1 local-only: only the local player hears it, and only on their own
+  // turn. Fires once per whole-second change while <= 10s remaining.
+  const prevCountdownRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isCurrentPlayerSelf) {
+      prevCountdownRef.current = null;
+      return;
+    }
+    const s = countdownSecondsLeft;
+    if (s === null) {
+      prevCountdownRef.current = null;
+      return;
+    }
+    if (s <= 10 && s !== prevCountdownRef.current) {
+      playUi('self_countdown_tick');
+    }
+    prevCountdownRef.current = s;
+  }, [countdownSecondsLeft, isCurrentPlayerSelf]);
 
   const isSpectator = useMemo(() => (gameState ? isSpectatorOf(gameState) : true), [gameState]);
 
@@ -319,6 +348,7 @@ export default function BoardScreen() {
       await sendMoveStore(move);
     } catch (error) {
       console.log('error when sending move', error);
+      playUi('ui_error');
     }
   };
 

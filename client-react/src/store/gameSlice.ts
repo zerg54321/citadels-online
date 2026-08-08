@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
 import {
-  ClientGameState, GameSetupData, Move, PlayerRole, PlayerId, RoomId, DistrictId,
+  ClientGameState, GameSetupData, Move, MoveType, PlayerRole, PlayerId, RoomId, DistrictId,
 } from 'citadels-common';
+import { recordIssuedKill } from '@/utils/avIssuedMoves';
 import socket from '../socket';
 import api from '../api';
 import type { AuthSlice } from './authSlice';
@@ -228,6 +229,12 @@ export const createGameSlice: StateCreator<GameSlice & AuthSlice & ChatSlice, []
   },
 
   sendMove(move) {
+    // Record the locally-issued assassin kill target so the AV feed dispatcher
+    // can self-identify as the assassin when `call_killed` arrives (D9: that
+    // feed entry carries only the victim + killed role, never the assassin).
+    if (move.type === MoveType.ASSASSIN_KILL && typeof move.data === 'number') {
+      recordIssuedKill(move.data);
+    }
     return new Promise<void>((resolve, reject) => {
       if (!socket.connected) return reject(new Error('You must be connected'));
       socket.emit('make move', move, (res: any) => {

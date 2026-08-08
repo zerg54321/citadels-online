@@ -363,7 +363,7 @@ export default function AuthPanel() {
           <button type="button" className="hdr-btn" onClick={() => setShowProfileModal(true)}>
             {t('ui.auth.profile')}
           </button>
-          <button type="button" className="hdr-btn hdr-btn--ghost" onClick={logout}>
+          <button type="button" className="hdr-btn hdr-btn--ghost auth-panel__logout" onClick={logout}>
             {t('ui.auth.logout')}
           </button>
         </div>

@@ -125,13 +125,17 @@ export default function CenterPanel({
             : t(statusBar.message) as string}
         </div>
 
-        {gameProgress === 'IN_GAME' && (chooseCharacterMode || killMode || robMode) && countdownText && countdownText !== '—' && (
-          <div className={`board-table__timer${countdownUrgent ? ' board-table__timer--urgent' : ''}`}>
-            {countdownText}
-          </div>
-        )}
+        <div className="board-table__center-flags">
+          {gameProgress === 'IN_GAME' && (chooseCharacterMode || killMode || robMode) && countdownText && countdownText !== '—' ? (
+            <div className={`board-table__timer${countdownUrgent ? ' board-table__timer--urgent' : ''}`}>
+              {countdownText}
+            </div>
+          ) : null}
 
-        {eventBanner && <div className="board-table__banner board-table__banner--warn">{eventBanner}</div>}
+          {eventBanner ? (
+            <div className="board-table__banner board-table__banner--warn">{eventBanner}</div>
+          ) : null}
+        </div>
 
         {showCenterCharacterGrid && (
           <div className="board-table__draft-grid">
@@ -139,7 +143,7 @@ export default function CenterPanel({
               <CharacterCard
                 key={i}
                 characterId={ch.id || 0}
-                faceDown={false}
+                faceDown={Boolean(ch.faceDown)}
                 selectable={ch.selectable}
                 disabled={!ch.selectable && (killMode || robMode || chooseCharacterMode)}
                 killed={ch.killed}

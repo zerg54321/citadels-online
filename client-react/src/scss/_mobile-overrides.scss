@@ -177,15 +177,16 @@
   }
 
   // ── In-game top bar (score board + turn order) ─────────────────────────
-  // The top bar lives in the App <header>, OUTSIDE the scaled canvas, so it
-  // is styled here under .is-mobile (not .game-stage--mobile). The global
-  // rule pins the score board left (game-top-bar justify-content:flex-start)
-  // and the turn-order right (margin-left:auto) so the score never jumps as
-  // chips shrink. On phone the score board then sits hard against the brand,
-  // looking cramped-left. Shift it toward centre with a FIXED percentage
-  // left margin — fixed (not auto) so it stays put regardless of how many
-  // turn-order chips remain (no jumping); turn-order keeps margin-left:auto
-  // and stays at the far right.
+  // The top bar lives in the App <header>, INSIDE the scaled canvas (it is
+  // passed as children to GameStage). These rules are scoped under .is-mobile
+  // on <body>, which matches the top bar as a descendant even though it is
+  // inside the scaled layer. The global rule pins the score board left
+  // (game-top-bar justify-content:flex-start) and the turn-order right
+  // (margin-left:auto) so the score never jumps as chips shrink. On phone the
+  // score board then sits hard against the brand, looking cramped-left. Shift
+  // it toward centre with a FIXED percentage left margin — fixed (not auto) so
+  // it stays put regardless of how many turn-order chips remain (no jumping);
+  // turn-order keeps margin-left:auto and stays at the far right.
   .board-table__score-bar {
     margin-left: 16%;
   }

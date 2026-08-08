@@ -204,6 +204,7 @@ export default function SeatPanel({
                 killed={roleCard.killed}
                 robbed={roleCard.robbed}
                 size="medium"
+                staggerReveal
               />
             )}
           </div>

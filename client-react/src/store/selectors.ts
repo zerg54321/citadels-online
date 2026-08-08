@@ -40,6 +40,10 @@ export const useIsConnected = () => useAppStore((s) => s.isConnected);
 
 export const useSeenCharacterIds = () => useAppStore((s) => s.seenCharacterIds);
 
+// Settings (Phase D4) — primitives only, returned directly for stable refs.
+export const useSfxVolume = () => useAppStore((s) => s.sfxVolume);
+export const useMuted = () => useAppStore((s) => s.muted);
+
 // --- Pure selectors (operate on gameState, no subscription) ---
 // Components call these inside useMemo with the gameState from useGameState().
 

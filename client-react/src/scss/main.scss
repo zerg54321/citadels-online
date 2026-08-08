@@ -19,6 +19,7 @@
 @import './home-screen';
 @import './stats-screen';
 @import './admin-screen';
+@import './dev-av-panel';
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
 
@@ -70,7 +71,7 @@ html, body {
   font-family: var(--font-body);
 }
 /* Disable user selection */
-#app, .tooltip {
+#app {
   user-select: none;
 }
 

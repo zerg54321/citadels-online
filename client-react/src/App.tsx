@@ -8,7 +8,10 @@ import AuthPanel from './components/AuthPanel';
 import LocaleSelector from './components/common/LocaleSelector';
 import GameTopBar from './components/game/GameTopBar';
 import GameStage from './components/game/GameStage';
-import { useAppStore, useGameProgress, useIsConnected } from './store';
+import DevAvPanel from './components/dev/DevAvPanel';
+import {
+  useAppStore, useGameProgress, useIsConnected, useSfxVolume, useMuted,
+} from './store';
 
 // Mirrors Vue App.vue. The About modal (Vue Bootstrap data-toggle) becomes a
 // createPortal + local state. Vue computed inGame ($route.name === 'room') →
@@ -20,7 +23,12 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [showAbout, setShowAbout] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const leaveRoomStore = useAppStore((s) => s.leaveRoom);
+  const setSfxVolume = useAppStore((s) => s.setSfxVolume);
+  const setMuted = useAppStore((s) => s.setMuted);
+  const sfxVolume = useSfxVolume();
+  const muted = useMuted();
   const gameProgress = useGameProgress();
   const isConnected = useIsConnected();
 
@@ -90,6 +98,18 @@ export default function App() {
                 {t('ui.about.title')}
               </button>
             </div>
+            <button
+              type="button"
+              className="hdr-btn settings-gear"
+              aria-label={t('ui.settings.title') as string}
+              title={t('ui.settings.title') as string}
+              onClick={() => setShowSettings(true)}
+            >
+              <svg viewBox="0 0 24 24" width="1.15em" height="1.15em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
             <AuthPanel />
             <LocaleSelector />
           </div>
@@ -124,6 +144,61 @@ export default function App() {
     document.body,
   );
 
+  // Settings panel (audio volume / mute). Portals to document.body so it
+  // escapes the GameStage scale layer — same pattern as aboutModal. Like
+  // aboutModal it is included in BOTH the inPlay and non-inPlay return
+  // branches below, so opening it never hits an early-return-isolation gap.
+  const settingsModal = showSettings && createPortal(
+    <div className="modal fade show d-block" style={{ background: 'rgba(0,0,0,0.65)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-dialog-centered">
+        <div className="modal-content app-modal">
+          <div className="modal-header border-0 pb-2">
+            <h5 className="modal-title app-modal__title">{t('ui.settings.title')}</h5>
+            <button type="button" className="close app-modal__close" aria-label={t('ui.close') as string} onClick={() => setShowSettings(false)}>
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div className="modal-body">
+            <div className="settings-row">
+              <label className="settings-row__label" htmlFor="settings-sfx-volume">
+                {t('ui.settings.sfx_volume')}
+              </label>
+              <input
+                id="settings-sfx-volume"
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                className="settings-range"
+                value={sfxVolume}
+                onChange={(e) => setSfxVolume(Number(e.target.value))}
+              />
+            </div>
+            <div className="settings-row">
+              <span className="settings-row__label">{t('ui.settings.sound')}</span>
+              <button
+                type="button"
+                className={`settings-toggle${!muted ? ' is-on' : ''}`}
+                role="switch"
+                aria-checked={!muted}
+                aria-label={t('ui.settings.sound') as string}
+                onClick={() => setMuted(!muted)}
+              >
+                {!muted ? t('ui.settings.on') : t('ui.settings.off')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+
+  // DEV AV Panel — audio/visual debug harness. Portals to <body> internally
+  // (escapes GameStage scaling) so it can sit in both the in-play and
+  // non-in-play branches. Gated on Vite's DEV flag so it never ships.
+  const devPanel = import.meta.env.DEV && <DevAvPanel />;
+
   // In-play: wrap header + body in GameStage so the whole shell scales as a
   // unit to fit any landscape viewport (iPad Pro/Air/mini, PC). The action
   // log escapes the stage via portal (see ActionLog + GameStage context).
@@ -134,6 +209,8 @@ export default function App() {
         {header}
         {body}
         {aboutModal}
+        {settingsModal}
+        {devPanel}
       </GameStage>
     );
   }
@@ -143,6 +220,8 @@ export default function App() {
       {header}
       {body}
       {aboutModal}
+      {settingsModal}
+      {devPanel}
     </div>
   );
 }

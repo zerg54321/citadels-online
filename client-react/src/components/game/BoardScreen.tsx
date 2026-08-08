@@ -463,6 +463,7 @@ export default function BoardScreen() {
                             killed={selfRoleCard.killed}
                             robbed={selfRoleCard.robbed}
                             size="medium"
+                            staggerReveal
                           />
                         )}
                         {gameProgress === 'IN_GAME' && !selfRoleCard.show && (

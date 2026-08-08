@@ -16,6 +16,13 @@
             "picture_credits": "Picture credits",
             "by": "by"
         },
+        "settings": {
+            "title": "Settings",
+            "sfx_volume": "Sound effects",
+            "sound": "Sound",
+            "on": "On",
+            "off": "Off"
+        },
         "auth": {
             "login": "Log in",
             "register": "Register",

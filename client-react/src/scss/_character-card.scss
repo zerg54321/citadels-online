@@ -4,19 +4,24 @@
 // ../../assets (relative to src/scss/).
 .char-card {
   flex-shrink: 0;
-  border-radius: 0.5rem;
+  // 更贴近真实扑克牌的圆角：按尺寸分级，比例约 13%（原 0.5rem 偏方正）。
+  // __inner / __face / --unseen::after 均 inherit，故只在此处与各尺寸覆盖即可。
+  border-radius: 0.8rem;
   position: relative;
   user-select: none;
 
-  &--small { width: 4.4rem; height: 6.1rem; }
+  &--small { width: 4.4rem; height: 6.1rem; border-radius: 0.55rem; }
   &--medium { width: 5.8rem; height: 8rem; }
-  &--large { width: 7.2rem; height: 9.8rem; }
+  &--large { width: 7.2rem; height: 9.8rem; border-radius: 0.95rem; }
 
   &--selectable {
     cursor: pointer;
-    &:hover .char-card__inner {
+    transition: transform 0.18s ease;
+    &:hover {
       transform: translateY(-3px);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(212, 175, 55, 0.55);
+      .char-card__inner {
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(212, 175, 55, 0.55);
+      }
     }
   }
 
@@ -27,11 +32,34 @@
   }
 
   &--current .char-card__inner {
-    box-shadow: 0 0 0 2px #d4af37, 0 0 16px rgba(212, 175, 55, 0.6);
+    box-shadow:
+      0 0 0 2px var(--gold-bright),
+      0 0 0 4px rgba(240, 215, 123, 0.3),
+      0 0 18px rgba(240, 215, 123, 0.5),
+      0 0 36px rgba(212, 175, 55, 0.3),
+      inset 0 0 14px rgba(240, 215, 123, 0.1);
     // Match the seat-panel--acting golden pulse so the currently-acting
     // role in the centre grid is as obvious as the acting player's seat.
     // The static gold border alone read as just "highlighted", not "live".
     animation: char-card-current-pulse 1.4s ease-in-out infinite;
+  }
+
+  // C3 翻面：framer-motion 驱动的 3D flipper。flipper 满铺卡牌并承载
+  // rotateY；两面 absolute 堆叠，各设 backface-visibility:hidden（TSX 内联
+  // style 已设，此处补几何）。perspective 由 .char-card 内联 style 提供。
+  &__flipper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+  }
+
+  &__face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 
   &__inner {
@@ -39,13 +67,16 @@
     height: 100%;
     border-radius: inherit;
     border: 1px solid rgba(255, 255, 255, 0.18);
+    /* B4 基础落地影：角色卡浮于桌面基底（候选区用）；
+       --current 在上方叠加更强的金边发光脉冲。 */
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
     color: #f5e6c8;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    /* position 不在此设——__face 类提供 position:absolute 让两面堆叠。
+       absolute 同样作为 stamp/tag 子元素的定位上下文。 */
+    transition: box-shadow 0.12s ease;
     background-color: #1a1512;
     background-position: center top;
     background-size: cover;
@@ -71,35 +102,35 @@
     /* art */
     &--art-assassin {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/assassin.jpg');
+        url('../assets/characters/assassin.webp');
     }
     &--art-thief {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/thief.jpg');
+        url('../assets/characters/thief.webp');
     }
     &--art-magician {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/magician.jpg');
+        url('../assets/characters/magician.webp');
     }
     &--art-king {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/king.jpg');
+        url('../assets/characters/king.webp');
     }
     &--art-bishop {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/bishop.jpg');
+        url('../assets/characters/bishop.webp');
     }
     &--art-merchant {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/merchant.jpg');
+        url('../assets/characters/merchant.webp');
     }
     &--art-architect {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/architect.jpg');
+        url('../assets/characters/architect.webp');
     }
     &--art-warlord {
       background-image: linear-gradient(to top, #000c 0%, #0000 48%),
-        url('../assets/characters/warlord.jpg');
+        url('../assets/characters/warlord.webp');
     }
   }
 
@@ -175,13 +206,17 @@
 
   &__stamp {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-12deg);
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 2rem;
     opacity: 0.92;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
     z-index: 3;
+    /* framer-motion 控制 scale/y，倾斜由 transform 在 motion 元素上叠加。
+       这里给静态态（reduced-motion）保留 -12deg 倾斜。 */
+    transform: rotate(-12deg);
   }
   &--small &__stamp { font-size: 1.25rem; }
   &--large &__stamp { font-size: 2.4rem; }
@@ -227,9 +262,19 @@
 // file (no cross-file dependency on _board-table.scss's animation).
 @keyframes char-card-current-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 2px #d4af37, 0 0 0 4px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.5);
+    box-shadow:
+      0 0 0 2px var(--gold-bright),
+      0 0 0 4px rgba(240, 215, 123, 0.3),
+      0 0 18px rgba(240, 215, 123, 0.5),
+      0 0 36px rgba(212, 175, 55, 0.3),
+      inset 0 0 14px rgba(240, 215, 123, 0.1);
   }
   50% {
-    box-shadow: 0 0 0 2px #fde68a, 0 0 0 6px rgba(212, 175, 55, 0.45), 0 0 26px rgba(212, 175, 55, 0.7);
+    box-shadow:
+      0 0 0 2px #fff3c4,
+      0 0 0 6px rgba(240, 215, 123, 0.45),
+      0 0 28px rgba(240, 215, 123, 0.7),
+      0 0 52px rgba(212, 175, 55, 0.45),
+      inset 0 0 20px rgba(240, 215, 123, 0.18);
   }
 }

@@ -5,14 +5,14 @@ import { GameMode } from 'citadels-common';
 import { useAppStore } from '@/store';
 import roomsApi, { type RoomListItem } from '@/api/rooms';
 import ParticleField from '@/components/common/ParticleField';
-import imgAssassin from '@/assets/characters/assassin.jpg';
-import imgThief from '@/assets/characters/thief.jpg';
-import imgMagician from '@/assets/characters/magician.jpg';
-import imgKing from '@/assets/characters/king.jpg';
-import imgBishop from '@/assets/characters/bishop.jpg';
-import imgMerchant from '@/assets/characters/merchant.jpg';
-import imgArchitect from '@/assets/characters/architect.jpg';
-import imgWarlord from '@/assets/characters/warlord.jpg';
+import imgAssassin from '@/assets/characters/assassin.webp';
+import imgThief from '@/assets/characters/thief.webp';
+import imgMagician from '@/assets/characters/magician.webp';
+import imgKing from '@/assets/characters/king.webp';
+import imgBishop from '@/assets/characters/bishop.webp';
+import imgMerchant from '@/assets/characters/merchant.webp';
+import imgArchitect from '@/assets/characters/architect.webp';
+import imgWarlord from '@/assets/characters/warlord.webp';
 
 // Immersive single-viewport home screen. Left: a cinematic hero (background
 // art + slogan + create CTA) crowned by the eight-character cast strip; right:

@@ -3,9 +3,14 @@
 // intentionally distinct from .district-card .coin (hand coins are larger,
 // stacked vertically). Nesting under a stable parent avoids collisions.
 
-// 手牌区根容器：禁止滚动条，宽度压力由手牌区弹性吸收
+// 手牌区根容器：禁止滚动条，宽度压力由手牌区弹性吸收。
+// B4：给整个手牌区一个轻微透视原点，让手牌像"从玩家视角握持"，
+// 子卡的细微 rotateX 由 hover translateY 自然带出（不强制每张倾斜，
+// 避免与既有 hover transform 冲突）。
 .player-hand-root {
   overflow: hidden;
+  perspective: 900px;
+  perspective-origin: 50% 100%;
 }
 
 // 初始选牌二选一：占据整个 self-body 区域（城市+角色位），卡牌完整尺寸居中展示
@@ -38,7 +43,7 @@
     transition: transform 0.18s ease;
 
     &:hover {
-      transform: translateY(-0.4rem);
+      transform: translateY(-0.4rem) rotateX(4deg);
     }
   }
 

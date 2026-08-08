@@ -16,10 +16,27 @@
   &__bg {
     position: absolute;
     inset: 0;
-    background:
-      radial-gradient(circle at 20% 80%, rgba(180, 120, 40, 0.08), transparent 40%),
-      radial-gradient(circle at 80% 20%, rgba(80, 100, 160, 0.1), transparent 35%);
     pointer-events: none;
+    /* B2 底层质感：绒布织纹 + 噪点 + 暖冷洗光。此层在 __stage 下方，
+       被半透明面板（seat-panel 88% / center-panel 72%）大部分遮挡，
+       仅面板间隙可见。暗角 vignette 单独提到 __vignette 顶层 overlay
+       以保证四角渐暗一定可见。 */
+    background:
+      /* 原有暖冷洗光（加强可见度） */
+      radial-gradient(circle at 20% 80%, rgba(180, 120, 40, 0.13), transparent 40%),
+      radial-gradient(circle at 80% 20%, rgba(80, 100, 160, 0.14), transparent 35%),
+      /* 绒布织纹：双向斜纹交叉，织纹明显可见 */
+      repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.035) 0px, rgba(212, 175, 55, 0.035) 1px, transparent 1px, transparent 5px),
+      repeating-linear-gradient(-45deg, rgba(212, 175, 55, 0.035) 0px, rgba(212, 175, 55, 0.035) 1px, transparent 1px, transparent 5px),
+      /* SVG 噪点颗粒 — fractalNoise，低频粗颗粒，可见的纸面质感 */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.09'/%3E%3C/svg%3E");
+  }
+
+  // B2 顶层暗角 overlay：曾尝试在 __stage 之上加 vignette，但实测观感
+  // 对游戏是副作用（四角过暗压迫、与面板暗色叠加显脏），已移除 TSX 渲染。
+  // 保留此规则空置以便日后用更弱的方案重试；__bg 底层织纹/噪点仍保留。
+  &__vignette {
+    display: none;
   }
 
   &__score-bar {
@@ -453,6 +470,18 @@
     padding: 0.35rem 0.5rem;
   }
 
+  // 固定高度占位容器，容纳 timer 与 banner。两者条件出现/消失时，
+  // 占位高度恒定，draft-grid 下方不跳动。timer(font 0.9rem + padding
+  // 估算) 与 banner(padding 0.35rem + font 0.8rem) 叠加约 3.2rem。
+  &__center-flags {
+    min-height: 3.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
   &__draft-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -517,11 +546,13 @@
 
     &--acting {
       box-shadow:
-        0 0 0 3px #fbbf24,
-        0 0 0 6px rgba(251, 191, 36, 0.35),
-        0 0 28px rgba(251, 191, 36, 0.55);
+        0 0 0 3px var(--gold-bright),
+        0 0 0 6px rgba(240, 215, 123, 0.35),
+        0 0 22px rgba(240, 215, 123, 0.45),
+        0 0 44px rgba(212, 175, 55, 0.25),
+        inset 0 0 16px rgba(240, 215, 123, 0.12);
       animation: seat-acting-pulse 1.4s ease-in-out infinite;
-      border-color: rgba(251, 191, 36, 0.7);
+      border-color: rgba(240, 215, 123, 0.7);
     }
   }
 
@@ -1048,8 +1079,22 @@
 }
 
 @keyframes seat-acting-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px #fbbf24, 0 0 0 6px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.4); }
-  50% { box-shadow: 0 0 0 3px #fde68a, 0 0 0 8px rgba(251, 191, 36, 0.45), 0 0 32px rgba(251, 191, 36, 0.65); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px var(--gold-bright),
+      0 0 0 6px rgba(240, 215, 123, 0.3),
+      0 0 22px rgba(240, 215, 123, 0.45),
+      0 0 44px rgba(212, 175, 55, 0.25),
+      inset 0 0 16px rgba(240, 215, 123, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #fff3c4,
+      0 0 0 8px rgba(240, 215, 123, 0.45),
+      0 0 34px rgba(240, 215, 123, 0.7),
+      0 0 64px rgba(212, 175, 55, 0.4),
+      inset 0 0 22px rgba(240, 215, 123, 0.2);
+  }
 }
 
 @keyframes seat-acting-arrow {

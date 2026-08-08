@@ -16,6 +16,13 @@
             "picture_credits": "图片来源",
             "by": "作者"
         },
+        "settings": {
+            "title": "设置",
+            "sfx_volume": "音效",
+            "sound": "声音",
+            "on": "开",
+            "off": "关"
+        },
         "auth": {
             "login": "登录",
             "register": "注册",

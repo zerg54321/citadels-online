@@ -14,6 +14,8 @@ import './scss/main.scss';
 
 // Restore auth token from localStorage before mounting.
 useAppStore.getState().initAuth();
+// Restore audio/UX settings (sfx volume / mute) before mounting.
+useAppStore.getState().initSettings();
 
 // Tag <body> once so portal-to-body elements (Bootstrap modals, endgame
 // overlay) — which render OUTSIDE .game-stage--mobile — can still be styled

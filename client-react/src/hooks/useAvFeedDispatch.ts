@@ -80,6 +80,19 @@ function handleLine(line: ActionFeedLine, selfUsername: string | undefined, redu
   };
 
   switch (line.kind) {
+    case 'kill': {
+      // Assassin selected a kill target — the dramatic "thud" of the kill
+      // decision. Plays at target-selection time (earlier than the card
+      // reveal), so everyone hears the kill happen before seeing who it was
+      // in the reveal sequence. The stamp VISUAL still appears later on the
+      // revealed card; only the sound moves here to de-clutter reveal time.
+      dispatch('stamp_kill');
+      break;
+    }
+    case 'rob': {
+      dispatch('stamp_rob');
+      break;
+    }
     case 'earn': {
       const amount = Number(p.amount) || 1;
       dispatch('earn_gold', { amount, distant: p.player !== selfUsername });

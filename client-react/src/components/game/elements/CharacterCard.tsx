@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/utils/cn';
-import { getRevealDelay, claimRevealAudio, claimStampAudio } from '@/utils/roleReveal';
+import { getRevealDelay, claimRevealAudio } from '@/utils/roleReveal';
 import { dispatchAv } from '@/utils/av';
 
 const ART_KEYS: Record<number, string> = {
@@ -121,18 +121,12 @@ export default function CharacterCard({
     }
   }, [displayBack, staggerReveal, characterId, reduce]);
 
-  // Stamp slam audio: fires when the kill/rob stamp becomes visible (card
-  // face-up + killed/robbed), deduped by characterId. The stamp motion.div
-  // mounts at this same moment so audio and visual slam align.
-  const stampVisible = !displayBack && (killed || robbed) && characterId > 0;
-  const prevStampRef = useRef(false);
-  useEffect(() => {
-    const was = prevStampRef.current;
-    prevStampRef.current = stampVisible;
-    if (!was && stampVisible && !revealOnMount && claimStampAudio(characterId)) {
-      dispatchAv(killed ? 'stamp_kill' : 'stamp_rob', { reducedMotion: Boolean(reduce) });
-    }
-  }, [stampVisible, characterId, killed, reduce, revealOnMount]);
+  // Note: stamp_kill/stamp_rob AUDIO is now feed-driven (useAvFeedDispatch
+  // on feed `kill`/`rob` at target-selection time), NOT fired here at card
+  // reveal. The stamp VISUAL (motion.div below) still appears at reveal —
+  // the "thud" sound plays earlier when the assassin/thief picks, which is
+  // cleaner (fewer sounds stacked at reveal: role_reveal + kill_settle only)
+  // and gives immediate feedback on the selection action.
 
   const handleClick = () => {
     if (selectable && !disabled) onSelect?.();

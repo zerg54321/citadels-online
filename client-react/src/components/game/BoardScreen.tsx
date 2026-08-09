@@ -188,9 +188,10 @@ export default function BoardScreen() {
 
   const countdownUrgent = countdownSecondsLeft !== null && countdownSecondsLeft <= 15;
 
-  // --- self countdown tick (last 10s of the local player's turn) ---
+  // --- self countdown tick (last 5s of the local player's turn) ---
   // L1 local-only: only the local player hears it, and only on their own
-  // turn. Fires once per whole-second change while <= 10s remaining.
+  // turn. Fires once per whole-second change while <= 5s remaining.
+  // P1: 从 ≤10s 收紧到 ≤5s —— 10 连滴在紧张时刻过于嘈杂。
   const prevCountdownRef = useRef<number | null>(null);
   useEffect(() => {
     if (!isCurrentPlayerSelf) {
@@ -202,7 +203,7 @@ export default function BoardScreen() {
       prevCountdownRef.current = null;
       return;
     }
-    if (s <= 10 && s !== prevCountdownRef.current) {
+    if (s <= 5 && s !== prevCountdownRef.current) {
       playUi('self_countdown_tick');
     }
     prevCountdownRef.current = s;

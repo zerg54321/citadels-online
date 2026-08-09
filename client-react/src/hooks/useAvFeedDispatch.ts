@@ -115,26 +115,29 @@ function handleLine(line: ActionFeedLine, selfUsername: string | undefined, redu
       const killedRole = Number(p.role);
       const role: AudioRole = p.player === selfUsername ? 'victim'
         : (getLastIssuedKillRole() === killedRole ? 'perpetrator' : 'other');
+      // 旁观者不播 kill_settle:受害者在 ①stamp_kill 已听过 thud,刺客保留
+      // 轻音作为自己行动的反馈,旁观无需再次提示(D9 角色分流:旁观更安静)。
+      if (role === 'other') break;
       dispatch('kill_settle', { role });
       break;
     }
     case 'rob_move': {
       const role: AudioRole = p.thief === selfUsername ? 'perpetrator'
         : p.player === selfUsername ? 'victim' : 'other';
+      if (role === 'other') break;
       dispatch('rob_settle', { role, amount: Number(p.amount) || 0 });
       break;
     }
     case 'rob_move_empty': {
       const role: AudioRole = p.thief === selfUsername ? 'perpetrator'
         : p.player === selfUsername ? 'victim' : 'other';
+      if (role === 'other') break;
       dispatch('rob_settle', { role, amount: 0 });
       break;
     }
     case 'call': {
-      // Turn-handoff cursor sound for OTHER players' turns. The local self-turn
-      // ding is handled separately by playTurnSound (BoardScreen) to avoid a
-      // double-fire when it is the local player's own character being called.
-      if (p.player !== selfUsername) dispatch('turn_handoff');
+      // 他人回合的 turn_handoff 提示已移除:频率最高、信息量最低,且自己回合
+      // 已有 playTurnSound(BoardScreen)提示。保留视觉轮次指示即可。
       break;
     }
     case 'round': {

@@ -50,7 +50,9 @@ export function useAvStateDispatch(): void {
         return;
       }
       if (cur > prev) {
-        dispatchAv('draw_card', { distant: pid !== selfId });
+        // 仅自己抽牌发声;他人抽牌信息量最低(建筑师每回合必触发),删除以
+        // 降低单回合声音密度。自己抽牌仍保留 crisp 提示。
+        if (pid === selfId) dispatchAv('draw_card');
       }
       handLenRef.current.set(pid, cur);
     });

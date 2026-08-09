@@ -102,7 +102,9 @@ function eventToFiles(id: string, o: PlayOpts): FileHit[] {
     case 'earn_gold': {
       const amt = o.amount ?? 1;
       const variant = amt <= 1 ? 'earn_1' : amt <= 3 ? 'earn_2' : 'earn_3';
-      return one(o.distant ? 'earn_distant' : variant);
+      // P1: 他人收租保留微弱存在感(gainMul 0.3)——收租是有意义的经济信号。
+      if (o.distant) return [{ name: 'earn_distant', delay: 0, gainMul: 0.3 }];
+      return one(variant);
     }
     case 'draw_card': return one(o.distant ? 'draw_distant' : 'draw');
     case 'build_cheap': return one(o.distant ? 'build_cheap_distant' : 'build_cheap');
@@ -117,11 +119,14 @@ function eventToFiles(id: string, o: PlayOpts): FileHit[] {
       else if (o.role === 'victim') hits.push({ name: 'rob_victim', delay: 60, gainMul: 0.9 });
       return hits;
     }
-    case 'build_expensive': return one('build_expensive');
+    // P1: 他人高价建造走 distant(闷+弱):无独立 distant 采样,降 gainMul 至 0.3
+    // 使旁观者只听到微弱存在感;synth 回退走 distantChain 低通。
+    case 'build_expensive': return [{ name: 'build_expensive', delay: 0, gainMul: o.distant ? 0.3 : 1 }];
     case 'destroy':
       if (o.role === 'victim') return one('destroy_victim');
       if (o.role === 'perpetrator') return one('destroy_perp');
-      return one('destroy_neutral');
+      // P1: 旁观拆迁无需强提示,neutral 降到 ~0.3 gain。
+      return [{ name: 'destroy_neutral', delay: 0, gainMul: 0.3 }];
     case 'turn_handoff': return one('turn_handoff');
     case 'win_stinger': return one('win');
     case 'lose_stinger': return one('lose');
@@ -269,10 +274,11 @@ const SYNTHS: Record<string, (c: AudioContext, now: number, peak: number, o: Pla
     if (o.role === 'perpetrator') tone(c, 880, now + 0.08, 0.12, peak * 0.6, 'sine');
     else if (o.role === 'victim') tone(c, 220, now + 0.08, 0.14, peak * 0.7, 'sawtooth');
   },
-  build_expensive: (c, now, peak) => {
-    tone(c, 130, now, 0.18, peak, 'sine');
-    tone(c, 196, now + 0.02, 0.22, peak * 0.7, 'sine');
-    noise(c, now, 0.12, peak * 0.4, 800);
+  build_expensive: (c, now, peak, o) => {
+    const dest = o.distant ? distantChain(c) : undefined;
+    tone(c, 130, now, 0.18, peak, 'sine', dest);
+    tone(c, 196, now + 0.02, 0.22, peak * 0.7, 'sine', dest);
+    noise(c, now, 0.12, peak * 0.4, 800, dest);
   },
   destroy: (c, now, peak, o) => {
     if (o.role === 'victim') {
@@ -282,7 +288,8 @@ const SYNTHS: Record<string, (c: AudioContext, now: number, peak: number, o: Pla
       tone(c, 180, now, 0.14, peak * 0.8, 'triangle');
       noise(c, now, 0.10, peak * 0.4, 1000);
     } else {
-      noise(c, now, 0.14, peak * 0.6, 700);
+      // P1: 旁观拆迁 neutral 降到 ~0.3 peak。
+      noise(c, now, 0.14, peak * 0.3, 700);
     }
   },
   turn_handoff: (c, now, peak) => tone(c, 660, now, 0.08, peak * 0.5, 'sine'),

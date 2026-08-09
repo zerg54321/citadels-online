@@ -4,6 +4,8 @@
 >
 > **当前状态（2026-08-09）：40 个采样文件已就位并已接线**，由 `generate_sfx.py`（Python + ffmpeg）程序化生成，**原创 / 公有领域，无第三方许可约束**。播放层 `utils/audio.ts` 通过 howler.js 优先播放这些采样，Web Audio 合成作为回退（采样缺失/howler 不可用时）。
 >
+> **P0+P1 修订（2026-08-10）：修复 `dispatchAv` 双播 bug（lead>0 的 6 个重音事件此前各播两次）；按"单回合 8~12 声"目标删减/降级——turn_handoff 他人提示移除、role_reveal 仅被刺/被偷受害者、kill/rob_settle 旁观不播、destroy 旁观降至 0.3 gain、build_expensive 他人走 distant(0.3)、draw_card 仅自己、earn_distant 0.3 gain、self_countdown_tick 收紧至 ≤5s。详见各事件表"备注"列。**
+>
 > 后续若替换为外部 CC0 采样，按下表"文件名"替换对应文件，并在本文件末尾 ATTRIBUTION 段记录来源 URL + 许可证。`utils/audio.ts` 无需改动（howler 按文件名懒加载）。
 
 ---
@@ -45,7 +47,7 @@
           ↘ 失败 → synthFallback()  [utils/audio.ts]  Web Audio 合成回退
 ```
 
-- `dispatchAv`（`av.ts:37`）：带 `audioLeadMs` 提前量排程；`playUi`（`av.ts:64`）无提前量，用于 L1 UI 事件。
+- `dispatchAv`（`av.ts:37`）：带 `audioLeadMs` 提前量排程。**P0 修复**：lead>0 时只 `setTimeout` 一次（此前立即播 + 延迟播各一次，6 个最响事件叠成双份）；lead<0 按 |lead| 延迟一次；lead=0 立即播一次。`playUi`（`av.ts:64`）无提前量，用于 L1 UI 事件。
 - `playSfx`（`audio.ts:314`）：读 `settingsSlice` 的 `muted`/`sfxVolume`，静音或音量 0 则不播。
 - `eventToFiles`（`audio.ts:94`）：按事件 id + `role` + `amount` + `distant` 选具体文件。
 
@@ -61,28 +63,28 @@
 | `ui_click` | 点击 ActionPanel 按钮 | `ActionPanel.tsx` onClick → `playUi('ui_click')` | `click.mp3` / `click.ogg` |
 | `ui_panel_open` | 打开设置/聊天面板 | （未接线，预留） | `panel_open.mp3` / `panel_open.ogg` |
 | `ui_error` | sendMove 失败 | `BoardScreen.tsx` sendMove catch → `playUi('ui_error')` | `error.mp3` / `error.ogg` |
-| `self_countdown_tick` | 自己倒计时 ≤10s 每秒 | `BoardScreen.tsx` countdown effect → `playUi('self_countdown_tick')` | `countdown_tick.mp3` / `countdown_tick.ogg` |
+| `self_countdown_tick` | 自己倒计时 ≤5s 每秒 | `BoardScreen.tsx` countdown effect → `playUi('self_countdown_tick')` | `countdown_tick.mp3` / `countdown_tick.ogg` |
 
 ### L2 — global 量感分流（自己清脆 / 他人 distant）
 
 | 事件 id | 触发源 | 调用点 | 播放文件 |
 |---|---|---|---|
-| `earn_gold` | feed `earn`（收租） | `useAvFeedDispatch` case `earn` → `dispatchAv('earn_gold', {amount, distant})` | 自己：`earn_1.mp3`(amount=1) / `earn_2.mp3`(2-3) / `earn_3.mp3`(4+)；他人：`earn_distant.mp3` |
-| `draw_card` | 手牌数 +1（state-diff） | `useAvStateDispatch` hand-length 边沿 → `dispatchAv('draw_card', {distant})` | 自己：`draw.mp3`；他人：`draw_distant.mp3` |
+| `earn_gold` | feed `earn`（收租） | `useAvFeedDispatch` case `earn` → `dispatchAv('earn_gold', {amount, distant})` | 自己：`earn_1.mp3`(amount=1) / `earn_2.mp3`(2-3) / `earn_3.mp3`(4+)；他人：`earn_distant.mp3`（P1：gainMul 0.3，保留微弱经济信号） |
+| `draw_card` | 手牌数 +1（state-diff） | `useAvStateDispatch` hand-length 边沿 → `dispatchAv('draw_card')`（P1：仅自己，他人抽牌已删除——信息量最低，建筑师每回合必触发） | 自己：`draw.mp3`（`draw_distant.mp3` 保留备用但不再触发） |
 | `build_cheap` | feed `build`（cost 1-3） | `useAvFeedDispatch` case `build` → `dispatchAv('build_cheap', {distant})` | 自己：`build_cheap.mp3`；他人：`build_cheap_distant.mp3` |
 
 ### L3 — global 广播（全员同一基础声）
 
 | 事件 id | 触发源 | 调用点 | 播放文件 |
 |---|---|---|---|
-| `role_reveal` | 角色卡翻面（seat/self 卡） | `CharacterCard.tsx` displayBack 边沿 → `dispatchAv('role_reveal')`（`claimRevealAudio` 去重） | `role_reveal.mp3` / `role_reveal.ogg` |
+| `role_reveal` | 角色卡翻面（seat/self 卡） | `CharacterCard.tsx` displayBack 边沿 → `dispatchAv('role_reveal')`（`claimRevealAudio` 去重）**P1：仅 `killed‖robbed` 受害者翻面触发；普通轮到翻面静默** | `role_reveal.mp3` / `role_reveal.ogg` |
 | `stamp_kill` | feed `kill`（刺客选目标） | `useAvFeedDispatch` case `kill` → `dispatchAv('stamp_kill')` | `stamp_kill.mp3` / `stamp_kill.ogg` |
 | `stamp_rob` | feed `rob`（盗贼选目标） | `useAvFeedDispatch` case `rob` → `dispatchAv('stamp_rob')` | `stamp_rob.mp3` / `stamp_rob.ogg` |
-| `kill_settle` | feed `call_killed`（被刺角色结算轮到） | `useAvFeedDispatch` case `call_killed` → `dispatchAv('kill_settle', {role})` | 受害=`kill_victim.mp3`；刺客/旁观=`kill_neutral.mp3` |
-| `rob_settle` | feed `rob_move`/`rob_move_empty`（金币转移） | `useAvFeedDispatch` case `rob_move` → `dispatchAv('rob_settle', {role, amount})` | LAYER：`rob_base.mp3` + 60ms后 `rob_perp.mp3`(盗贼) / `rob_victim.mp3`(被偷者)；旁观仅 `rob_base.mp3` |
-| `build_expensive` | feed `build`（cost ≥4） | `useAvFeedDispatch` case `build` → `dispatchAv('build_expensive')` | `build_expensive.mp3` / `build_expensive.ogg`（全员同声，无 distant） |
-| `destroy` | feed `destroy`（军阀拆迁） | `useAvFeedDispatch` case `destroy` → `dispatchAv('destroy', {role})` | 受害=`destroy_victim.mp3`；军阀=`destroy_perp.mp3`；他人=`destroy_neutral.mp3` |
-| `turn_handoff` | feed `call`（他人角色轮到） | `useAvFeedDispatch` case `call` → `dispatchAv('turn_handoff')` | `turn_handoff.mp3` / `turn_handoff.ogg` |
+| `kill_settle` | feed `call_killed`（被刺角色结算轮到） | `useAvFeedDispatch` case `call_killed` → `dispatchAv('kill_settle', {role})`**P1：role=other 旁观不播，仅 victim/刺客** | 受害=`kill_victim.mp3`；刺客=`kill_neutral.mp3`（旁观已不播） |
+| `rob_settle` | feed `rob_move`/`rob_move_empty`（金币转移） | `useAvFeedDispatch` case `rob_move` → `dispatchAv('rob_settle', {role, amount})`**P1：role=other 旁观不播，仅盗贼/被偷者** | LAYER：`rob_base.mp3` + 60ms后 `rob_perp.mp3`(盗贼) / `rob_victim.mp3`(被偷者)（旁观已不播） |
+| `build_expensive` | feed `build`（cost ≥4） | `useAvFeedDispatch` case `build` → `dispatchAv('build_expensive', {distant})` | 自己：`build_expensive.mp3` / `build_expensive.ogg`；**P1：他人 distant gainMul 0.3（无独立 distant 采样，降 gain；synth 回退走 distantChain 低通）** |
+| `destroy` | feed `destroy`（军阀拆迁） | `useAvFeedDispatch` case `destroy` → `dispatchAv('destroy', {role})` | 受害=`destroy_victim.mp3`；军阀=`destroy_perp.mp3`；他人=`destroy_neutral.mp3`（**P1：neutral gainMul 0.3**） |
+| `turn_handoff` | ~~feed `call`（他人角色轮到）~~ | **P1：feed 驱动的他人提示已移除**（频率最高、信息量最低）。自己回合仍由 `BoardScreen` → `playTurnSound()`（复用 `turn_handoff` 采样）提示 | `turn_handoff.mp3` / `turn_handoff.ogg`（仅 self-turn 使用） |
 | `win_stinger` | gameProgress → FINISHED（胜） | `useAvStateDispatch` progress 边沿 → `dispatchAv('win_stinger')` | `win.mp3` / `win.ogg` |
 | `lose_stinger` | gameProgress → FINISHED（负） | `useAvStateDispatch` progress 边沿 → `dispatchAv('lose_stinger')` | `lose.mp3` / `lose.ogg` |
 
@@ -107,7 +109,7 @@
 | 项目 | 说明 |
 |------|------|
 | **触发** | 被刺角色的座位牌轮到时翻面（`exportPlayerCharacters` 的 `turnReached` 变 true） |
-| **调用** | `CharacterCard.tsx` displayBack 边沿 → `dispatchAv('role_reveal')`（`claimRevealAudio` 去重） |
+| **调用** | `CharacterCard.tsx` displayBack 边沿 → `dispatchAv('role_reveal')`（`claimRevealAudio` 去重）**P1：仅 `killed` 为 true 时触发；普通角色轮到翻面静默** |
 | **文件** | `role_reveal.mp3`（庄严双音 chord） |
 | **听众** | 全场 |
 | **视觉** | 💀 印章砸下（motion.div spring 动画），**无声**——thud 已在时刻①播放 |
@@ -119,8 +121,8 @@
 | **触发** | 被刺角色轮到时被跳过，服务端推 feed `{kind:'call_killed', params:{player, role}}` |
 | **调用** | `useAvFeedDispatch` case `call_killed` → `dispatchAv('kill_settle', {role})` |
 | **role 判定** | `params.player === selfUsername` → `victim`；`getLastIssuedKillRole() === params.role` → `perpetrator`；否则 `other` |
-| **文件** | 受害=`kill_victim.mp3`（心悸警报，低频脉冲2次）；刺客/旁观=`kill_neutral.mp3`（中性基础） |
-| **听众** | 按角色分化（D9 REPLACE：受害听心悸，他人听中性） |
+| **文件** | 受害=`kill_victim.mp3`（心悸警报，低频脉冲2次）；刺客=`kill_neutral.mp3`（中性基础）。**P1：role=other 旁观不播**（受害在 ①stamp_kill 已听 thud） |
+| **听众** | 按角色分化（D9 REPLACE：受害听心悸，刺客听中性；旁观静默） |
 
 ### 自己被刺的完整体验
 
@@ -147,7 +149,7 @@
 | 项目 | 说明 |
 |------|------|
 | **触发** | 被偷角色座位牌翻面 |
-| **文件** | `role_reveal.mp3`；💰 印章砸下（无声） |
+| **文件** | `role_reveal.mp3`（**P1：仅 `robbed` 为 true 时触发**）；💰 印章砸下（无声） |
 
 ### 时刻 ③ 被偷角色结算（feed `rob_move` / `rob_move_empty`）
 
@@ -156,7 +158,7 @@
 | **触发** | 被偷角色轮到时金币转移，服务端推 feed `{kind:'rob_move', params:{player, thief, amount, role}}` |
 | **调用** | `useAvFeedDispatch` case `rob_move` → `dispatchAv('rob_settle', {role, amount})` |
 | **role 判定** | `params.thief === selfUsername` → `perpetrator`；`params.player === selfUsername` → `victim`；否则 `other` |
-| **文件** | LAYER 叠加：基础 `rob_base.mp3` + 60ms后 `rob_perp.mp3`(盗贼) / `rob_victim.mp3`(被偷者)；旁观仅 `rob_base.mp3` |
+| **文件** | LAYER 叠加：基础 `rob_base.mp3` + 60ms后 `rob_perp.mp3`(盗贼) / `rob_victim.mp3`(被偷者)。**P1：role=other 旁观不播** |
 | **0 金币** | feed `rob_move_empty` → 同上但 amount=0 |
 
 ---
@@ -198,7 +200,7 @@ L3 结算事件的 `role` 由 `useAvFeedDispatch` 从 feed params + 本地 self 
 | 行为 | feed? | 音效触发方式 |
 |------|-------|-------------|
 | 选金币 +2（`TAKE_GOLD`） | 无 | **无音效**（`earn` feed 专指收租，非选金币） |
-| 摸牌（建筑师抽2/铁匠铺/选牌） | 无 | state-diff：`board.hand.length` 递增 → `draw_card` |
+| 摸牌（建筑师抽2/铁匠铺/选牌） | 无 | state-diff：`board.hand.length` 递增 → `draw_card`（**P1：仅自己手牌递增触发，他人抽牌已删除**） |
 | 角色选牌（`CHOOSE_CHARACTER`） | 无 | 无音效（选牌本身无声） |
 | 胜负结算 | 无 | state-diff：`gameProgress` → FINISHED 边沿 → `win/lose_stinger` |
 
@@ -230,22 +232,22 @@ L3 结算事件的 `role` 由 `useAvFeedDispatch` 从 feed params + 本地 self 
 | `earn_3.mp3` | earn_gold (amount=4+, 自己) | |
 | `earn_distant.mp3` | earn_gold (他人) | |
 | `draw.mp3` | draw_card (自己) | |
-| `draw_distant.mp3` | draw_card (他人) | |
+| `draw_distant.mp3` | draw_card (他人，**P1：已停用**保留备用) | |
 | `build_cheap.mp3` | build_cheap (自己) | |
 | `build_cheap_distant.mp3` | build_cheap (他人) | |
-| `build_expensive.mp3` / `build_expensive.ogg` | build_expensive | ✓ |
-| `role_reveal.mp3` / `role_reveal.ogg` | role_reveal | ✓ |
+| `build_expensive.mp3` / `build_expensive.ogg` | build_expensive（自己全量；**P1：他人 distant gainMul 0.3**） | ✓ |
+| `role_reveal.mp3` / `role_reveal.ogg` | role_reveal（**P1：仅被刺/被偷受害者**） | ✓ |
 | `stamp_kill.mp3` / `stamp_kill.ogg` | stamp_kill | ✓ |
 | `stamp_rob.mp3` / `stamp_rob.ogg` | stamp_rob | ✓ |
 | `kill_victim.mp3` | kill_settle (受害) | |
-| `kill_neutral.mp3` | kill_settle (刺客/旁观) | |
-| `rob_base.mp3` | rob_settle (基础，全员) | |
+| `kill_neutral.mp3` | kill_settle (刺客；**P1：旁观已不播**) | |
+| `rob_base.mp3` | rob_settle (基础，盗贼/被偷者；**P1：旁观已不播**) | |
 | `rob_perp.mp3` | rob_settle (盗贼尾音) | |
 | `rob_victim.mp3` | rob_settle (被偷者尾音) | |
 | `destroy_victim.mp3` | destroy (受害) | |
 | `destroy_perp.mp3` | destroy (军阀) | |
-| `destroy_neutral.mp3` | destroy (他人) | |
-| `turn_handoff.mp3` / `turn_handoff.ogg` | turn_handoff | ✓ |
+| `destroy_neutral.mp3` | destroy (他人，**P1：gainMul 0.3**) | |
+| `turn_handoff.mp3` / `turn_handoff.ogg` | turn_handoff（**P1：feed 驱动他人提示已移除，仅 self-turn `playTurnSound` 使用**） | ✓ |
 | `win.mp3` / `win.ogg` | win_stinger | ✓ |
 | `lose.mp3` / `lose.ogg` | lose_stinger | ✓ |
 

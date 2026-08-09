@@ -44,19 +44,15 @@ export function dispatchAv(event: AvEvent, opts: DispatchOpts = {}): boolean {
     amount: opts.amount,
     distant: opts.distant,
   });
-  if (lead <= 0) return play();
-  // negative lead = audio after peak (rare); positive = audio before peak
-  window.setTimeout(play, Math.max(0, -lead) === 0 ? lead : 0);
-  // Note: leading-before-peak with setTimeout fires AFTER now; true
-  // pre-peak lead would need the visual to be scheduled ahead. In practice
-  // the visual starts immediately and the lead is small (20-60ms), so the
-  // audio landing slightly after dispatch is perceptually on-peak. For
-  // negative leads (audio after peak) we schedule the delay.
-  if (lead < 0) {
-    window.setTimeout(play, -lead);
-    return true;
-  }
-  return play();
+  if (lead === 0) return play();
+  // Non-zero lead: audio must land at a specific offset from now (on or near
+  // the visual peak), so schedule a SINGLE delayed play. Never also play
+  // immediately — that double-fired the loudest events (role_reveal/stamp/
+  // build/destroy) and was the main source of cluttered audio.
+  //   lead > 0: visual peaks ~lead ms after dispatch → delay audio by lead
+  //   lead < 0: audio intended after peak → delay by |lead|
+  window.setTimeout(play, lead > 0 ? lead : -lead);
+  return true;
 }
 
 /** Convenience: just play the audio now (no lead), for UI-handler L1 events

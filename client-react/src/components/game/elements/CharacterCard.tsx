@@ -110,16 +110,18 @@ export default function CharacterCard({
   // true→false), deduped by characterId so the self card + self SeatPanel
   // (same characterId) don't double-play. Only opt-in staggerReveal cards
   // (seat/self) — the centre grid batch flip is not a per-role call event.
+  // P1: 只保留被刺/被偷受害者翻面的庄严双音(戏剧性揭晓);普通轮到翻面静默
+  // ——视觉翻牌本身已足够,从每回合 6~8 声降到 0~2 声。
   const prevDisplayBackRef = useRef(displayBack);
   useEffect(() => {
     const wasBack = prevDisplayBackRef.current;
     prevDisplayBackRef.current = displayBack;
-    if (staggerReveal && wasBack && !displayBack && characterId > 0) {
+    if (staggerReveal && wasBack && !displayBack && characterId > 0 && (killed || robbed)) {
       if (claimRevealAudio(characterId)) {
         dispatchAv('role_reveal', { reducedMotion: Boolean(reduce) });
       }
     }
-  }, [displayBack, staggerReveal, characterId, reduce]);
+  }, [displayBack, staggerReveal, characterId, killed, robbed, reduce]);
 
   // Note: stamp_kill/stamp_rob AUDIO is now feed-driven (useAvFeedDispatch
   // on feed `kill`/`rob` at target-selection time), NOT fired here at card

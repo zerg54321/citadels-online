@@ -37,6 +37,14 @@ interface CharacterCardProps {
    *  Only the per-seat role cards and the local self-role card opt in; the
    *  centre draft grid keeps its single batch flip. See utils/roleReveal.ts. */
   staggerReveal?: boolean;
+  /** Start face-down and flip to face-up on mount after `revealDelay` ms.
+   *  Used by the centre grid at the CHOOSE→DONE boundary so all 8 role cards
+   *  cascade-flip when the action phase begins. Without this, only the cards
+   *  that happened to persist across the array-length change (indices 0-1)
+   *  would flip; the rest would pop in face-up with no animation. */
+  revealOnMount?: boolean;
+  /** Cascade delay in ms for the revealOnMount flip (index × step). */
+  revealDelay?: number;
   onSelect?: () => void;
 }
 
@@ -56,6 +64,8 @@ export default function CharacterCard({
   current = false,
   unseen = false,
   staggerReveal = false,
+  revealOnMount = false,
+  revealDelay = 0,
   onSelect,
 }: CharacterCardProps) {
   const { t } = useTranslation();
@@ -75,20 +85,26 @@ export default function CharacterCard({
   // the flip + face-down class; the kill/rob stamps are gated on it too so
   // their slam lands with the (possibly deferred) flip rather than playing
   // hidden during the delay.
-  const [displayBack, setDisplayBack] = useState(isBack);
-  const prevBackRef = useRef(isBack);
+  const [displayBack, setDisplayBack] = useState(isBack || revealOnMount);
+  const prevBackRef = useRef(isBack || revealOnMount);
   useEffect(() => {
     const wasBack = prevBackRef.current;
-    prevBackRef.current = isBack;
-    if (staggerReveal && wasBack && !isBack && characterId > 0) {
+    const targetBack = isBack;
+    prevBackRef.current = targetBack;
+    if (revealOnMount && wasBack && !targetBack && characterId > 0) {
+      if (reduce) { setDisplayBack(false); return; }
+      const id = window.setTimeout(() => setDisplayBack(false), revealDelay);
+      return () => window.clearTimeout(id);
+    }
+    if (staggerReveal && wasBack && !targetBack && characterId > 0) {
       const d = getRevealDelay(characterId);
       if (d > 0) {
         const id = window.setTimeout(() => setDisplayBack(false), d);
         return () => window.clearTimeout(id);
       }
     }
-    setDisplayBack(isBack);
-  }, [isBack, staggerReveal, characterId]);
+    setDisplayBack(targetBack);
+  }, [isBack, staggerReveal, characterId, revealOnMount, revealDelay, reduce]);
 
   // Role-reveal audio: fires when the card flips face-up (displayBack
   // true→false), deduped by characterId so the self card + self SeatPanel
@@ -113,10 +129,10 @@ export default function CharacterCard({
   useEffect(() => {
     const was = prevStampRef.current;
     prevStampRef.current = stampVisible;
-    if (!was && stampVisible && claimStampAudio(characterId)) {
+    if (!was && stampVisible && !revealOnMount && claimStampAudio(characterId)) {
       dispatchAv(killed ? 'stamp_kill' : 'stamp_rob', { reducedMotion: Boolean(reduce) });
     }
-  }, [stampVisible, characterId, killed, reduce]);
+  }, [stampVisible, characterId, killed, reduce, revealOnMount]);
 
   const handleClick = () => {
     if (selectable && !disabled) onSelect?.();

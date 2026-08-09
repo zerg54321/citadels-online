@@ -112,6 +112,11 @@ export default function CenterPanel({
   const asideChips = (charactersList?.aside || []).filter((a) => a.id);
   const showCenterCharacterGrid = chooseCharacterMode || killMode || robMode
     || (gameProgress === 'IN_GAME' && (charactersList?.callable || []).length > 0);
+  // The "reveal grid" is the full 8-card roster shown at the CHOOSE→DONE
+  // boundary and throughout DO_ACTIONS (not the pick / kill / rob target
+  // grid). In this mode all 8 cards should cascade-flip face-up on mount;
+  // outside it (pick/kill/rob) cards are interactive selectors that don't flip.
+  const isRevealGrid = !chooseCharacterMode && !killMode && !robMode;
   const showGraveyard = gameState?.board?.graveyard !== undefined;
   const graveyardCard = gameState?.board?.graveyard as DistrictId | undefined;
 
@@ -141,7 +146,7 @@ export default function CenterPanel({
           <div className="board-table__draft-grid">
             {centerCharacters.map((ch, i) => (
               <CharacterCard
-                key={i}
+                key={ch.id || `slot-${i}`}
                 characterId={ch.id || 0}
                 faceDown={Boolean(ch.faceDown)}
                 selectable={ch.selectable}
@@ -152,6 +157,8 @@ export default function CenterPanel({
                 current={ch.current}
                 unseen={veilEnabled && ch.id > 0 && !seenSet.has(ch.id)}
                 size="large"
+                revealOnMount={isRevealGrid}
+                revealDelay={i * 100}
                 onSelect={() => onSelectCharacter?.(ch, i)}
               />
             ))}

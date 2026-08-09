@@ -196,9 +196,11 @@ export default class GameFlowController {
                     cm.getCurrentCharacter(),
                     this.state.actionFeed,
                   );
-                  const skipDelay = this.state.hasAiPlayers
-                    ? Math.max(3000, 2200)
-                    : Math.max(3000, 1500);
+                  // Assassinated characters get a longer pause so the kill
+                  // stamp / reveal registers before the next character acts;
+                  // unowned (aside) characters are skipped more quickly.
+                  const isKilled = cm.getCurrentCharacter() === cm.killedCharacter;
+                  const skipDelay = isKilled ? 5000 : 2500;
                   this.state.schedulePhase(() => {
                     cm.jumpToNextCharacter();
                     this.onCharacterTurnStart();

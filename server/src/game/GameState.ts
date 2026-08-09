@@ -463,7 +463,12 @@ export default class GameState implements Subject {
     });
 
     this.hasAiPlayers = stablePlayers.some((id) => this.players.get(id)?.isAi);
-    this.syncMode = this.hasAiPlayers;
+    // syncMode is for tests/training only (constructor option). Do NOT tie it
+    // to hasAiPlayers here — that made schedulePhase run synchronously in AI
+    // games, skipping all UI phase-transition delays (skip/end/reveal), so
+    // killed-character reveals and round-end pauses were swallowed and the
+    // game appeared to fast-forward. AI pacing is handled separately by
+    // TurnTimer.aiActionDelayMs().
 
     // only 6p 3v3: ranked if no AI, practice (unranked) if any AI
     this.gameMode = this.hasAiPlayers ? GameMode.CASUAL : GameMode.COMPETITIVE_TEAM6;

@@ -60,3 +60,6 @@ coverage/
 
 # Kilo
 .kilo/
+
+# Assistant workspace data
+.workbuddy/

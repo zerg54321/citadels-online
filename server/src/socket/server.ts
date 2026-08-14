@@ -656,12 +656,32 @@ export function initSocket(io: Server) {
           callback({ status: 'error', message: 'message cannot be empty' });
           return;
         }
-        room.io.to(room.roomId).emit('chat message', {
+        const payload = {
           playerId: player.id,
           username: player.username,
           text,
+          role: player.role,
           ts: Date.now(),
-        });
+        };
+        if (player.role === PlayerRole.SPECTATOR) {
+          // Spectator chat: only visible to other spectators (OB mode).
+          // Iterate room sockets and emit only to those whose role is
+          // SPECTATOR — same pattern as Room.sendRoomStateToAllClients().
+          const clients = room.io.sockets.adapter.rooms.get(room.roomId);
+          if (clients) {
+            clients.forEach((clientId) => {
+              const cs: ExtendedSocket | undefined = room.io.sockets.sockets.get(clientId);
+              if (!cs) return;
+              const cp = room.gameState.getPlayer(cs.playerId);
+              if (cp && cp.role === PlayerRole.SPECTATOR) {
+                cs.emit('chat message', payload);
+              }
+            });
+          }
+        } else {
+          // Player chat: broadcast to everyone (players + spectators).
+          room.io.to(room.roomId).emit('chat message', payload);
+        }
         callback({ status: 'ok' });
       } catch (err) {
         console.error('[chat message] handler failed', err);

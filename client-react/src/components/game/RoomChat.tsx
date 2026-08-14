@@ -42,9 +42,14 @@ export default function RoomChat() {
         {chatMessages.map((msg, i) => (
           <div
             key={i}
-            className={`room-chat__msg${msg.playerId === selfId ? ' room-chat__msg--self' : ''}`}
+            className={`room-chat__msg${msg.playerId === selfId ? ' room-chat__msg--self' : ''}${msg.role === 1 ? ' room-chat__msg--ob' : ''}`}
           >
-            <span className="room-chat__name">{msg.username}</span>
+            <span className="room-chat__name">
+              {msg.role === 1 && (
+                <span className="room-chat__ob-tag">{t('ui.lobby.spectator')}</span>
+              )}
+              {msg.username}
+            </span>
             <span className="room-chat__text">{msg.text}</span>
           </div>
         ))}

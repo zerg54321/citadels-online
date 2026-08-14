@@ -9,6 +9,8 @@ export interface ChatMessage {
   playerId: string;
   username: string;
   text: string;
+  /** Sender's role: PlayerRole.SPECTATOR (1) or PlayerRole.PLAYER (2). */
+  role?: number;
   ts: number;
 }
 

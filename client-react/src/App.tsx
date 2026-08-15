@@ -118,9 +118,31 @@ export default function App() {
     </header>
   );
 
+  // ICP 备案号 — read from the local-only env var VITE_ICP_BEIAN (set in
+  // client-react/.env.local, which is gitignored so the number never leaks
+  // into a public repo). Renders the MIIT-required footer link when present.
+  // Placed INSIDE the scrollable body so it only shows at the very bottom of
+  // the page (after scrolling) instead of being pinned to the viewport — the
+  // MIIT filing requirement is that it sits at the page footer, not that it
+  // is always on-screen.
+  const icpBeian = import.meta.env.VITE_ICP_BEIAN as string | undefined;
+  const footer = (icpBeian && !inPlay) ? (
+    <footer className="app-footer">
+      <a
+        href="https://beian.miit.gov.cn/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="app-footer__link"
+      >
+        {icpBeian}
+      </a>
+    </footer>
+  ) : null;
+
   const body = (
     <div className={`body flex-fill${inPlay ? ' body--game' : ''}`}>
       <Outlet />
+      {footer}
     </div>
   );
 

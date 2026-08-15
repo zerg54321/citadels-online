@@ -37,6 +37,7 @@ set -euo pipefail
 #   --email EMAIL       Let's Encrypt 邮箱（可选）
 #   --git-url URL       Git 仓库地址（默认 GitHub，可改为 Gitee 镜像）
 #   --branch NAME       分支/标签名（默认 main）
+#   --icp-beian BEIAN   ICP 备案号（省略时安装过程会交互式询问）
 #   --yes               跳过交互确认
 #   -h, --help          显示帮助
 # =============================================================================
@@ -64,6 +65,7 @@ DOMAIN=""
 EMAIL=""
 GIT_URL="https://github.com/zerg54321/citadels-online.git"
 BRANCH="main"
+ICP_BEIAN=""
 ASSUME_YES=false
 
 while [ $# -gt 0 ]; do
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
     --email) EMAIL="${2:?--email 需要一个值}"; shift 2 ;;
     --git-url) GIT_URL="${2:?--git-url 需要一个值}"; shift 2 ;;
     --branch) BRANCH="${2:?--branch 需要一个值}"; shift 2 ;;
+    --icp-beian) ICP_BEIAN="${2:?--icp-beian 需要一个值}"; shift 2 ;;
     *) echo "未知参数: $1 (使用 --help 查看用法)"; exit 1 ;;
   esac
 done
@@ -195,6 +198,40 @@ migrate_avatars() {
     cp -an "$old_dir"/. "$AVATAR_DIR"/ || true
     rm -rf "$old_dir"
     log "旧头像目录已迁移并清理"
+  fi
+}
+
+# 写入 client-react 的 ICP 备案号。该值渲染在网站页脚（VITE_ICP_BEIAN），
+# .env.local 已被 .gitignore 忽略、不随仓库同步，需在构建所在机生成。
+# 传入的 ICP_BEIAN 为空时，交互式提示用户输入（跳过/留空则不在页脚渲染）。
+ensure_icp_beian() {
+  local env_file="$REPO_DIR/client-react/.env.local"
+
+  # 已存在且非占位值 → 直接复用，不改动
+  if [ -s "$env_file" ]; then
+    local existing
+    existing="$(grep '^VITE_ICP_BEIAN=' "$env_file" | head -n1 | cut -d= -f2-)"
+    case "$existing" in
+      ""|"请在此填入你的ICP备案号")
+        : ;; # 空或占位值，需重新询问
+      *)
+        log "已有 ICP 备案号，复用: ${env_file} (VITE_ICP_BEIAN=${existing})"
+        return 0 ;;
+    esac
+  fi
+
+  local beian="$ICP_BEIAN"
+  if [ -z "$beian" ] && [ "$ASSUME_YES" = false ]; then
+    read -r -p "请输入 ICP 备案号（如 京ICP备XXXXXXXX号；直接回车则不在页脚显示）: " beian
+  fi
+
+  if [ -n "$beian" ]; then
+    mkdir -p "$(dirname "$env_file")"
+    printf '# 由部署脚本生成，请勿提交（已被 .gitignore 忽略）\nVITE_ICP_BEIAN=%s\n' "$beian" > "$env_file"
+    log "已写入 ICP 备案号到 ${env_file}"
+  else
+    rm -f "$env_file"
+    warn "未设置 ICP 备案号，网站页脚将不显示备案信息（可后续用 --icp-beian 提供）"
   fi
 }
 
@@ -367,6 +404,7 @@ if [ "$MODE" = "install" ]; then
   ensure_env
   ensure_avatar_dir_env
   migrate_avatars
+  ensure_icp_beian
   if [ "$SKIP_BUILD" = false ]; then
     build_app
   else

@@ -392,7 +392,7 @@ export default class CharacterManager {
     }
   }
 
-  exportPlayerCharacters(pos: PlayerPosition, dest: PlayerPosition) {
+  exportPlayerCharacters(pos: PlayerPosition, dest: PlayerPosition, revealAll = false) {
     // Official reveal rule:
     // - own cards always visible
     // - others only when that character's call order is reached (id <= current)
@@ -400,7 +400,11 @@ export default class CharacterManager {
     //   is marked on the global 1–8 list; owner is shown when that role is called
     // - spectators follow the SAME reveal timing as a non-owner player (no
     //   omniscient view), so they cannot cheat by reading unrevealed roles
-    const canSee = dest === pos
+    //
+    // revealAll: god-view / replay / admin-OB mode — every player's role is
+    // shown face-up regardless of call order or viewer identity.
+    const canSee = revealAll
+      || dest === pos
       || this.turnState === TurnState.DONE;
     const characterPos = pos + CharacterPosition.PLAYER_1 as CharacterPosition;
     const currentCharacter = this.getCurrentCharacter();
@@ -439,7 +443,7 @@ export default class CharacterManager {
     };
   }
 
-  exportCharactersList(dest: PlayerPosition) {
+  exportCharactersList(dest: PlayerPosition, revealAll = false) {
     let characters = {};
 
     switch (this.choosingState.getState().type) {
@@ -448,11 +452,13 @@ export default class CharacterManager {
         break;
       case CCST.PUT_ASIDE_FACE_UP:
       case CCST.PUT_ASIDE_FACE_DOWN:
-        characters = this.exportListPutAside(dest);
+        characters = this.exportListPutAside(dest, revealAll);
         break;
       case CCST.PUT_ASIDE_FACE_DOWN_UP:
       case CCST.CHOOSE_CHARACTER:
-        characters = this.exportListChooseCard(dest);
+        // pass revealAll through (a 2-arg call silently defaulted it to
+        // false, which wrongly masked the pool even in god-view frames)
+        characters = this.exportListChooseCard(dest, !revealAll, revealAll);
         break;
       case CCST.DONE:
         characters = this.exportListDone();
@@ -493,14 +499,17 @@ export default class CharacterManager {
     };
   }
 
-  private exportListPutAside(dest: PlayerPosition) {
-    return this.exportListChooseCard(dest, false);
+  private exportListPutAside(dest: PlayerPosition, revealAll = false) {
+    // canSee stays FALSE so normal players see candidate cards as card-backs
+    // (blind put-aside); only god-view (revealAll) reveals the candidate pool.
+    return this.exportListChooseCard(dest, false, revealAll);
   }
 
-  private exportListChooseCard(dest: PlayerPosition, canSee = true) {
+  private exportListChooseCard(dest: PlayerPosition, canSee = true, revealAll = false) {
     const { player } = this.choosingState.getState();
     const isSpectator = player === PlayerPosition.SPECTATOR;
-    const canSeeList = canSee && (isSpectator || dest === player);
+    // god-view reveals the callable pool regardless of viewer / picker.
+    const canSeeList = revealAll || (canSee && (isSpectator || dest === player));
 
     return {
       // current character

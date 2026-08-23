@@ -108,6 +108,27 @@ try {
 // forcing a one-time re-login. Matches 0 rows after the first run.
 db.exec('UPDATE users SET pwd_changed_at = created_at WHERE pwd_changed_at = \'\'');
 
+// replay_json: optional JSON array of god-view replay snapshots for a match.
+// Added via guarded ALTER (SQLite has no ADD COLUMN IF NOT EXISTS); each
+// finished match stores its replay frames here for later OB/replay.
+try {
+  db.exec('ALTER TABLE matches ADD COLUMN replay_json TEXT');
+} catch (err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!msg.includes('duplicate column')) throw err;
+}
+
+// is_public: 1 (default) = anyone may view the match replay; 0 = only
+// participants. Reserved for a future per-room "public match" setting at
+// game start — all current matches save as public. Kept in the DB (not the
+// replay file) because the public list query filters on it cheaply.
+try {
+  db.exec('ALTER TABLE matches ADD COLUMN is_public INTEGER NOT NULL DEFAULT 1');
+} catch (err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!msg.includes('duplicate column')) throw err;
+}
+
 // avatar_type / avatar_ref backfill for DBs created before the columns
 // existed. Same duplicate-column guard pattern as pwd_changed_at. Existing
 // users default to preset avatar '01' so every account has a visible avatar

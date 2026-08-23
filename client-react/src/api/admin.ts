@@ -114,6 +114,12 @@ export default {
   match(token: string, id: string) {
     return adminRequest<{ status: string; match: AdminMatch }>(`/api/admin/matches/${id}`, token);
   },
+  replay(token: string, id: string, limit = 200, offset = 0) {
+    return adminRequest<{ status: string; frames: unknown[]; total: number }>(
+      `/api/admin/matches/${id}/replay?limit=${limit}&offset=${offset}`,
+      token,
+    );
+  },
   deleteMatch(token: string, id: string) {
     return adminRequest<{ status: string; backup: string }>(`/api/admin/matches/${id}`, token, {
       method: 'DELETE',

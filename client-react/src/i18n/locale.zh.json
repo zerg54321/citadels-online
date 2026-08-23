@@ -10,6 +10,7 @@
         "confirm": "确认",
         "close": "关闭",
         "unknown_error": "未知错误。",
+        "feature_unavailable": "功能暂不可用。",
         "about": {
             "title": "关于",
             "text": "<div class='about-attribution'>原版桌游《富饶之城》由 <a target='_blank' href='https://zh.wikipedia.org/wiki/布魯諾·法伊杜蒂'>Bruno Faidutti</a> 设计，版权归原作者及发行方所有。<br>本项目仅作学习交流与技术探索，非商业用途。</div><ul class='about-credits'><li>Fork 自 <a target='_blank' href='https://github.com/antbrl/citadels-online'>Antoine Brûlé</a> 的开源在线版 (MIT)，特此致谢。</li><li>由 <a target='_blank' href='https://github.com/zerg54321/citadels-online'>zerg</a> 维护与二次开发 (MIT)。</li><li>卡牌与角色美术为 AI 生成原创素材，未使用原版游戏原画。</li><li>Emoji 资源来自 <a target='_blank' href='https://emojipedia.org/twitter'>Twemoji</a> (CC-BY 4.0)。</li><li>字体来自 Google Fonts：Cinzel、EB Garamond、Noto Sans SC、Noto Serif SC（SIL Open Font License 1.1）。</li></ul>",
@@ -198,6 +199,7 @@
             "aside": "弃置",
             "action_log": "行动记录",
             "action_log_empty": "暂无记录",
+            "jump_latest": "查看最新",
             "action_log_expand": "展开行动记录",
             "action_log_collapse": "收起行动记录",
             "show_actions": "显示行动",
@@ -228,6 +230,9 @@
             "status_offline": "离线",
             "status_hosted": "托管",
             "no_buildings": "暂无建筑",
+            "phase_initial": "初始选牌",
+            "phase_choose": "选角阶段",
+            "phase_actions": "行动阶段",
             "warn_destroy_ally": "确定要拆除队友「{name}」的建筑吗？这通常会损害己方利益。",
             "destroy_confirm_title": "拆除确认",
             "messages": {
@@ -311,7 +316,8 @@
             "leave_room": "退出房间",
             "leave_room_confirm_title": "确认退出房间",
             "leave_room_confirm_body": "你当前正在房间内，离开后其他玩家将无法看到你。确定要离开吗？",
-            "show_result": "查看结算"
+            "show_result": "查看结算",
+            "winner_team": "胜方队伍"
         },
         "admin": {
             "title": "管理后台",
@@ -378,7 +384,39 @@
             "upload": "上传",
             "avatar_ref": "头像引用",
             "prev": "上一页",
-            "next": "下一页"
+            "next": "下一页",
+            "back": "返回",
+            "token_required": "需要管理员令牌。请先在管理后台登录。",
+            "replay": "回放",
+            "replay_error": "回放加载失败：{msg}",
+            "live_ob": "实时观战 (OB)",
+            "ob_hint": "输入房间号进入上帝视角观战",
+            "ob_rooms_title": "可观的房间",
+            "ob_no_rooms": "当前没有进行中的房间",
+            "ob_refresh": "刷新",
+            "ob_watch": "观战",
+            "ob_phase_ingame": "游戏中",
+            "ob_phase_lobby": "等待中",
+            "ob_spectators": "{n} 人观看"
+        },
+        "replay": {
+            "round": "回合",
+            "play": "播放",
+            "pause": "暂停",
+            "step_back": "回退一步",
+            "step_forward": "快进一步",
+            "prev_round": "回退一轮",
+            "next_round": "快进一轮",
+            "speed": "播放速度",
+            "library_title": "回放",
+            "include_ai": "包含 AI 对局",
+            "empty": "暂无回放记录。",
+            "players": "玩家",
+            "view": "查看",
+            "ai_player": "AI 玩家",
+            "wins": "获胜",
+            "back_list": "返回列表",
+            "perspective": "点击切换视角"
         }
     },
     "characters": [

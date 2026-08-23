@@ -51,7 +51,7 @@ export default class BoardState {
     this.initialCardSelectionQueue = [...players];
   }
 
-  exportForPlayer(destPlayerId: PlayerId) {
+  exportForPlayer(destPlayerId: PlayerId, revealAll = false) {
     const destPlayerPos = this.playerOrder.indexOf(destPlayerId) as PlayerPosition;
 
     return {
@@ -59,17 +59,25 @@ export default class BoardState {
         Array.from(this.players).map((elem) => {
           const playerId = elem[0];
           const board = elem[1];
-          const canSeeHand = playerId === destPlayerId;
+          // god-view (revealAll) shows every player's hand; otherwise only the
+          // viewer's own hand is revealed, every other hand is card-backs.
+          const canSeeHand = revealAll || playerId === destPlayerId;
           const otherPlayerPos = this.playerOrder.indexOf(playerId) as PlayerPosition;
           return [playerId, {
             ...board.exportForPlayer(canSeeHand),
-            characters: this.characterManager.exportPlayerCharacters(otherPlayerPos, destPlayerPos),
+            characters: this.characterManager.exportPlayerCharacters(
+              otherPlayerPos,
+              destPlayerPos,
+              revealAll,
+            ),
           }];
         }),
       ),
       gamePhase: this.gamePhase,
       turnState: this.characterManager.getClientTurnState(),
-      playerOrder: this.playerOrder,
+      // COPIES (see PlayerBoardState.exportForPlayer): replay frames
+      // outlive this call while playerOrder/graveyard keep mutating.
+      playerOrder: [...this.playerOrder],
       currentPlayer: this.getCurrentPlayerPosition(),
       currentPlayerExtraData: {
         ...this.characterManager.exportCurrentPlayerExtraData(),
@@ -77,7 +85,7 @@ export default class BoardState {
           .get(this.getCurrentPlayerId())
           ?.computeEarningsForCharacter(this.characterManager.getCurrentCharacter()) ?? 0,
       },
-      characters: this.characterManager.exportCharactersList(destPlayerPos),
+      characters: this.characterManager.exportCharactersList(destPlayerPos, revealAll),
       graveyard: this.graveyard,
     };
   }

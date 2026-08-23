@@ -13,8 +13,17 @@ import GameSetupData from '../game/GameSetupData';
 import { authenticateToken } from '../auth/jwt';
 import { disposeTurnTimer, getTurnTimer } from '../gameManager/TurnTimer';
 import { validateMove } from '../game/moveValidator';
+import { adminEnabled, adminToken } from '../admin/config';
+import crypto from 'crypto';
 
 const debug = Debug('citadels-server');
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length === 0 || b.length === 0) return false;
+  const ha = crypto.createHash('sha256').update(a).digest();
+  const hb = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
 
 const gameStore = new InMemoryGameStore();
 
@@ -41,16 +50,22 @@ export function getGameStore() {
 function attachAuth(socket: ExtendedSocket) {
   const token = socket.handshake.auth?.token
     || socket.handshake.headers?.authorization?.toString().replace(/^Bearer\s+/i, '');
-  if (!token || typeof token !== 'string') return;
-  // authenticateToken enforces the password-change invalidation check, so a
-  // reconnect with a token whose password was changed since issuance is
-  // treated as anonymous (no userId) rather than authenticated.
-  const user = authenticateToken(token);
-  if (!user) return;
-  socket.userId = user.id;
-  socket.displayName = user.displayName;
-  socket.accountUsername = user.username;
-  socket.avatar = user.avatar;
+  if (token && typeof token === 'string') {
+    // Admin token (constant-time compared): grants god-view OB over socket.
+    if (adminEnabled() && safeEqual(token, adminToken)) {
+      socket.isAdmin = true;
+    }
+    // User JWT: authenticates a player account. authenticateToken enforces the
+    // password-change invalidation check, so a reconnect with a token whose
+    // password was changed since issuance is treated as anonymous (no userId).
+    const user = authenticateToken(token);
+    if (user) {
+      socket.userId = user.id;
+      socket.displayName = user.displayName;
+      socket.accountUsername = user.username;
+      socket.avatar = user.avatar;
+    }
+  }
 }
 
 function leaveRoomForPlayer(room: Room, playerId: PlayerId) {

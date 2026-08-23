@@ -10,6 +10,7 @@
         "confirm": "Confirm",
         "close": "Close",
         "unknown_error": "Unknown error.",
+        "feature_unavailable": "This feature is unavailable.",
         "about": {
             "title": "About",
             "text": "<div class='about-attribution'>Original board game <em>Citadels</em> designed by <a target='_blank' href='https://en.wikipedia.org/wiki/Bruno_Faidutti'>Bruno Faidutti</a>; the game and its rights belong to the original designer and publishers.<br>This project is for personal learning, technical exploration, and is non-commercial.</div><ul class='about-credits'><li>Forked from the open-source <a target='_blank' href='https://github.com/antbrl/citadels-online'>online version</a> by <a target='_blank' href='https://github.com/antbrl/citadels-online'>Antoine Brûlé</a> (MIT).</li><li>Maintained and developed by <a target='_blank' href='https://github.com/zerg54321/citadels-online'>zerg</a> (MIT).</li><li>Card and character artwork is AI-generated original material, not taken from the original game.</li><li>Emoji from <a target='_blank' href='https://emojipedia.org/twitter'>Twemoji</a> (CC-BY 4.0).</li><li>Fonts from Google Fonts: Cinzel, EB Garamond, Noto Sans SC, Noto Serif SC (SIL Open Font License 1.1).</li></ul>",
@@ -198,6 +199,7 @@
             "aside": "Aside",
             "action_log": "Action Log",
             "action_log_empty": "No events yet",
+            "jump_latest": "Jump to latest",
             "action_log_expand": "Expand action log",
             "action_log_collapse": "Collapse action log",
             "show_actions": "Show Actions",
@@ -228,6 +230,9 @@
             "status_offline": "Offline",
             "status_hosted": "Autoplay",
             "no_buildings": "No districts yet",
+            "phase_initial": "Initial draft",
+            "phase_choose": "Character draft",
+            "phase_actions": "Action phase",
             "warn_destroy_ally": "Destroy a district owned by ally \"{name}\"? This usually hurts your team.",
             "destroy_confirm_title": "Destroy Confirmation",
             "messages": {
@@ -311,7 +316,8 @@
             "leave_room": "Leave",
             "leave_room_confirm_title": "Confirm leave room",
             "leave_room_confirm_body": "You are currently in a room. Leaving will remove you from the room for other players. Are you sure you want to leave?",
-            "show_result": "Show results"
+            "show_result": "Show results",
+            "winner_team": "Winning team"
         },
         "admin": {
             "title": "Admin Console",
@@ -378,7 +384,39 @@
             "upload": "Upload",
             "avatar_ref": "Avatar ref",
             "prev": "Prev",
-            "next": "Next"
+            "next": "Next",
+            "back": "Back",
+            "token_required": "An admin token is required. Sign in on the admin page first.",
+            "replay": "Replay",
+            "replay_error": "Replay failed to load: {msg}",
+            "live_ob": "Live OB (god-view)",
+            "ob_hint": "Enter a room id to observe live",
+            "ob_rooms_title": "Live rooms",
+            "ob_no_rooms": "No rooms in progress",
+            "ob_refresh": "Refresh",
+            "ob_watch": "Watch",
+            "ob_phase_ingame": "In game",
+            "ob_phase_lobby": "Lobby",
+            "ob_spectators": "{n} watching"
+        },
+        "replay": {
+            "round": "Round",
+            "play": "Play",
+            "pause": "Pause",
+            "step_back": "Step back",
+            "step_forward": "Step forward",
+            "prev_round": "Previous round",
+            "next_round": "Next round",
+            "speed": "Playback speed",
+            "library_title": "Replays",
+            "include_ai": "Include AI matches",
+            "empty": "No replays yet.",
+            "players": "Players",
+            "view": "View",
+            "ai_player": "AI player",
+            "wins": "wins",
+            "back_list": "Back to list",
+            "perspective": "Click to switch perspective"
         }
     },
     "characters": [

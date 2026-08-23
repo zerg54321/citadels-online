@@ -1,0 +1,478 @@
+// OB / Replay (god-view) screen — PC big-screen "around the table" layout.
+//   [left: 3 seats] [CENTER: 8 role cards = the table] [right: 3 seats] [LOG]
+//
+// Seats REUSE the in-game `.seat-panel` classes (banner gradient, pill chips,
+// crown, ally/enemy glow) from _board-table.scss — only the god-view hand
+// strip and the overall grid live here. The centre panel mirrors the in-game
+// `.board-table__center-panel` / draft-grid card sizing.
+//
+// Total column budget: 32+32+24 (board) + 16 (log) ≈ 105rem; below 1688px the
+// whole screen zooms down proportionally (see media queries at the bottom).
+
+.ob-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0.75rem;
+  gap: 0.5rem;
+  color: var(--parchment, #f2e3c5);
+  font-family: 'EB Garamond', 'Noto Serif SC', serif;
+
+  &__topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(34, 27, 16, 0.95) 0%, rgba(22, 18, 11, 0.92) 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  &__brand {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: #d4af37;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    padding-right: 0.75rem;
+    border-right: 1px solid rgba(212, 175, 55, 0.25);
+    flex-shrink: 0;
+  }
+
+  &__meta {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  // In-game score-bar look (board-table__score-bar): A blue glow / B red
+  // glow with a small VS separator, scaled down to topbar height.
+  &__score {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    font-weight: 800;
+    font-size: 1.05rem;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    padding: 0 0.35rem;
+  }
+
+  &__score-team {
+    &--a {
+      color: #7ec8ff;
+      text-shadow: 0 0 8px rgba(80, 160, 255, 0.5);
+    }
+    &--b {
+      color: #ff8a8a;
+      text-shadow: 0 0 8px rgba(255, 80, 80, 0.45);
+    }
+  }
+
+  &__score-vs {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    opacity: 0.55;
+  }
+
+  &__center {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    color: var(--parchment, #f2e3c5);
+
+    &--error {
+      align-content: center;
+      gap: 0.75rem;
+      flex-direction: column;
+    }
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// Topbar status chips — round (gold), phase (parchment), room (mono code).
+// Same pill anatomy as the seat-panel banner chips for visual consistency.
+.ob-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.34rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(13, 11, 8, 0.55);
+  color: var(--parchment, #f2e3c5);
+  white-space: nowrap;
+
+  &--round {
+    font-family: 'Cinzel', serif;
+    color: #d4af37;
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(212, 175, 55, 0.1);
+  }
+
+  // Phase — parchment capsule (vs the gold round pill) so the two read at a
+  // glance as different kinds of information.
+  &--phase {
+    font-family: var(--font-readable);
+    color: var(--parchment, #f2e3c5);
+    border-color: rgba(242, 227, 197, 0.35);
+    background: rgba(242, 227, 197, 0.07);
+  }
+
+  &--room {
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: 0.08em;
+    color: #d4af37;
+    text-transform: uppercase;
+  }
+}
+
+// Row: board (left seats + center + right seats) on the left, action log on
+// the right. Fills the full height.
+.ob-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 0.5rem;
+
+  &__board {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    // Seat columns hold a 4-up row of 7rem city tiles + a 5.8rem role slot;
+    // the centre must keep at least 24rem so the 8-card role grid (34rem at
+    // full width) never collapses.
+    grid-template-columns: minmax(32rem, 35rem) minmax(24rem, 1fr) minmax(32rem, 35rem);
+    grid-template-rows: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+// Vertical stack of seats on one side (left or right).
+.ob-column {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &--left { grid-column: 1; }
+  &--right { grid-column: 3; }
+}
+
+// A god-view seat: the in-game `.seat-panel` provides the look (banner
+// gradient, chips, crown, ally/enemy border, acting pulse); this only sizes
+// the seat inside its column and styles the revealed hand strip.
+.ob-seat {
+  flex: 1 1 0;
+
+  // god-view hand strip — sits BELOW the city/role body (never overlaps it).
+  // Cards use the FULL in-game hand size (7×10rem): the rotated-cost coin
+  // strip inside .district-card is hard-coded 9.5rem long (6 coins + padding)
+  // and only fits at this native size — shrinking the card clips the coins.
+  // Fanning uses the same global .district-card-wrapper accordion as the
+  // player's own hand (hover a card to spread it out for reading).
+  &__hand {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: stretch;
+    padding: 0.15rem 0.3rem 0.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+
+    .district-card {
+      width: 7rem;
+      height: 10rem;
+    }
+  }
+}
+
+// Center: the table — phase + round header, the in-game draft-grid sizing of
+// the 8 role cards (read-only, current role highlighted), and the winner
+// banner. Panel look mirrors .board-table__center-panel.
+.ob-center {
+  grid-column: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-radius: 12px;
+  background: rgba(12, 10, 8, 0.72);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 0.6rem;
+  text-align: center;
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+
+  &__phase {
+    font-family: 'Cinzel', serif;
+    color: #d4af37;
+    font-size: 1rem;
+  }
+
+  &__round { font-size: 0.85rem; opacity: 0.85; }
+
+  // Same sizing rule as the in-game .board-table__draft-grid: 4 columns,
+  // cards up to 7.4rem wide at the in-game 5:7 aspect (large size).
+  &__chars {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem 0.45rem;
+    justify-items: center;
+    width: 100%;
+    max-width: 34rem;
+
+    .char-card {
+      width: 100%;
+      max-width: 7.4rem;
+      height: auto;
+      aspect-ratio: 5 / 7;
+    }
+  }
+
+  &__result {
+    font-family: 'Cinzel', serif;
+    color: #d4af37;
+    font-size: 1rem;
+  }
+}
+
+// Right-side action log — styled to match the in-game ActionLog panel
+// (same font, colours, item/chat/round-sep treatment).
+.ob-log {
+  width: 16rem;
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border-left: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(24, 20, 12, 0.92);
+  position: relative; // anchors the jump-to-latest pill
+
+  &__title {
+    font-family: var(--font-readable);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--gold-bright, #d4af37);
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+    flex: 0 0 auto;
+  }
+
+  // Floating pill at the log's bottom edge — appears whenever the list is
+  // scrolled away from the bottom, so one click catches up to the latest
+  // entries (shows the number of missed lines while new ones arrive).
+  &__jump {
+    position: absolute;
+    left: 50%;
+    bottom: 0.55rem;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.24rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 175, 55, 0.55);
+    background: rgba(13, 11, 8, 0.95);
+    color: var(--gold-bright, #f0d77b);
+    font-family: var(--font-readable);
+    font-size: 0.72rem;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      background: rgba(212, 175, 55, 0.18);
+      box-shadow: 0 2px 12px rgba(212, 175, 55, 0.3);
+    }
+  }
+
+  &__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.4rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-family: var(--font-readable);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  &__round-sep {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.72rem;
+    color: #d4af37;
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    padding: 0.15rem 0;
+    margin: 0.1rem 0;
+  }
+
+  // Action log item — same warm/gold look as the game panel.
+  &__item {
+    color: #e7d7b8;
+    background: rgba(212, 175, 55, 0.04);
+    border-radius: 6px;
+    padding: 0.3rem 0.4rem;
+    border-left: 2px solid rgba(212, 175, 55, 0.4);
+    word-break: break-word;
+
+    &--muted { opacity: 0.5; }
+
+    // Chat message — blue-tinted like the game log; spectator (OB) purple.
+    &--chat {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.2rem;
+      background: rgba(96, 165, 250, 0.06);
+      border-left-color: rgba(96, 165, 250, 0.5);
+    }
+
+    &--chat-ob {
+      border-left-color: rgba(192, 132, 252, 0.5);
+      background: rgba(168, 85, 247, 0.06);
+    }
+  }
+
+  &__chat-name {
+    font-weight: 700;
+    color: #93c5fd;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+  }
+
+  &__chat-text { word-break: break-word; flex: 1 1 auto; min-width: 0; }
+
+  &__chat-ob-tag {
+    display: inline-block;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 0 0.25rem;
+    border-radius: 3px;
+    background: rgba(168, 85, 247, 0.25);
+    color: #c4b5fd;
+    border: 1px solid rgba(192, 132, 252, 0.4);
+    flex-shrink: 0;
+  }
+}
+
+// Playback bar.
+.ob-player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 10px;
+  background: rgba(24, 20, 12, 0.9);
+
+  &__btn {
+    width: 2.1rem;
+    height: 2.1rem;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 0.3rem;
+    background: transparent;
+    color: #d4af37;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover:not(:disabled) { background: rgba(212, 175, 55, 0.18); }
+    &:disabled { opacity: 0.35; cursor: default; }
+  }
+
+  &__btn--primary {
+    background: #d4af37;
+    color: #1a140c;
+    font-weight: 700;
+    &:hover:not(:disabled) { background: #e6c65b; }
+  }
+
+  &__slider {
+    flex: 1;
+    min-width: 4rem;
+    accent-color: #d4af37;
+    cursor: pointer;
+  }
+
+  &__pos { font-size: 0.8rem; opacity: 0.85; white-space: nowrap; }
+
+  &__speed { display: flex; gap: 0.2rem; }
+
+  &__speed-btn {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 0.2rem;
+    background: transparent;
+    color: var(--parchment, #f2e3c5);
+    cursor: pointer;
+
+    &.is-active { background: rgba(212, 175, 55, 0.25); color: #d4af37; }
+  }
+}
+
+// Narrow-viewport scaling — mirrors the GameStage design-canvas idea, but via
+// `zoom` (fine for the admin-only Chromium target). Full-height content is
+// ~70rem (1120px): topbar + 3 seats (banner + city rows + 10rem hand strip)
+// + playback bar. WIDTH tiers come first, HEIGHT tiers after — the later
+// height rules win when both match, and height is the binding constraint
+// (a slightly larger zoom on a short-but-wide screen would clip the hands).
+@media (max-width: 1687px) {
+  .ob-screen { zoom: 0.85; }
+}
+
+@media (max-width: 1434px) {
+  .ob-screen { zoom: 0.75; }
+}
+
+@media (max-height: 1300px) {
+  .ob-screen { zoom: 0.9; }
+}
+
+@media (max-height: 1100px) {
+  .ob-screen { zoom: 0.8; }
+}
+
+@media (max-height: 950px) {
+  .ob-screen { zoom: 0.7; }
+}
+
+@media (max-height: 800px) {
+  .ob-screen { zoom: 0.58; }
+}

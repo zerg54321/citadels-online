@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MatchResult, TeamId } from 'citadels-common';
 import adminApi, {
@@ -6,6 +7,7 @@ import adminApi, {
   type AdminMatch,
   type AdminAuditRow,
 } from '@/api/admin';
+import roomsApi, { type RoomListItem } from '@/api/rooms';
 import { avatarUrl } from '@/utils/avatarUrl';
 
 const STORAGE_KEY = 'adminToken';
@@ -520,7 +522,90 @@ function UserPanel({
   );
 }
 
+// Live OB entry — lists rooms straight from the public GET /api/rooms feed
+// (no manual room-id typing). In-game rooms first, then lobbies; auto-refresh
+// every 15s so the list stays honest as games start and end.
+function ObRoomsPanel({ t }: { t: TFunc }) {
+  const navigate = useNavigate();
+  const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (silent: boolean) => {
+      if (!silent) setLoading(true);
+      try {
+        const list = await roomsApi.list();
+        if (!cancelled) {
+          setRooms(list.filter((r) => r.canSpectate));
+          setError('');
+        }
+      } catch (e) {
+        if (!cancelled && !silent) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled && !silent) setLoading(false);
+      }
+    };
+    load(false);
+    const timer = setInterval(() => load(true), 15000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
+
+  return (
+    <div className="admin-ob-rooms">
+      <div className="admin-ob-rooms__head">
+        <span className="admin-ob-rooms__title">{t('ui.admin.ob_rooms_title')}</span>
+        <button
+          type="button"
+          className="admin-btn admin-btn--ghost"
+          onClick={() => {
+            setLoading(true);
+            roomsApi.list()
+              .then((list) => { setRooms(list.filter((r) => r.canSpectate)); setError(''); })
+              .catch((e) => { setError(e instanceof Error ? e.message : String(e)); })
+              .finally(() => setLoading(false));
+          }}
+        >
+          ↻ {t('ui.admin.ob_refresh')}
+        </button>
+      </div>
+      {error && <div className="admin-alert admin-alert--danger">{t('ui.admin.load_failed', { msg: error })}</div>}
+      {loading && <div className="admin-screen__empty">{t('ui.loading')}</div>}
+      {!loading && !error && rooms.length === 0 && (
+        <div className="admin-screen__empty">{t('ui.admin.ob_no_rooms')}</div>
+      )}
+      {!loading && rooms.length > 0 && (
+        <div className="admin-ob-rooms__list">
+          {rooms.map((r) => (
+            <div className="admin-ob-rooms__row" key={r.roomId}>
+              <code className="admin-ob-rooms__id">{r.roomId}</code>
+              <span className={`admin-badge ${r.phase === 'in_game' ? 'admin-badge--ranked' : 'admin-badge--casual'}`}>
+                {r.phase === 'in_game' ? t('ui.admin.ob_phase_ingame') : t('ui.admin.ob_phase_lobby')}
+              </span>
+              <span className="admin-ob-rooms__players" title={r.players.map((p) => p.username).join(', ')}>
+                {r.playerCount}/{r.maxPlayers} · {r.players.map((p) => p.username).join('、')}
+                {r.spectatorCount > 0 && (
+                  <span className="admin-ob-rooms__spectators"> · {t('ui.admin.ob_spectators', { n: r.spectatorCount })}</span>
+                )}
+              </span>
+              <button
+                type="button"
+                className="admin-btn admin-btn--gold"
+                onClick={() => navigate(`/admin/ob/${r.roomId}`)}
+              >
+                {t('ui.admin.ob_watch')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MatchesTab({ token, t }: { token: string; t: TFunc }) {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<AdminMatch[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -586,6 +671,7 @@ function MatchesTab({ token, t }: { token: string; t: TFunc }) {
     <div>
       {error && <div className="admin-alert admin-alert--danger">{t('ui.admin.load_failed', { msg: error })}</div>}
       {actionMsg && <div className={`admin-alert admin-alert--${actionMsg.kind}`}>{actionMsg.text}</div>}
+      <ObRoomsPanel t={t} />
       {loading && <div className="admin-screen__empty">{t('ui.loading')}</div>}
       {!loading && matches.length === 0 && !error && <div className="admin-screen__empty">{t('ui.admin.no_data')}</div>}
       {!loading && matches.length > 0 && (
@@ -675,6 +761,9 @@ function MatchesTab({ token, t }: { token: string; t: TFunc }) {
                 </button>
               </>
             )}
+            <button type="button" className="admin-btn admin-btn--gold" onClick={() => navigate(`/admin/replay/${detail.id}`)}>
+              {t('ui.admin.replay')}
+            </button>
             <button type="button" className="admin-btn admin-btn--ghost" onClick={() => setDetail(null)}>{t('ui.admin.cancel')}</button>
           </div>
         </div>

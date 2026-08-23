@@ -1,0 +1,345 @@
+// Public replay screens (open to everyone; god view stays admin-only):
+//   .replay-list — the library page (finished matches, AI filter, pager)
+//   .replay-screen — the first-person replay viewer mounted on .ob-screen
+//     .replay-seats — perspective switcher (watch the same moment from any seat)
+//     .replay-layout — board (in-game .board-table classes) + action log
+//
+// The list page mirrors _stats-screen.scss (dark/gold grid card list); the
+// viewer reuses .ob-screen / .ob-player / .ob-log from
+// _ob-replay-screen.scss so live OB, admin replay and public replay share
+// one visual language.
+
+// ── Library list page ──────────────────────────────────────────────────────
+.replay-list {
+  max-width: 72rem;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--gold-bright);
+    font-size: 1.5rem;
+    margin: 0;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  &__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-readable);
+    font-size: 0.85rem;
+    color: var(--parchment);
+    cursor: pointer;
+    user-select: none;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 999px;
+    background: rgba(13, 11, 8, 0.55);
+    transition: border-color 0.18s ease, background 0.18s ease;
+
+    &:hover {
+      border-color: rgba(212, 175, 55, 0.6);
+      background: rgba(212, 175, 55, 0.08);
+    }
+
+    input {
+      accent-color: var(--gold);
+      width: 0.95rem;
+      height: 0.95rem;
+      cursor: pointer;
+    }
+  }
+
+  &__state {
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 2.5rem 0;
+    text-align: center;
+  }
+
+  &__pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 1.1rem;
+  }
+
+  &__pager-info {
+    font-family: var(--font-readable);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-width: 4rem;
+    text-align: center;
+  }
+}
+
+// ── Match table (grid card list, mirrors .stats-table) ────────────────────
+.replay-table {
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-panel-2) 0%, var(--bg-panel) 100%);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5);
+
+  &__head {
+    display: grid;
+    grid-template-columns: 1.4fr 0.7fr 0.9fr 3fr 0.7fr;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    background: rgba(13, 11, 8, 0.55);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+
+    span {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+  }
+
+  // rows are <button> — full visual reset, the whole row is the click target
+  &__row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.7fr 0.9fr 3fr 0.7fr;
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    background: transparent;
+    color: var(--parchment);
+    font: inherit;
+    font-size: 0.88rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: rgba(212, 175, 55, 0.05); }
+  }
+
+  &__cell--time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  &__score {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    font-weight: 700;
+    white-space: nowrap;
+
+    &--na { color: var(--text-muted); font-weight: 400; }
+  }
+
+  // in-game team colours: A blue glow / B red glow
+  &__score-a { color: #7ec8ff; }
+  &__score-b { color: #ff8a8a; }
+  &__score-vs { color: var(--text-muted); font-size: 0.75rem; }
+
+  &__players {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  &__player {
+    display: inline-block;
+    font-size: 0.78rem;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+
+    &--a {
+      color: #a8d4f5;
+      border-color: rgba(126, 200, 255, 0.4);
+      background: rgba(126, 200, 255, 0.07);
+    }
+
+    &--b {
+      color: #f5b8b8;
+      border-color: rgba(255, 138, 138, 0.4);
+      background: rgba(255, 138, 138, 0.07);
+    }
+
+    // AI seat — dashed outline marks it as automated at a glance
+    &--ai {
+      border-style: dashed;
+      opacity: 0.7;
+    }
+  }
+
+  &__result {
+    font-family: var(--font-readable);
+    font-size: 0.72rem;
+    color: var(--gold);
+    margin-left: 0.35rem;
+    white-space: nowrap;
+  }
+
+  &__btn {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-align: right;
+    transition: color 0.15s ease;
+  }
+
+  &__row:hover &__btn { color: var(--gold-bright); }
+}
+
+// ── First-person replay viewer (on .ob-screen) ─────────────────────────────
+.replay-screen {
+  // perspective switcher — lives INSIDE the ObTopBar meta row (after the
+  // team score), not as a strip of its own: one banner total. Separated
+  // from the score by a gold hairline; wraps to a second line inside the
+  // topbar on narrow screens (__meta has flex-wrap).
+  .replay-seats {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    padding-left: 0.55rem;
+    border-left: 1px solid rgba(212, 175, 55, 0.25);
+    min-width: 0;
+  }
+
+  .replay-seats__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 999px;
+    background: rgba(13, 11, 8, 0.55);
+    color: var(--parchment, #f2e3c5);
+    font-family: var(--font-readable);
+    font-size: 0.74rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      background: rgba(212, 175, 55, 0.12);
+      border-color: rgba(212, 175, 55, 0.55);
+    }
+
+    &.is-active {
+      background: rgba(212, 175, 55, 0.2);
+      border-color: var(--gold-bright, #f0d77b);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+      color: var(--gold-bright, #f0d77b);
+      font-weight: 700;
+    }
+
+    // the player acting in the CURRENT frame — subtle marker even when not
+    // the selected perspective (helps follow turn order while analyzing)
+    &.is-acting {
+      border-color: rgba(126, 200, 255, 0.5);
+    }
+  }
+
+  .replay-seats__avatar {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+  }
+
+  .replay-seats__name {
+    max-width: 5.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .replay-seats__crown { font-size: 0.75rem; }
+
+  .replay-seats__acting-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: #7ec8ff;
+    box-shadow: 0 0 6px rgba(126, 200, 255, 0.8);
+    animation: replay-acting-pulse 1.2s ease-in-out infinite;
+  }
+
+  // board + log row: the board reuses the in-game .board-table classes
+  // (seat panels, centre panel, self panel) via store injection; the log is
+  // the shared .ob-log.
+  .replay-layout {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 0.5rem;
+
+    &__board {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &__log {
+      width: 16rem;
+      flex: 0 0 auto;
+      min-height: 0;
+      // flex column so .ob-log can shrink to the row height and scroll
+      // INSIDE itself — a plain block wrapper lets the log overflow, which
+      // grows the document and pushes the board out of the viewport as
+      // soon as the page scrolls.
+      display: flex;
+      flex-direction: column;
+
+      // .ob-log ships with flex: 0 0 auto — fine in the god-view ROW layout
+      // where align-stretch hands it the row height, but inside this COLUMN
+      // wrapper "0 0 auto" means content-sized and unshrinkable: the log
+      // grows past the viewport, __list's overflow-y never engages, and the
+      // page scrolls the board away. Constrain it to the wrapper instead.
+      .ob-log {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+    }
+  }
+}
+
+@keyframes replay-acting-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+// ── Responsive ─────────────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .replay-table__head,
+  .replay-table__row {
+    grid-template-columns: 1fr 0.8fr 2.2fr 0.7fr;
+  }
+
+  // team score column collapses into the players cell on narrow screens
+  .replay-table__head span:nth-child(3),
+  .replay-table__row .replay-table__score {
+    display: none;
+  }
+}

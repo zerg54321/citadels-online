@@ -111,12 +111,17 @@ export default class PlayerBoardState {
   }
 
   exportForPlayer(canSeeHand: boolean): PlayerBoard {
+    // Arrays/object are COPIED, never passed by reference: replay frames
+    // (captureReplaySnapshot) outlive this call while the game keeps
+    // mutating this.city / this.hand / this.score — a shared reference
+    // would make every stored frame serialize the FINAL board (cities
+    // would appear fully built from replay frame 0).
     return {
       stash: this.stash,
-      hand: canSeeHand ? this.hand : Array(this.hand.length).fill(null),
-      tmpHand: canSeeHand ? this.tmpHand : Array(this.tmpHand.length).fill(null),
-      city: this.city,
-      score: this.score,
+      hand: canSeeHand ? [...this.hand] : Array(this.hand.length).fill(null),
+      tmpHand: canSeeHand ? [...this.tmpHand] : Array(this.tmpHand.length).fill(null),
+      city: [...this.city],
+      score: { ...this.score },
 
       // characters are not known from this scope
       characters: [],

@@ -33,6 +33,11 @@ export default function App() {
   const isConnected = useIsConnected();
 
   const inGame = location.pathname.startsWith('/room');
+  // Admin sub-screens (live OB / replay) run under /admin/*. Their topbar has
+  // its own 返回 button, but the header brand is ALSO a "back" affordance for
+  // users — pointing it to /admin (breadcrumb-style) instead of the site home
+  // ensures every back affordance on those screens returns to the admin page.
+  const onAdminSubPage = location.pathname.startsWith('/admin/');
   // GameStage (equal-ratio scaling) is only for an active board. The lobby
   // shares the /room path and the in-game header styling, but it is a normal
   // responsive page and must not be forced into the 1366×1024 scaled canvas.
@@ -59,6 +64,8 @@ export default function App() {
                 {(inLobby || !inGame) && <img src="/svg/1fa99.svg" alt="" className="header-brand__coin" />}
                 {inPlay ? (
                   t('ui.title')
+                ) : onAdminSubPage ? (
+                  <Link to="/admin" className="text-reset" title={t('ui.admin.title')}>{t('ui.title')}</Link>
                 ) : (
                   <a href="/" className="text-reset">{t('ui.title')}</a>
                 )}
@@ -86,9 +93,14 @@ export default function App() {
             )}
             <div className={`header-extra${inPlay ? ' header-extra--hidden' : ''}`}>
               {!inLobby && (
-                <Link className="hdr-link" to="/stats">
-                  {t('ui.stats.title')}
-                </Link>
+                <>
+                  <Link className="hdr-link" to="/stats">
+                    {t('ui.stats.title')}
+                  </Link>
+                  <Link className="hdr-link" to="/replays">
+                    {t('ui.replay.library_title')}
+                  </Link>
+                </>
               )}
               <button
                 type="button"
@@ -126,7 +138,8 @@ export default function App() {
   // MIIT filing requirement is that it sits at the page footer, not that it
   // is always on-screen.
   const icpBeian = import.meta.env.VITE_ICP_BEIAN as string | undefined;
-  const footer = (icpBeian && !inPlay) ? (
+  // ICP 备案号只显示在主页，其余页面（admin/stats/cards/房间等）不显示。
+  const footer = (icpBeian && location.pathname === '/') ? (
     <footer className="app-footer">
       <a
         href="https://beian.miit.gov.cn/"

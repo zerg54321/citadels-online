@@ -76,6 +76,13 @@ export default class Room implements Observer {
   }
 
   update(): void {
+    // Record a replay frame whenever the board state moved (deduped inside).
+    // MUST run BEFORE tryPersistMatch so that a move flipping the game to
+    // FINISHED captures that terminal frame before the match is persisted —
+    // otherwise saveFinishedMatch reads replaySnapshots without the final
+    // frame and (matchPersisted guard) never re-saves it, so the replay would
+    // end one frame early, missing the finished/game-over state.
+    this.gameState.captureReplaySnapshot();
     this.tryPersistMatch();
     // Re-arm deadline / AI BEFORE sending state so the emitted turnDeadlineAt
     // reflects the freshly armed deadline. Previously send ran before arm,
@@ -109,7 +116,13 @@ export default class Room implements Observer {
       clients.forEach((clientId) => {
         const clientSocket: ExtendedSocket | undefined = this.io.sockets.sockets.get(clientId);
         if (clientSocket) {
-          clientSocket.emit('update game state', this.gameState.getStateFromPlayer(clientSocket.playerId));
+          // Admins get the omniscient god-view snapshot (all hands + roles);
+          // everyone else gets their normal player-scoped view. Self for an
+          // admin is a placeholder seat — the client renders it as spectating.
+          const payload = clientSocket.isAdmin
+            ? this.gameState.getGodViewState()
+            : this.gameState.getStateFromPlayer(clientSocket.playerId);
+          clientSocket.emit('update game state', payload);
         }
       });
     }

@@ -156,8 +156,11 @@ export const createAuthSlice: StateCreator<AuthSlice & GameSlice, [], [], AuthSl
   reconnectSocket() {
     const { authToken } = get();
     socket.auth = authToken ? { token: authToken } : {};
-    if (socket.connected) {
-      socket.disconnect();
-    }
+    // socket.io does NOT auto-reconnect after a manual disconnect() — a bare
+    // disconnect here would leave the singleton dead until the next
+    // joinRoom. Chain .connect() so the socket immediately re-establishes
+    // with the fresh auth (keeps the header SERVER STATUS truthful after
+    // login/logout token swaps).
+    socket.disconnect().connect();
   },
 });

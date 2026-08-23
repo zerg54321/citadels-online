@@ -26,6 +26,7 @@ import {
   adminListMatches,
   adminCountMatches,
   adminGetMatch,
+  adminGetMatchReplay,
   adminDeleteMatch,
   AdminMatchItem,
 } from '../db/matches';
@@ -238,6 +239,19 @@ export function createAdminRouter(): Router {
     const m = adminGetMatch(req.params.id);
     if (!m) { res.status(404).json({ status: 'error', message: 'match not found' }); return; }
     res.json({ status: 'ok', match: publicMatchRow(m) });
+  });
+
+  // Full god-view replay frames for a match (all hands + roles revealed).
+  // Paginated so a large match is not returned as one giant response.
+  router.get('/matches/:id/replay', requireAdmin, (req: Request, res: Response) => {
+    const limit = clampLimit(req.query.limit, 200, 2000);
+    const offset = clampOffset(req.query.offset);
+    const result = adminGetMatchReplay(req.params.id, limit, offset);
+    if (result === undefined) {
+      res.status(404).json({ status: 'error', message: 'replay not found' });
+      return;
+    }
+    res.json({ status: 'ok', frames: result.frames, total: result.total });
   });
 
   router.delete('/matches/:id', requireAdmin, async (req: Request, res: Response) => {

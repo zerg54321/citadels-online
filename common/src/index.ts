@@ -37,6 +37,8 @@ export type {
 export { formatActionFeedLine } from './view/actionFeed';
 // eslint-disable-next-line import/no-cycle
 export type { ActionFeedLine, ActionFeedTFunc } from './view/actionFeed';
+// eslint-disable-next-line import/no-cycle
+export { derivePlayerView } from './view/replayView';
 
 export type PlayerId = string;
 export type RoomId = string;

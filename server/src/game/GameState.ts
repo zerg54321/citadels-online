@@ -32,6 +32,11 @@ import { MAX_CHARACTER_SKIP_ATTEMPTS } from '../utils/schedule';
 // while bounding memory/payload for abandoned games.
 const ACTION_FEED_MAX_LENGTH = 2000;
 
+/** Cap on stored replay snapshots. A 6-player game has ~600-1000 distinct
+ *  state changes; keeping the full run bounded protects memory for abandoned
+ *  rooms while comfortable covering a normal match for replay. */
+const REPLAY_MAX_SNAPSHOTS = 4000;
+
 /** 玩家因超时/掉线被强制托管达到此次数后,锁定为托管至本局结束,无法手动取消。
  *  阈值给网络波动留余量,同时阻止恶意消极游戏(故意超时)或反复掉线拖累他人。 */
 const AUTOPLAY_TIMEOUT_LOCK_THRESHOLD = 3;
@@ -74,8 +79,43 @@ export default class GameState implements Subject {
   actionFeed: ActionFeedLine[];
   /** epoch ms when this room became empty of human players */
   emptySince: number | null;
+  /**
+   * Replay frames: an ordered list of god-view snapshots (getGodViewState
+   * output, fully-revealed hands/roles), one per distinct game-state change
+   * while IN_GAME/FINISHED. Persisted to the matches table at game end so the
+   * match can be replayed later. Bounded to keep abandoned games reasonable.
+   */
+  replaySnapshots: Record<string, unknown>[];
   private flow: GameFlowController;
   private executor: ActionExecutor;
+
+  /**
+   * Append a replay snapshot if the board state actually changed since the
+   * last one (dedupe reconnects / no-op client joins). Returns true when a
+   * new frame was captured. No-op outside IN_GAME/FINISHED or without a board.
+   */
+  captureReplaySnapshot(): boolean {
+    if (!this.board) return false;
+    if (this.progress !== GameProgress.IN_GAME && this.progress !== GameProgress.FINISHED) {
+      return false;
+    }
+    if (this.replaySnapshots.length >= REPLAY_MAX_SNAPSHOTS) {
+      // drop the oldest so a long game keeps a bounded, always-latest window
+      this.replaySnapshots.shift();
+    }
+    const frame = this.getGodViewState();
+    const serialized = JSON.stringify(frame);
+    const last = this.replaySnapshots[this.replaySnapshots.length - 1];
+    if (last && JSON.stringify(last) === serialized) {
+      return false;
+    }
+    // Parse back from the dedup string: a fully detached deep copy. Frames
+    // live until match persistence while the game keeps mutating its state —
+    // any reference shared with the live objects would leak the FINAL board
+    // into every earlier frame.
+    this.replaySnapshots.push(JSON.parse(serialized));
+    return true;
+  }
 
   clone(): GameState {
     const gs = Object.create(GameState.prototype) as GameState;
@@ -102,6 +142,7 @@ export default class GameState implements Subject {
     gs.lobbySeats = [...this.lobbySeats];
     gs.actionFeed = [...this.actionFeed.map((a) => ({ ...a }))];
     gs.emptySince = this.emptySince;
+    gs.replaySnapshots = this.replaySnapshots.map((s) => JSON.parse(JSON.stringify(s)));
     gs.fastMode = this.fastMode;
     gs.syncMode = this.syncMode;
     gs.flow = new GameFlowController(gs);
@@ -134,6 +175,7 @@ export default class GameState implements Subject {
     this.lobbySeats = new Array(MAX_LOBBY_SEATS).fill(null);
     this.actionFeed = [];
     this.emptySince = null;
+    this.replaySnapshots = [];
     this.fastMode = options?.fastMode ?? false;
     this.syncMode = options?.syncMode ?? false;
     this.flow = new GameFlowController(this);
@@ -413,6 +455,64 @@ export default class GameState implements Subject {
       lobbyPlayerOrder: [...this.lobbyPlayerOrder],
       lobbySeats: [...this.lobbySeats],
       actionFeed: this.actionFeed,
+    };
+  }
+
+  /**
+   * God-view serialization: a ClientGameState-shaped snapshot with EVERY
+   * player's hand and role revealed (revealAll=true). Used for:
+   *   1. live admin-OB sockets (a privileged viewer who may see all hands);
+   *   2. replay frames — each snapshot is a fully-revealed, JSON-serializable
+   *      point-in-time the client can render and step between.
+   * Same player metadata as getStateFromPlayer (self is a placeholder — the
+   * god-viewer has no seat, so the client treats it as spectating).
+   */
+  getGodViewState(): Record<string, unknown> {
+    if (this.progress === GameProgress.IN_GAME || this.progress === GameProgress.FINISHED) {
+      refreshLiveScores(this, this.progress === GameProgress.FINISHED);
+    }
+    // revealAll makes both canSeeHand and role reveal independent of the
+    // viewer's position, so any seat id (including one not in playerOrder,
+    // → PlayerPosition.SPECTATOR) works as the "viewer".
+    const anySeatId: PlayerId = this.lobbyPlayerOrder[0] ?? '';
+    return {
+      progress: this.progress,
+      gameMode: this.gameMode,
+      players: Object.fromEntries(
+        Array.from(this.players).map(([id, player]) => [id, {
+          id: player.id,
+          username: player.username,
+          manager: player.manager,
+          online: player.online,
+          role: player.role,
+          userId: player.userId,
+          team: player.team,
+          isAi: player.isAi,
+          isAutoplay: player.isAutoplay,
+          hadEffectiveAiControl: player.hadEffectiveAiControl,
+          autoplayTimeoutCount: player.autoplayTimeoutCount,
+          avatar: player.avatar,
+        }]),
+      ),
+      self: anySeatId,
+      board: this.board?.exportForPlayer(anySeatId, true),
+      settings: {
+        completeCitySize: this.completeCitySize,
+        actionTimeoutSeconds: this.actionTimeoutSeconds,
+      },
+      turnDeadlineAt: this.turnDeadlineAt,
+      teamScores: this.teamScores,
+      matchResult: this.matchResult,
+      lastRoundSummary: this.lastRoundSummary,
+      roundNumber: this.roundNumber,
+      lobbyPlayerOrder: [...this.lobbyPlayerOrder],
+      lobbySeats: [...this.lobbySeats],
+      // COPY the feed: replay frames (captureReplaySnapshot) outlive this
+      // call while pushAction keeps mutating the live array — a bare
+      // reference would make every stored frame serialize the FINAL feed,
+      // so the replay log would show the whole game from frame 0 instead of
+      // growing with playback.
+      actionFeed: [...this.actionFeed],
     };
   }
 

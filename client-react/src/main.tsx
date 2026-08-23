@@ -7,13 +7,24 @@ import RoomScreen from './components/game/RoomScreen';
 import CardsPreview from './components/CardsPreview';
 import StatsScreen from './components/StatsScreen';
 import AdminScreen from './components/AdminScreen';
+import ObReplayScreen from './components/game/ObReplayScreen';
+import AdminObScreen from './components/game/AdminObScreen';
+import ReplayListScreen from './components/ReplayListScreen';
+import PlayerReplayScreen from './components/PlayerReplayScreen';
 import './i18n';
 import { useAppStore } from './store';
 import { isMobile } from './utils/isMobile';
 import './scss/main.scss';
 
-// Restore auth token from localStorage before mounting.
-useAppStore.getState().initAuth();
+// Restore auth token from localStorage before mounting, then bring the
+// singleton socket up right away (fire-and-forget). The socket used to
+// connect lazily at the first joinRoom, which left the header SERVER STATUS
+// stuck on OFFLINE on every non-room page (home/admin/stats). Connecting at
+// startup makes the badge reflect real server reachability; connect errors
+// are handled by the socket layer (isConnected stays false).
+useAppStore.getState().initAuth().finally(() => {
+  useAppStore.getState().connect().catch(() => { /* offline — badge shows it */ });
+});
 // Restore audio/UX settings (sfx volume / mute) before mounting.
 useAppStore.getState().initSettings();
 
@@ -38,6 +49,12 @@ const router = createBrowserRouter([
       { path: 'cards', element: <CardsPreview /> },
       { path: 'stats', element: <StatsScreen /> },
       { path: 'admin', element: <AdminScreen /> },
+      { path: 'admin/replay/:matchId', element: <ObReplayScreen /> },
+      { path: 'admin/ob/:roomId', element: <AdminObScreen /> },
+      // Public replay library (first-person replay; god view stays admin-only
+      // under /admin/replay/:matchId).
+      { path: 'replays', element: <ReplayListScreen /> },
+      { path: 'replay/:matchId', element: <PlayerReplayScreen /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

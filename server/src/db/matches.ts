@@ -6,6 +6,7 @@ import {
   TeamId,
 } from 'citadels-common';
 import db from './database';
+import { saveReplayFile, loadReplayFile, deleteReplayFile } from './replayFiles';
 import GameState from '../game/GameState';
 import { nowIso } from '../utils/dateUtils';
 
@@ -62,8 +63,8 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
   const insertMatch = db.prepare(`
     INSERT INTO matches (
       id, room_id, game_mode, ranked, has_ai, complete_city_size,
-      team_score_a, team_score_b, match_result, started_at, ended_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      team_score_a, team_score_b, match_result, started_at, ended_at, is_public
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
   `);
 
   const insertPlayer = db.prepare(`
@@ -126,11 +127,16 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
 
   try {
     tx();
-    return matchId;
   } catch (err) {
     console.error('[matches] save failed', err);
     return null;
   }
+  // Replay frames go to a standalone file (decoupled from the user DB).
+  // Written AFTER the row commits so a metadata row never points at a
+  // half-written file; a write failure just means "no replay for this
+  // match", not a broken match record.
+  saveReplayFile(matchId, gameState.replaySnapshots);
+  return matchId;
 }
 
 export type MyMatchItem = {
@@ -356,11 +362,181 @@ export function adminGetMatch(id: string): AdminMatchItem | undefined {
 
 // Delete a match and its players in one transaction. Relies on the
 // match_players ON DELETE CASCADE FK, but we wrap explicitly so a partial
-// failure leaves nothing dangling.
+// failure leaves nothing dangling. Also removes the standalone replay file.
+/** Load a match's replay frames from the standalone replay file. Falls back
+ * to the legacy in-DB replay_json column for matches saved before the
+ * file-based split (returns undefined when neither exists). */
+function loadMatchReplay(id: string): unknown[] | undefined {
+  const fromFile = loadReplayFile(id);
+  if (fromFile !== undefined) return fromFile;
+  const row = db.prepare('SELECT replay_json FROM matches WHERE id = ?').get(id) as
+    ({ replay_json: string | null } | undefined);
+  if (!row || !row.replay_json) return undefined;
+  try {
+    const parsed = JSON.parse(row.replay_json);
+    return Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Return a page of the stored god-view replay frames for a match (array of
+ *  ClientGameState-shaped, fully-revealed snapshots), plus the total frame
+ *  count. Returns undefined if the match doesn't exist / has no replay saved.
+ *  Frames are served in pages so a large match isn't returned in one response. */
+export function adminGetMatchReplay(
+  id: string,
+  limit: number,
+  offset: number,
+): { frames: unknown[]; total: number } | undefined {
+  const all = loadMatchReplay(id);
+  if (all === undefined) return undefined;
+  const total = all.length;
+  const start = Math.max(0, offset);
+  const frames = all.slice(start, start + Math.max(1, limit));
+  return { frames, total };
+}
+
 export function adminDeleteMatch(id: string): boolean {
   const tx = db.transaction(() => {
     const r = db.prepare('DELETE FROM matches WHERE id = ?').run(id);
     return r.changes > 0;
   });
-  return tx();
+  const removed = tx();
+  if (removed) deleteReplayFile(id);
+  return removed;
+}
+
+// ── Public replay operations ────────────────────────────────────────────
+// The replay library is open to everyone: list finished matches and load
+// their frames without admin auth. is_public=0 (future per-room setting)
+// restricts a match's frames to its participants only.
+
+export type PublicMatchItem = {
+  id: string;
+  game_mode: number;
+  ranked: boolean;
+  has_ai: boolean;
+  team_score_a: number | null;
+  team_score_b: number | null;
+  match_result: number;
+  started_at: string;
+  ended_at: string;
+  players: Array<{
+    seat: number;
+    team: number;
+    display_name: string;
+    personal_score: number;
+    is_ai: boolean;
+    team_won: boolean;
+  }>;
+};
+
+function rowsToPublicMatches(
+  matchRows: MatchRow[],
+  playerRows: (MatchPlayerRow & { match_id: string })[],
+): PublicMatchItem[] {
+  const byMatch = new Map<string, PublicMatchItem['players']>();
+  playerRows.forEach((p) => {
+    const arr = byMatch.get(p.match_id) ?? [];
+    arr.push({
+      seat: p.seat,
+      team: p.team,
+      display_name: p.display_name,
+      personal_score: p.personal_score,
+      is_ai: Boolean(p.is_ai),
+      team_won: Boolean(p.team_won),
+    });
+    byMatch.set(p.match_id, arr);
+  });
+  return matchRows.map((m) => ({
+    id: m.id,
+    game_mode: m.game_mode,
+    ranked: Boolean(m.ranked),
+    has_ai: Boolean(m.has_ai),
+    team_score_a: m.team_score_a,
+    team_score_b: m.team_score_b,
+    match_result: m.match_result,
+    started_at: m.started_at,
+    ended_at: m.ended_at,
+    players: byMatch.get(m.id) ?? [],
+  }));
+}
+
+/** Public match list. `includeAi=false` (default) hides matches containing
+ * AI players — replays are for analyzing human games; AI matches are casual. */
+export function listPublicMatches(
+  limit: number,
+  offset: number,
+  includeAi: boolean,
+): PublicMatchItem[] {
+  // is_public=1 is mandatory — private matches never appear in the public
+  // library (their participants reach them via /api/matches/:id/replay).
+  const matchRows = (includeAi
+    ? db.prepare(`
+        SELECT id, room_id, game_mode, ranked, has_ai, complete_city_size,
+               team_score_a, team_score_b, match_result, started_at, ended_at
+        FROM matches WHERE is_public = 1
+        ORDER BY ended_at DESC LIMIT ? OFFSET ?
+      `)
+    : db.prepare(`
+        SELECT id, room_id, game_mode, ranked, has_ai, complete_city_size,
+               team_score_a, team_score_b, match_result, started_at, ended_at
+        FROM matches WHERE is_public = 1 AND has_ai = 0
+        ORDER BY ended_at DESC LIMIT ? OFFSET ?
+      `)
+  ).all(limit, offset) as MatchRow[];
+  if (matchRows.length === 0) return [];
+
+  const ids = matchRows.map((m) => m.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const playerRows = db.prepare(`
+    SELECT match_id, user_id, player_id, seat, team, display_name,
+           personal_score, is_ai, team_won
+    FROM match_players WHERE match_id IN (${placeholders})
+    ORDER BY match_id, seat
+  `).all(...ids) as (MatchPlayerRow & { match_id: string })[];
+
+  return rowsToPublicMatches(matchRows, playerRows);
+}
+
+export function countPublicMatches(includeAi: boolean): number {
+  const r = (includeAi
+    ? db.prepare('SELECT COUNT(*) n FROM matches WHERE is_public = 1')
+    : db.prepare('SELECT COUNT(*) n FROM matches WHERE is_public = 1 AND has_ai = 0')
+  ).get() as { n: number };
+  return r.n;
+}
+
+/** Replay frames for the public replay page, with the is_public permission
+ * check: public matches need no auth; private ones (is_public=0, future)
+ * require the caller to be a participant (matched via match_players.user_id).
+ * Returns:
+ *   - { ok: false, reason: 'not_found' } — unknown match / no replay saved
+ *   - { ok: false, reason: 'forbidden' } — private and caller not a participant
+ *   - { ok: true, frames, total } — authorized */
+export function getPublicMatchReplay(
+  id: string,
+  userId: string | null,
+  limit: number,
+  offset: number,
+): { ok: true; frames: unknown[]; total: number } | { ok: false; reason: 'not_found' | 'forbidden' } {
+  const row = db.prepare('SELECT is_public FROM matches WHERE id = ?').get(id) as
+    ({ is_public: number } | undefined);
+  if (!row) return { ok: false, reason: 'not_found' };
+
+  if (!row.is_public) {
+    if (!userId) return { ok: false, reason: 'forbidden' };
+    const part = db.prepare(
+      'SELECT 1 FROM match_players WHERE match_id = ? AND user_id = ?',
+    ).get(id, userId);
+    if (!part) return { ok: false, reason: 'forbidden' };
+  }
+
+  const all = loadMatchReplay(id);
+  if (all === undefined) return { ok: false, reason: 'not_found' };
+  const total = all.length;
+  const start = Math.max(0, offset);
+  const frames = all.slice(start, start + Math.max(1, limit));
+  return { ok: true, frames, total };
 }

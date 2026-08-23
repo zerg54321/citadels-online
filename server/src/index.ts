@@ -7,6 +7,7 @@ import { createAuthRouter } from './auth/routes';
 import { createAvatarRouter } from './auth/avatarRoutes';
 import { createStatsRouter } from './stats/routes';
 import { createRoomsRouter } from './rooms/routes';
+import createMatchesRouter from './matches/routes';
 import { createAdminRouter } from './admin/routes';
 import { dbPath } from './db/database';
 
@@ -41,6 +42,9 @@ app.use('/api/auth', createAuthRouter());
 app.use('/api/avatar', createAvatarRouter());
 app.use('/api/stats', createStatsRouter());
 app.use('/api/rooms', createRoomsRouter());
+// Public replay library: finished matches + their god-view frames. Private
+// matches (is_public=0, future room setting) are gated inside the router.
+app.use('/api/matches', createMatchesRouter());
 
 // Admin surface: always mounted; the router's requireAdmin gate is
 // fail-closed (404 for every path) when ADMIN_TOKEN/ADMIN_ALLOW_IPS are

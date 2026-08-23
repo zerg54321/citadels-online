@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { GameMode, MatchResult } from 'citadels-common';
+import { MatchResult, TeamId } from 'citadels-common';
 import matchesApi, { type PublicMatchItem } from '@/api/matches';
 
 // Public replay library. Lists every FINISHED match (server stores replay
@@ -48,13 +48,6 @@ export default function ReplayListScreen() {
     } catch {
       return iso;
     }
-  };
-
-  const resultText = (m: PublicMatchItem) => {
-    if (m.match_result === MatchResult.TEAM_A_WIN) return `${t('ui.team.a')} ${t('ui.replay.wins')}`;
-    if (m.match_result === MatchResult.TEAM_B_WIN) return `${t('ui.team.b')} ${t('ui.replay.wins')}`;
-    if (m.match_result === MatchResult.DRAW) return t('ui.score.draw');
-    return '—';
   };
 
   return (
@@ -104,8 +97,8 @@ export default function ReplayListScreen() {
                     {m.ranked ? t('ui.stats.ranked') : t('ui.stats.casual')}
                   </span>
                 </span>
-                <span className={`replay-table__score${m.game_mode === GameMode.COMPETITIVE_TEAM6 ? '' : ' replay-table__score--na'}`}>
-                  {m.game_mode === GameMode.COMPETITIVE_TEAM6 ? (
+                <span className={`replay-table__score${m.team_score_a == null && m.team_score_b == null ? ' replay-table__score--na' : ''}`}>
+                  {m.team_score_a != null || m.team_score_b != null ? (
                     <>
                       <span className="replay-table__score-a">{m.team_score_a ?? 0}</span>
                       <span className="replay-table__score-vs">:</span>
@@ -114,16 +107,30 @@ export default function ReplayListScreen() {
                   ) : '—'}
                 </span>
                 <span className="replay-table__players">
-                  {m.players.map((p) => (
-                    <span
-                      key={p.seat}
-                      className={`replay-table__player replay-table__player--${p.team === 0 ? 'a' : 'b'}${p.is_ai ? ' replay-table__player--ai' : ''}`}
-                      title={`${p.display_name}${p.is_ai ? ` · ${t('ui.replay.ai_player')}` : ''}`}
-                    >
-                      {p.display_name}
-                    </span>
-                  ))}
-                  <span className="replay-table__result">{resultText(m)}</span>
+                  {([TeamId.A, TeamId.B] as const).map((team) => {
+                    const members = m.players.filter((p) => p.team === team);
+                    if (!members.length) return null;
+                    const isTeamA = team === TeamId.A;
+                    // winner communicated by the brighter win-glow alone —
+                    // the coloured score right next to it already says which
+                    // team it belongs to, no "A队/B队" text chips needed
+                    const won = isTeamA
+                      ? m.match_result === MatchResult.TEAM_A_WIN
+                      : m.match_result === MatchResult.TEAM_B_WIN;
+                    return (
+                      <span key={team} className="replay-table__team">
+                        {members.map((p) => (
+                          <span
+                            key={p.seat}
+                            className={`replay-table__player replay-table__player--${isTeamA ? 'a' : 'b'}${won ? ' replay-table__player--won' : ''}${p.is_ai ? ' replay-table__player--ai' : ''}`}
+                            title={`${p.display_name}${p.is_ai ? ` · ${t('ui.replay.ai_player')}` : ''}`}
+                          >
+                            {p.display_name}
+                          </span>
+                        ))}
+                      </span>
+                    );
+                  })}
                 </span>
                 <span className="replay-table__btn">{t('ui.replay.view')}</span>
               </button>

@@ -64,6 +64,13 @@ socket.on('update game state', (data: unknown) => {
       state.setGameSetupData({ actionTimeoutSeconds: newGameState.settings.actionTimeoutSeconds });
     }
   }
+  // Same sync for the spectator toggle (tri-state: undefined = untouched)
+  if (newGameState?.settings?.allowSpectators !== undefined) {
+    const state = useAppStore.getState();
+    if (state.gameSetupData.allowSpectators !== newGameState.settings.allowSpectators) {
+      state.setGameSetupData({ allowSpectators: newGameState.settings.allowSpectators });
+    }
+  }
 });
 
 socket.on('chat message', (msg: { playerId: string; username: string; text: string; ts: number }) => {

@@ -1,10 +1,14 @@
-import { useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PlayerRole } from 'citadels-common';
 import { useAppStore, useGameSetupData, selectPlayerFromId } from '@/store';
+import roomsApi, { type OnlineUserItem } from '@/api/rooms';
 import ParticleField from '@/components/common/ParticleField';
+import OnlinePlayers from '@/components/common/OnlinePlayers';
 import TimeoutSelect from './elements/TimeoutSelect';
 import PlayersList from './elements/PlayersList';
 import RoomChat from './RoomChat';
@@ -29,6 +33,31 @@ export default function LobbyScreen() {
     gameState?.settings?.actionTimeoutSeconds ?? 120,
   );
   const [showSetupConfirm, setShowSetupConfirm] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUserItem[]>([]);
+  const onlineTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const authUserId = useAppStore((s) => s.authUser?.id);
+
+  // Poll who is online outside this room — the whole point of the capsule
+  // strip in the lobby: "whom can we still invite". 8s is plenty for a
+  // friends-scale server; the home page's faster 4s poll already exists
+  // there because the room list is its primary content.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const { online } = await roomsApi.listWithOnline();
+        if (alive) setOnlineUsers(online);
+      } catch {
+        // transient — next poll retries
+      }
+    };
+    load();
+    onlineTimerRef.current = setInterval(load, 8000);
+    return () => {
+      alive = false;
+      if (onlineTimerRef.current) clearInterval(onlineTimerRef.current);
+    };
+  }, []);
 
   const getPlayer = selectPlayerFromId(gameState);
 
@@ -47,6 +76,14 @@ export default function LobbyScreen() {
     ? actionTimeoutSeconds
     : (gameState?.settings?.actionTimeoutSeconds ?? 120);
 
+  // 是否允许观战：房主用本地状态，其他玩家从游戏状态读取（服务端同步）
+  const [allowSpectators, setAllowSpectators] = useState(
+    gameState?.settings?.allowSpectators ?? true,
+  );
+  const currentAllowSpectators = isManager
+    ? allowSpectators
+    : (gameState?.settings?.allowSpectators ?? true);
+
   const handleTimeoutChange = async (value: number) => {
     const prevValue = actionTimeoutSeconds;
     setActionTimeoutSeconds(value);
@@ -54,6 +91,16 @@ export default function LobbyScreen() {
       await updateGameSetup({ actionTimeoutSeconds: value });
     } catch {
       setActionTimeoutSeconds(prevValue);
+    }
+  };
+
+  const handleSpectatorsChange = async (value: boolean) => {
+    const prevValue = allowSpectators;
+    setAllowSpectators(value);
+    try {
+      await updateGameSetup({ allowSpectators: value });
+    } catch {
+      setAllowSpectators(prevValue);
     }
   };
 
@@ -232,6 +279,40 @@ export default function LobbyScreen() {
                       </div>
                     )}
                   </div>
+
+                  {/* 允许观战开关：房主可切换，其他玩家只读 */}
+                  <div className="lobby-settings__group">
+                    <label htmlFor="allowSpectators" className="lobby-settings__label">
+                      {t('ui.lobby.settings.allow_spectators')}
+                    </label>
+                    {isManager ? (
+                      <button
+                        type="button"
+                        id="allowSpectators"
+                        role="switch"
+                        aria-checked={allowSpectators}
+                        className={`lobby-settings__switch${allowSpectators ? ' is-on' : ''}`}
+                        onClick={() => handleSpectatorsChange(!allowSpectators)}
+                      >
+                        <span className="lobby-settings__switch-track">
+                          <span className="lobby-settings__switch-thumb" />
+                        </span>
+                        <span className="lobby-settings__switch-text">
+                          {allowSpectators
+                            ? t('ui.lobby.settings.spectators_on')
+                            : t('ui.lobby.settings.spectators_off')}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="lobby-settings__readonly">
+                        <span className="lobby-settings__readonly-value">
+                          {currentAllowSpectators
+                            ? t('ui.lobby.settings.spectators_on')
+                            : t('ui.lobby.settings.spectators_off')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -244,6 +325,9 @@ export default function LobbyScreen() {
                   <RoomChat />
                 </div>
               </div>
+
+              {/* 在线玩家：房外谁还在线，方便拉人 */}
+              <OnlinePlayers users={onlineUsers} selfUserId={authUserId} />
             </div>
           </div>
 

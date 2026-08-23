@@ -29,6 +29,24 @@ async function getJson(path: string) {
   return data;
 }
 
+export type ReplayChatEntry = {
+  playerId: string;
+  username: string;
+  text: string;
+  role: number;
+  ts: number;
+  /** absolute frame number the message arrived at */
+  frame: number;
+};
+
+export type ReplayResponse = {
+  frames: unknown[];
+  total: number;
+  chatLog: ReplayChatEntry[];
+  /** absolute frame number of frames[0] — map chat.frame → local index */
+  frameOffset: number;
+};
+
 // Public replay library API (see server/src/matches/routes.ts):
 //   GET /api/matches          — finished match list (?includeAi=1 to include
 //                               AI matches; hidden by default)
@@ -43,7 +61,7 @@ export default {
     return getJson(`/api/matches?${q.toString()}`);
   },
 
-  replay(matchId: string, limit = 500, offset = 0): Promise<{ frames: unknown[]; total: number }> {
+  replay(matchId: string, limit = 500, offset = 0): Promise<ReplayResponse> {
     const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     return getJson(`/api/matches/${encodeURIComponent(matchId)}/replay?${q.toString()}`);
   },

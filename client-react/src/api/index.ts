@@ -67,7 +67,7 @@ export default {
     });
   },
 
-  updateGameSetup(s: Socket, setupData: { actionTimeoutSeconds?: number }) {
+  updateGameSetup(s: Socket, setupData: { actionTimeoutSeconds?: number; allowSpectators?: boolean }) {
     return new Promise<{ status: string; message?: string }>((resolve, reject) => {
       s.emit('set game setup', setupData, (data: any) => {
         if (data?.status === 'ok') return resolve(data);

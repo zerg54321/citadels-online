@@ -49,6 +49,8 @@ export default class GameState implements Subject {
   completeCitySize: number;
   /** P4: action time limit in seconds */
   actionTimeoutSeconds: number;
+  /** room setting: may regular spectators join? (admin OB bypasses) */
+  allowSpectators: boolean;
   /** P4: epoch ms when current actor must act; null when no human timer */
   turnDeadlineAt: number | null;
   observers: Observer[];
@@ -77,6 +79,25 @@ export default class GameState implements Subject {
   /** rolling action log for clients; structured { kind, params } entries
    *  localized client-side via formatActionFeedLine() */
   actionFeed: ActionFeedLine[];
+  /**
+   * Chat archive for replay: every chat message (players AND spectators)
+   * with the ABSOLUTE frame number it arrived at. Absolute = the counter
+   * that keeps increasing even when replaySnapshots shifts old frames out
+   * (REPLAY_MAX_SNAPSHOTS) — array indices would drift after the shift,
+   * absolute numbers never do. The replay file stores startFrame so the
+   * client maps absolute → local index.
+   */
+  chatLog: Array<{
+    playerId: string;
+    username: string;
+    text: string;
+    role: number;
+    ts: number;
+    frame: number;
+  }>;
+  /** absolute replay-frame counter — increments on every captured frame,
+   *  never resets, immune to replaySnapshots.shift() */
+  replayFrameSeq = 0;
   /** epoch ms when this room became empty of human players */
   emptySince: number | null;
   /**
@@ -114,7 +135,32 @@ export default class GameState implements Subject {
     // any reference shared with the live objects would leak the FINAL board
     // into every earlier frame.
     this.replaySnapshots.push(JSON.parse(serialized));
+    this.replayFrameSeq += 1;
+    // Stamp chat messages that arrived since the previous frame with the
+    // absolute number of THIS frame, so the replay can interleave them in
+    // the right spot. Unstamped (frame = -1) = sent before the first frame
+    // (lobby phase) — they belong before everything.
+    const frameNo = this.replayFrameSeq;
+    this.chatLog.forEach((m) => {
+      if (m.frame === -1) {
+        // eslint-disable-next-line no-param-reassign -- stamping the archive entry
+        m.frame = frameNo;
+      }
+    });
     return true;
+  }
+
+  /** Archive a chat message for the replay. frame stays -1 until the next
+   *  captured frame stamps it — messages sent between frames (or during the
+   *  lobby, before any frame exists) still land in order. */
+  pushChatLog(entry: {
+    playerId: string;
+    username: string;
+    text: string;
+    role: number;
+    ts: number;
+  }): void {
+    this.chatLog.push({ ...entry, frame: -1 });
   }
 
   clone(): GameState {
@@ -127,6 +173,7 @@ export default class GameState implements Subject {
     gs.board = this.board?.clone();
     gs.completeCitySize = this.completeCitySize;
     gs.actionTimeoutSeconds = this.actionTimeoutSeconds;
+    gs.allowSpectators = this.allowSpectators;
     gs.turnDeadlineAt = this.turnDeadlineAt;
     gs.observers = [];
     gs.cityCompletedThisMatch = this.cityCompletedThisMatch;
@@ -141,6 +188,8 @@ export default class GameState implements Subject {
     gs.lobbyPlayerOrder = [...this.lobbyPlayerOrder];
     gs.lobbySeats = [...this.lobbySeats];
     gs.actionFeed = [...this.actionFeed.map((a) => ({ ...a }))];
+    gs.chatLog = this.chatLog.map((m) => ({ ...m }));
+    gs.replayFrameSeq = this.replayFrameSeq;
     gs.emptySince = this.emptySince;
     gs.replaySnapshots = this.replaySnapshots.map((s) => JSON.parse(JSON.stringify(s)));
     gs.fastMode = this.fastMode;
@@ -160,6 +209,7 @@ export default class GameState implements Subject {
     this.board = undefined;
     this.completeCitySize = completeCitySize;
     this.actionTimeoutSeconds = 120;
+    this.allowSpectators = true;
     this.turnDeadlineAt = null;
     this.observers = [];
     this.cityCompletedThisMatch = false;
@@ -174,6 +224,8 @@ export default class GameState implements Subject {
     this.lobbyPlayerOrder = [];
     this.lobbySeats = new Array(MAX_LOBBY_SEATS).fill(null);
     this.actionFeed = [];
+    this.chatLog = [];
+    this.replayFrameSeq = 0;
     this.emptySince = null;
     this.replaySnapshots = [];
     this.fastMode = options?.fastMode ?? false;
@@ -446,6 +498,7 @@ export default class GameState implements Subject {
       settings: {
         completeCitySize: this.completeCitySize,
         actionTimeoutSeconds: this.actionTimeoutSeconds,
+        allowSpectators: this.allowSpectators,
       },
       turnDeadlineAt: this.turnDeadlineAt,
       teamScores: this.teamScores,
@@ -499,6 +552,7 @@ export default class GameState implements Subject {
       settings: {
         completeCitySize: this.completeCitySize,
         actionTimeoutSeconds: this.actionTimeoutSeconds,
+        allowSpectators: this.allowSpectators,
       },
       turnDeadlineAt: this.turnDeadlineAt,
       teamScores: this.teamScores,
@@ -587,6 +641,7 @@ export default class GameState implements Subject {
     const pickOrder = [...stablePlayers.slice(rotation), ...stablePlayers.slice(0, rotation)];
 
     this.actionTimeoutSeconds = gameSetupData.actionTimeoutSeconds ?? 120;
+    this.allowSpectators = gameSetupData.allowSpectators ?? true;
     this.turnDeadlineAt = null;
     this.cityCompletedThisMatch = false;
     this.cityCompletedThisTurnPhase = false;

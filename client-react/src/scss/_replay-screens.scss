@@ -99,13 +99,13 @@
     display: grid;
     grid-template-columns: 1.4fr 0.7fr 0.9fr 3fr 0.7fr;
     gap: 0.5rem;
-    padding: 0.65rem 1rem;
+    padding: 0.7rem 1rem;
     background: rgba(13, 11, 8, 0.55);
     border-bottom: 1px solid rgba(212, 175, 55, 0.3);
 
     span {
       font-family: var(--font-display);
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--gold);
@@ -119,13 +119,13 @@
     gap: 0.5rem;
     align-items: center;
     width: 100%;
-    padding: 0.6rem 1rem;
+    padding: 0.75rem 1rem;
     border: none;
     border-bottom: 1px solid rgba(212, 175, 55, 0.12);
     background: transparent;
     color: var(--parchment);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 1rem;
     text-align: left;
     cursor: pointer;
     transition: background 0.15s ease;
@@ -135,37 +135,49 @@
   }
 
   &__cell--time {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     color: var(--text-muted);
   }
 
   &__score {
     display: inline-flex;
     align-items: baseline;
-    gap: 0.3rem;
+    gap: 0.35rem;
     font-weight: 700;
+    font-size: 1.15rem;
     white-space: nowrap;
 
     &--na { color: var(--text-muted); font-weight: 400; }
   }
 
   // in-game team colours: A blue glow / B red glow
-  &__score-a { color: #7ec8ff; }
-  &__score-b { color: #ff8a8a; }
-  &__score-vs { color: var(--text-muted); font-size: 0.75rem; }
+  &__score-a { color: #7ec8ff; text-shadow: 0 0 8px rgba(126, 200, 255, 0.4); }
+  &__score-b { color: #ff8a8a; text-shadow: 0 0 8px rgba(255, 138, 138, 0.35); }
+  &__score-vs { color: var(--text-muted); font-size: 0.85rem; }
 
   &__players {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.35rem 0.9rem;
     min-width: 0;
+  }
+
+  // one team group: member pills only — colour already encodes the team
+  // (A blue / B red, matching the score and the in-game board), so no
+  // "A队/B队" text chips; the wider gap between groups keeps the two
+  // teams readable at a glance
+  &__team {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   &__player {
     display: inline-block;
-    font-size: 0.78rem;
-    padding: 0.12rem 0.5rem;
+    font-size: 0.92rem;
+    padding: 0.16rem 0.62rem;
     border-radius: 999px;
     border: 1px solid;
     white-space: nowrap;
@@ -182,6 +194,25 @@
       background: rgba(255, 138, 138, 0.07);
     }
 
+    // winning team's pills carry the win signal: brighter border + soft
+    // glow + bold name (replaces the old "A队胜" result text — the score
+    // column right beside it already tells the story)
+    &--won {
+      font-weight: 700;
+
+      &.replay-table__player--a {
+        border-color: rgba(126, 200, 255, 0.85);
+        box-shadow: 0 0 10px rgba(126, 200, 255, 0.35);
+        color: #cfe9ff;
+      }
+
+      &.replay-table__player--b {
+        border-color: rgba(255, 138, 138, 0.85);
+        box-shadow: 0 0 10px rgba(255, 138, 138, 0.35);
+        color: #ffd3d3;
+      }
+    }
+
     // AI seat — dashed outline marks it as automated at a glance
     &--ai {
       border-style: dashed;
@@ -189,17 +220,9 @@
     }
   }
 
-  &__result {
-    font-family: var(--font-readable);
-    font-size: 0.72rem;
-    color: var(--gold);
-    margin-left: 0.35rem;
-    white-space: nowrap;
-  }
-
   &__btn {
     font-family: var(--font-display);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--gold);

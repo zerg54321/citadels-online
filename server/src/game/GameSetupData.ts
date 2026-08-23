@@ -8,15 +8,18 @@ export default class GameSetupData {
   players: PlayerId[];
   completeCitySize: number;
   actionTimeoutSeconds: number;
+  allowSpectators: boolean;
 
   constructor(
     players: PlayerId[],
     completeCitySize: number,
     actionTimeoutSeconds: number = DEFAULT_TIMEOUT,
+    allowSpectators: boolean = true,
   ) {
     this.players = players;
     this.completeCitySize = completeCitySize;
     this.actionTimeoutSeconds = GameSetupData.clampTimeout(actionTimeoutSeconds);
+    this.allowSpectators = allowSpectators;
   }
 
   static clampTimeout(sec: number | undefined): number {
@@ -26,6 +29,11 @@ export default class GameSetupData {
   }
 
   static fromJSON(obj: SerializedGameSetupData) {
-    return new this(obj.players, obj.completeCitySize, obj.actionTimeoutSeconds);
+    return new this(
+      obj.players,
+      obj.completeCitySize,
+      obj.actionTimeoutSeconds,
+      obj.allowSpectators ?? true,
+    );
   }
 }

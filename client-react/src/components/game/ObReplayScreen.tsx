@@ -1,10 +1,11 @@
 import {
-  useCallback, useEffect, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GameProgress, ClientGameState } from 'citadels-common';
 import adminApi from '@/api/admin';
+import type { ReplayChatEntry } from '@/api/matches';
 import { cn } from '@/utils/cn';
 import GodViewBoard, { ObTopBar } from './GodViewBoard';
 
@@ -62,6 +63,8 @@ export default function ObReplayScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [speed, setSpeed] = useState(1000);
+  const [chatLog, setChatLog] = useState<ReplayChatEntry[]>([]);
+  const [frameOffset, setFrameOffset] = useState(0);
 
   const framesRef = useRef<ClientGameState[]>([]);
   const idxRef = useRef(0);
@@ -106,6 +109,8 @@ export default function ObReplayScreen() {
         });
         framesRef.current = all;
         setFrames(all);
+        setChatLog(first.chatLog || []);
+        setFrameOffset(typeof first.frameOffset === 'number' ? first.frameOffset : 0);
         idxRef.current = 0;
         setIdx(0);
         setPlaying(false);
@@ -142,6 +147,12 @@ export default function ObReplayScreen() {
   }, [playing, speed]);
 
   const gs = frames[idx];
+  // chat messages that have arrived by the current frame (absolute frame
+  // numbers; local index = idx + frameOffset; -1 = pre-first-frame lobby chat)
+  const visibleChat = useMemo(() => {
+    const currentAbs = idx + frameOffset;
+    return chatLog.filter((m) => m.frame === -1 || m.frame <= currentAbs);
+  }, [chatLog, idx, frameOffset]);
   const hasPrev = idx > 0;
   const hasNext = idx < frames.length - 1;
   const phaseName = !gs ? '' : gs.progress === GameProgress.FINISHED
@@ -184,7 +195,7 @@ export default function ObReplayScreen() {
         backLabel={t('ui.admin.back')}
       />
 
-      <GodViewBoard gs={gs} />
+      <GodViewBoard gs={gs} chat={visibleChat} />
 
       <div className="ob-player">
         <button type="button" className="ob-player__btn" title={t('ui.replay.prev_round')} disabled={!hasPrev} onClick={() => goto(findPrevRound(frames, idx))}>⏮</button>

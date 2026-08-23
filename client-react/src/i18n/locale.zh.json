@@ -79,7 +79,17 @@
             "phase_in_game": "对局中",
             "phase_finished": "已结束",
             "join": "加入",
-            "spectate": "观战"
+            "spectate": "观战",
+            "spectate_off": "观战已关闭"
+        },
+        "online": {
+            "title": "在线",
+            "more": "还有 {n} 人",
+            "collapse": "收起",
+            "status_idle": "空闲",
+            "status_lobby": "房间大厅",
+            "status_playing": "对局中",
+            "status_spectating": "观战中"
         },
         "room": {
             "username": "用户名",
@@ -126,6 +136,9 @@
                 "card_title": "对局设置",
                 "complete_city_size": "建成城市所需城区数量",
                 "action_timeout": "回合限时",
+                "allow_spectators": "允许观战",
+                "spectators_on": "允许",
+                "spectators_off": "关闭",
                 "action_timeout_hint": "超时后强制托管，由系统代打。默认 120 秒。",
                 "ai_practice_hint": "含 AI 的 6 人局为 3v3 练习（不进竞技排名）。",
                 "game_mode": "模式",

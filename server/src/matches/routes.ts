@@ -83,7 +83,15 @@ export default function createMatchesRouter(): Router {
         res.status(status).json({ status: 'error', message });
         return;
       }
-      res.json({ status: 'ok', frames: result.frames, total: result.total });
+      // frameOffset = absolute number of frames[0]; chat entries carry
+      // absolute frame numbers — client maps them to local indices via it
+      res.json({
+        status: 'ok',
+        frames: result.frames,
+        total: result.total,
+        chatLog: result.chatLog,
+        frameOffset: result.frameOffset,
+      });
     } catch (err) {
       console.error('[matches] public replay failed', err);
       res.status(500).json({ status: 'error', message: 'failed to load replay' });

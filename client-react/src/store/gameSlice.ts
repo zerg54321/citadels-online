@@ -44,7 +44,7 @@ export interface GameSlice {
   setPlayerOnline: (online: boolean, playerId?: PlayerId) => void;
   prepareGameSetupConfirmation: (cfg: { completeCitySize?: number; actionTimeoutSeconds?: number }) => void;
   setGameSetupData: (data: Partial<GameSetupData>) => void;
-  updateGameSetup: (setupData: { actionTimeoutSeconds?: number }) => Promise<void>;
+  updateGameSetup: (setupData: { actionTimeoutSeconds?: number; allowSpectators?: boolean }) => Promise<void>;
   setSelectedCards: (cards: DistrictId[]) => void;
   setSeenCharacterIds: (updater: number[] | ((prev: number[]) => number[])) => void;
   resetSeenCharacterIds: () => void;

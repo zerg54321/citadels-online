@@ -6,7 +6,7 @@ import { initSocket } from './socket/server';
 import { createAuthRouter } from './auth/routes';
 import { createAvatarRouter } from './auth/avatarRoutes';
 import { createStatsRouter } from './stats/routes';
-import { createRoomsRouter } from './rooms/routes';
+import createRoomsRouter from './rooms/routes';
 import createMatchesRouter from './matches/routes';
 import { createAdminRouter } from './admin/routes';
 import { dbPath } from './db/database';
@@ -62,9 +62,9 @@ const io = new Server(http, {
     // localhost default for IP-only HTTP deploys.
     origin: process.env.NODE_ENV === 'production'
       ? (process.env.CORS_ORIGIN || 'http://localhost:8081')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
       : ['http://localhost:3010', 'http://127.0.0.1:3010'],
     credentials: true,
   },

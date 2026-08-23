@@ -23,6 +23,8 @@ export type RoomListItem = {
   players: { username: string; online: boolean }[];
   canJoinAsPlayer: boolean;
   canSpectate: boolean;
+  /** room setting: false → the spectate button is hidden/disabled */
+  allowSpectators: boolean;
   completeCitySize: number;
 };
 
@@ -70,7 +72,8 @@ export default class Room implements Observer {
         online: p.online,
       })),
       canJoinAsPlayer: inLobby && seated.length < 6,
-      canSpectate: inLobby || inGame,
+      canSpectate: (inLobby || inGame) && this.gameState.allowSpectators,
+      allowSpectators: this.gameState.allowSpectators,
       completeCitySize: this.gameState.completeCitySize,
     };
   }

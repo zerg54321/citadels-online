@@ -1,4 +1,5 @@
 import type { Avatar } from 'citadels-common';
+import type { ReplayChatEntry } from './matches';
 
 export type AdminUser = {
   id: string;
@@ -115,7 +116,10 @@ export default {
     return adminRequest<{ status: string; match: AdminMatch }>(`/api/admin/matches/${id}`, token);
   },
   replay(token: string, id: string, limit = 200, offset = 0) {
-    return adminRequest<{ status: string; frames: unknown[]; total: number }>(
+    return adminRequest<{
+      status: string; frames: unknown[]; total: number;
+      chatLog: ReplayChatEntry[]; frameOffset: number;
+    }>(
       `/api/admin/matches/${id}/replay?limit=${limit}&offset=${offset}`,
       token,
     );

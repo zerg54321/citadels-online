@@ -6,7 +6,10 @@ import {
   TeamId,
 } from 'citadels-common';
 import db from './database';
-import { saveReplayFile, loadReplayFile, deleteReplayFile } from './replayFiles';
+import {
+  saveReplayFile, loadReplayFile, deleteReplayFile,
+  type ReplayChatEntry, type ReplayFileData,
+} from './replayFiles';
 import GameState from '../game/GameState';
 import { nowIso } from '../utils/dateUtils';
 
@@ -134,8 +137,10 @@ export function saveFinishedMatch(roomId: string, gameState: GameState): string 
   // Replay frames go to a standalone file (decoupled from the user DB).
   // Written AFTER the row commits so a metadata row never points at a
   // half-written file; a write failure just means "no replay for this
-  // match", not a broken match record.
-  saveReplayFile(matchId, gameState.replaySnapshots);
+  // match", not a broken match record. startFrame = absolute number of the
+  // first frame (replaySnapshots may have dropped older ones).
+  const startFrame = Math.max(0, gameState.replayFrameSeq - gameState.replaySnapshots.length);
+  saveReplayFile(matchId, gameState.replaySnapshots, gameState.chatLog, startFrame);
   return matchId;
 }
 
@@ -363,10 +368,11 @@ export function adminGetMatch(id: string): AdminMatchItem | undefined {
 // Delete a match and its players in one transaction. Relies on the
 // match_players ON DELETE CASCADE FK, but we wrap explicitly so a partial
 // failure leaves nothing dangling. Also removes the standalone replay file.
-/** Load a match's replay frames from the standalone replay file. Falls back
+/** Load a match's replay data from the standalone replay file. Falls back
  * to the legacy in-DB replay_json column for matches saved before the
- * file-based split (returns undefined when neither exists). */
-function loadMatchReplay(id: string): unknown[] | undefined {
+ * file-based split (returns undefined when neither exists). Legacy payloads
+ * carry no chat and start at frame 0. */
+function loadMatchReplay(id: string): ReplayFileData | undefined {
   const fromFile = loadReplayFile(id);
   if (fromFile !== undefined) return fromFile;
   const row = db.prepare('SELECT replay_json FROM matches WHERE id = ?').get(id) as
@@ -374,7 +380,8 @@ function loadMatchReplay(id: string): unknown[] | undefined {
   if (!row || !row.replay_json) return undefined;
   try {
     const parsed = JSON.parse(row.replay_json);
-    return Array.isArray(parsed) ? parsed : undefined;
+    if (!Array.isArray(parsed)) return undefined;
+    return { frames: parsed, startFrame: 0, chatLog: [] };
   } catch {
     return undefined;
   }
@@ -382,19 +389,28 @@ function loadMatchReplay(id: string): unknown[] | undefined {
 
 /** Return a page of the stored god-view replay frames for a match (array of
  *  ClientGameState-shaped, fully-revealed snapshots), plus the total frame
- *  count. Returns undefined if the match doesn't exist / has no replay saved.
+ *  count, the chat archive and the absolute number of the page's first
+ *  frame (the client maps chat.frame → local index via it). Returns
+ *  undefined if the match doesn't exist / has no replay saved.
  *  Frames are served in pages so a large match isn't returned in one response. */
 export function adminGetMatchReplay(
   id: string,
   limit: number,
   offset: number,
-): { frames: unknown[]; total: number } | undefined {
+): {
+    frames: unknown[];
+    total: number;
+    chatLog: ReplayChatEntry[];
+    frameOffset: number;
+  } | undefined {
   const all = loadMatchReplay(id);
   if (all === undefined) return undefined;
-  const total = all.length;
+  const total = all.frames.length;
   const start = Math.max(0, offset);
-  const frames = all.slice(start, start + Math.max(1, limit));
-  return { frames, total };
+  const frames = all.frames.slice(start, start + Math.max(1, limit));
+  return {
+    frames, total, chatLog: all.chatLog, frameOffset: all.startFrame + start,
+  };
 }
 
 export function adminDeleteMatch(id: string): boolean {
@@ -514,13 +530,22 @@ export function countPublicMatches(includeAi: boolean): number {
  * Returns:
  *   - { ok: false, reason: 'not_found' } — unknown match / no replay saved
  *   - { ok: false, reason: 'forbidden' } — private and caller not a participant
- *   - { ok: true, frames, total } — authorized */
+ *   - { ok: true, frames, total, chatLog, frameOffset } — authorized */
 export function getPublicMatchReplay(
   id: string,
   userId: string | null,
   limit: number,
   offset: number,
-): { ok: true; frames: unknown[]; total: number } | { ok: false; reason: 'not_found' | 'forbidden' } {
+): {
+    ok: true;
+    frames: unknown[];
+    total: number;
+    chatLog: ReplayChatEntry[];
+    frameOffset: number;
+  } | {
+    ok: false;
+    reason: 'not_found' | 'forbidden';
+  } {
   const row = db.prepare('SELECT is_public FROM matches WHERE id = ?').get(id) as
     ({ is_public: number } | undefined);
   if (!row) return { ok: false, reason: 'not_found' };
@@ -535,8 +560,10 @@ export function getPublicMatchReplay(
 
   const all = loadMatchReplay(id);
   if (all === undefined) return { ok: false, reason: 'not_found' };
-  const total = all.length;
+  const total = all.frames.length;
   const start = Math.max(0, offset);
-  const frames = all.slice(start, start + Math.max(1, limit));
-  return { ok: true, frames, total };
+  const frames = all.frames.slice(start, start + Math.max(1, limit));
+  return {
+    ok: true, frames, total, chatLog: all.chatLog, frameOffset: all.startFrame + start,
+  };
 }

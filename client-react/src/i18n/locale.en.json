@@ -79,7 +79,17 @@
             "phase_in_game": "In game",
             "phase_finished": "Finished",
             "join": "Join",
-            "spectate": "Spectate"
+            "spectate": "Spectate",
+            "spectate_off": "Spectating off"
+        },
+        "online": {
+            "title": "Online",
+            "more": "{n} more",
+            "collapse": "Show less",
+            "status_idle": "Idle",
+            "status_lobby": "In a lobby",
+            "status_playing": "Playing",
+            "status_spectating": "Spectating"
         },
         "room": {
             "username": "Username",
@@ -126,6 +136,9 @@
                 "card_title": "Game Setup",
                 "complete_city_size": "Number of districts to complete city",
                 "action_timeout": "Turn Time Limit",
+                "allow_spectators": "Allow Spectators",
+                "spectators_on": "On",
+                "spectators_off": "Off",
                 "action_timeout_hint": "On timeout, force autoplay. Default 120s.",
                 "ai_practice_hint": "6p with AI is 3v3 practice (unranked).",
                 "game_mode": "Mode",

@@ -14,7 +14,7 @@ import {
 import { cn } from '@/utils/cn';
 import { useAppStore } from '@/store';
 import { avatarUrl } from '@/utils/avatarUrl';
-import matchesApi from '@/api/matches';
+import matchesApi, { type ReplayChatEntry } from '@/api/matches';
 import Emoji from '@/components/common/Emoji';
 import SeatPanel from './game/elements/SeatPanel';
 import PlayerHand from './game/elements/PlayerHand';
@@ -80,6 +80,8 @@ export default function PlayerReplayScreen() {
   const { matchId } = useParams<{ matchId: string }>();
 
   const [frames, setFrames] = useState<ClientGameState[]>([]);
+  const [chatLog, setChatLog] = useState<ReplayChatEntry[]>([]);
+  const [frameOffset, setFrameOffset] = useState(0);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -123,6 +125,10 @@ export default function PlayerReplayScreen() {
         });
         framesRef.current = all;
         setFrames(all);
+        // chat archive + absolute frame of the first frame (chat.frame is
+        // absolute; local index = chat.frame - frameOffset)
+        setChatLog(first.chatLog || []);
+        setFrameOffset(typeof first.frameOffset === 'number' ? first.frameOffset : 0);
         idxRef.current = 0;
         setIdx(0);
         setPlaying(false);
@@ -165,6 +171,15 @@ export default function PlayerReplayScreen() {
     () => (godFrame && seatId ? derivePlayerView(godFrame, seatId) : undefined),
     [godFrame, seatId],
   );
+
+  // Chat messages that have "arrived" by the current frame. chat.frame is an
+  // ABSOLUTE number; the local index of the current frame is idx + frameOffset
+  // (frameOffset = absolute number of frames[0]). Messages stamped -1 (sent
+  // before the first frame, e.g. lobby chatter) always show.
+  const visibleChat = useMemo(() => {
+    const currentAbs = idx + frameOffset;
+    return chatLog.filter((m) => m.frame === -1 || m.frame <= currentAbs);
+  }, [chatLog, idx, frameOffset]);
 
   // inject derived view into the store for the shared game components;
   // restore the previous value on unmount (usually undefined — replays and
@@ -264,7 +279,7 @@ export default function PlayerReplayScreen() {
         </div>
       </ObTopBar>
 
-      <ReplayBoard derived={derived} />
+      <ReplayBoard derived={derived} chat={visibleChat} />
 
       <div className="ob-player">
         <button type="button" className="ob-player__btn" title={t('ui.replay.prev_round')} disabled={!hasPrev} onClick={() => goto(findPrevRound(frames, idx))}>⏮</button>
@@ -314,7 +329,7 @@ export default function PlayerReplayScreen() {
 // seats around, own panel at bottom) with every interaction stripped: no
 // move buttons, no countdown, no endgame modal. Interaction components read
 // the injected store state (player meta, current actor) via their own hooks.
-function ReplayBoard({ derived }: { derived: ClientGameState }) {
+function ReplayBoard({ derived, chat }: { derived: ClientGameState; chat: ReplayChatEntry[] }) {
   const { t } = useTranslation();
   const { self } = derived;
   // replay board is always a player view (god view is admin-only)
@@ -475,7 +490,7 @@ function ReplayBoard({ derived }: { derived: ClientGameState }) {
       </div>
 
       <div className="replay-layout__log">
-        <ObLog feed={derived.actionFeed || []} chat={[]} />
+        <ObLog feed={derived.actionFeed || []} chat={chat} />
       </div>
     </div>
   );

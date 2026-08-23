@@ -285,6 +285,64 @@
   &__readonly-value {
     color: var(--gold-bright);
   }
+
+  // 允许观战开关（房主可切换）
+  &__switch {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.5rem;
+    background: rgba(13, 11, 8, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    cursor: pointer;
+    font-family: var(--font-readable);
+    transition: border-color 0.18s ease, background 0.18s ease;
+
+    &:hover {
+      border-color: rgba(212, 175, 55, 0.5);
+    }
+  }
+  &__switch-track {
+    width: 2.2rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: rgba(154, 145, 125, 0.35);
+    border: 1px solid rgba(154, 145, 125, 0.4);
+    position: relative;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  &__switch-thumb {
+    position: absolute;
+    top: 50%;
+    left: 0.12rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    background: #d8cfb8;
+    transform: translateY(-50%);
+    transition: left 0.18s ease, background 0.18s ease;
+  }
+  &__switch-text {
+    font-size: 0.85rem;
+    color: var(--parchment);
+  }
+  &__switch.is-on {
+    border-color: rgba(212, 175, 55, 0.55);
+    background: rgba(212, 175, 55, 0.1);
+    .lobby-settings__switch-track {
+      background: rgba(212, 175, 55, 0.55);
+      border-color: rgba(212, 175, 55, 0.7);
+    }
+    .lobby-settings__switch-thumb {
+      left: calc(100% - 0.12rem - 0.85rem);
+      background: #fff3d6;
+    }
+    .lobby-settings__switch-text {
+      color: var(--gold-bright);
+    }
+  }
 }
 
 // 深色主题 form-control（设置卡内）

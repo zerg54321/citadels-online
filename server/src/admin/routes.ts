@@ -243,6 +243,8 @@ export function createAdminRouter(): Router {
 
   // Full god-view replay frames for a match (all hands + roles revealed).
   // Paginated so a large match is not returned as one giant response.
+  // chatLog entries carry absolute frame numbers; frameOffset is the
+  // absolute number of the page's first frame (client maps chat → index).
   router.get('/matches/:id/replay', requireAdmin, (req: Request, res: Response) => {
     const limit = clampLimit(req.query.limit, 200, 2000);
     const offset = clampOffset(req.query.offset);
@@ -251,7 +253,13 @@ export function createAdminRouter(): Router {
       res.status(404).json({ status: 'error', message: 'replay not found' });
       return;
     }
-    res.json({ status: 'ok', frames: result.frames, total: result.total });
+    res.json({
+      status: 'ok',
+      frames: result.frames,
+      total: result.total,
+      chatLog: result.chatLog,
+      frameOffset: result.frameOffset,
+    });
   });
 
   router.delete('/matches/:id', requireAdmin, async (req: Request, res: Response) => {

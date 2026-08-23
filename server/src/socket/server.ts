@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Server } from 'socket.io';
 import Debug from 'debug';
 import {
@@ -14,7 +15,9 @@ import { authenticateToken } from '../auth/jwt';
 import { disposeTurnTimer, getTurnTimer } from '../gameManager/TurnTimer';
 import { validateMove } from '../game/moveValidator';
 import { adminEnabled, adminToken } from '../admin/config';
-import crypto from 'crypto';
+import {
+  trackRoomJoin, trackRoomLeave, trackSocketConnect, trackSocketDisconnect,
+} from './onlineUsers';
 
 const debug = Debug('citadels-server');
 
@@ -95,10 +98,12 @@ export function initSocket(io: Server) {
   io.on('connection', (socket: ExtendedSocket) => {
     debug(`user '${socket.id}' connected`);
     attachAuth(socket);
+    trackSocketConnect(socket);
 
     socket.on('disconnect', () => {
       try {
         debug(`user '${socket.id}' disconnected`);
+        trackSocketDisconnect(socket);
 
         if (socket.roomId && socket.playerId) {
           const { roomId } = socket;
@@ -170,6 +175,7 @@ export function initSocket(io: Server) {
         socket.leave(room.roomId);
         socket.roomId = undefined;
         socket.playerId = undefined;
+        trackRoomLeave(socket);
       } catch (err) {
         console.error('[leave room] handler failed', err);
         callback({ status: 'error', message: 'internal server error' });
@@ -307,6 +313,14 @@ export function initSocket(io: Server) {
             return;
           }
 
+          // spectator gate: the room setting blocks REGULAR spectator joins;
+          // admin OB sockets bypass (isAdmin set at auth time). Reconnects
+          // never reach here — they resolved to `player` above.
+          if ((spectator || !roomOpen) && !socket.isAdmin && !room.gameState.allowSpectators) {
+            cb({ status: 'error', message: 'spectators are not allowed in this room' });
+            return;
+          }
+
           if (spectator || !roomOpen) {
             if (!socket.userId) {
               // anonymous spectator: temporary player id for state view only
@@ -373,6 +387,7 @@ export function initSocket(io: Server) {
         socket.roomId = roomId;
         socket.join(roomId);
         socket.to(roomId).emit('joined room', socket.playerId);
+        trackRoomJoin(socket, roomId, player.role === PlayerRole.SPECTATOR);
 
         room.update();
 
@@ -507,7 +522,7 @@ export function initSocket(io: Server) {
       }
     });
 
-    socket.on('set game setup', (setupData: { actionTimeoutSeconds?: number }, callback) => {
+    socket.on('set game setup', (setupData: { actionTimeoutSeconds?: number; allowSpectators?: boolean }, callback) => {
       try {
         const room = gameStore.findRoom(socket.roomId);
         if (!room) {
@@ -531,6 +546,10 @@ export function initSocket(io: Server) {
           room.gameState.actionTimeoutSeconds = GameSetupData.clampTimeout(
             setupData.actionTimeoutSeconds,
           );
+        }
+        // boolean tri-state: only flip when explicitly provided
+        if (typeof setupData?.allowSpectators === 'boolean') {
+          room.gameState.allowSpectators = setupData.allowSpectators;
         }
         room.update();
         callback({ status: 'ok' });
@@ -678,6 +697,9 @@ export function initSocket(io: Server) {
           role: player.role,
           ts: Date.now(),
         };
+        // Archive for the replay file (players AND spectator chat — replay
+        // viewers get to read what the OB crowd was saying after the fact).
+        room.gameState.pushChatLog(payload);
         if (player.role === PlayerRole.SPECTATOR) {
           // Spectator chat: only visible to other spectators (OB mode).
           // Iterate room sockets and emit only to those whose role is

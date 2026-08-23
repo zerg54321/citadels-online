@@ -227,6 +227,8 @@ export type ClientGameState = {
     completeCitySize: number
     /** action time limit in seconds (P4) */
     actionTimeoutSeconds: number
+    /** may regular spectators join? (admin OB bypasses) */
+    allowSpectators?: boolean
   }
   /** epoch ms when current actor's turn expires; null if none */
   turnDeadlineAt?: number | null
@@ -260,6 +262,9 @@ export type GameSetupData = {
   completeCitySize: number
   /** action time limit seconds; default 120; clamp 10–180 (10 for tests) */
   actionTimeoutSeconds?: number
+  /** allow spectators to join this room; default true. Admin OB always
+   *  bypasses — the setting only gates regular spectator joins. */
+  allowSpectators?: boolean
 };
 
 export enum MoveType {

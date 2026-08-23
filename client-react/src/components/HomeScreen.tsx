@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { GameMode } from 'citadels-common';
 import { useAppStore } from '@/store';
-import roomsApi, { type RoomListItem } from '@/api/rooms';
+import roomsApi, { type OnlineUserItem, type RoomListItem } from '@/api/rooms';
+import OnlinePlayers from '@/components/common/OnlinePlayers';
 import ParticleField from '@/components/common/ParticleField';
 import imgAssassin from '@/assets/characters/assassin.webp';
 import imgThief from '@/assets/characters/thief.webp';
@@ -37,17 +38,18 @@ const FACT_KEYS = [
   { icon: '⚔️', title: 'ui.homepage.facts_team_t', desc: 'ui.homepage.facts_team_d' },
 ] as const;
 
-
 export default function HomeScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isLoggedIn = Boolean(useAppStore((s) => s.authToken && s.authUser));
+  const authUser = useAppStore((s) => s.authUser);
   const createRoom = useAppStore((s) => s.createRoom);
   const setConnected = useAppStore((s) => s.setConnected);
 
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [createError, setCreateError] = useState('');
   const [rooms, setRooms] = useState<RoomListItem[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUserItem[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [roomsError, setRoomsError] = useState('');
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -56,7 +58,10 @@ export default function HomeScreen() {
     setRoomsLoading(true);
     setRoomsError('');
     try {
-      setRooms(await roomsApi.list());
+      // One poll feeds both the room list and the online-player capsules.
+      const { rooms: list, online } = await roomsApi.listWithOnline();
+      setRooms(list);
+      setOnlineUsers(online);
       // Reuse the rooms poll as a liveness probe for the header status pill:
       // a successful /api/rooms round-trip means the game server is up and
       // reachable (Caddy alone returning a static SPA would not expose this
@@ -174,8 +179,10 @@ export default function HomeScreen() {
         </div>
       </section>
 
-      {/* ── Right: glass panel — live rooms + gameplay highlights ─────── */}
+      {/* ── Right: glass panel — online players + live rooms + highlights ── */}
       <aside className="home-panel">
+        <OnlinePlayers users={onlineUsers} selfUserId={authUser?.id} />
+
         <section className="home-rooms">
           <div className="home-rooms__bar">
             <div className="home-rooms__bar-left">
@@ -258,7 +265,12 @@ export default function HomeScreen() {
                           {t('ui.rooms.spectate')}
                         </button>
                       )}
-                      {!room.canJoinAsPlayer && !room.canSpectate && (
+                      {!room.canJoinAsPlayer && !room.canSpectate && room.phase === 'in_game' && (
+                        <span className="home-rooms__closed text-muted-gold small">
+                          {t('ui.rooms.spectate_off')}
+                        </span>
+                      )}
+                      {!room.canJoinAsPlayer && !room.canSpectate && room.phase !== 'in_game' && (
                         <span className="home-rooms__closed text-muted-gold small">—</span>
                       )}
                     </div>

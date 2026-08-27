@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   /** ICP 备案号，配置于本地 .env.local（已 gitignore）。空值时不渲染 Footer。 */
   readonly VITE_ICP_BEIAN?: string;
+  /** 公安备案号（冀公网安备…号），配置于本地 .env.local（已 gitignore）。空值时不渲染。 */
+  readonly VITE_GONGAN_BEIAN?: string;
 }
 
 interface ImportMeta {

@@ -130,25 +130,37 @@ export default function App() {
     </header>
   );
 
-  // ICP 备案号 — read from the local-only env var VITE_ICP_BEIAN (set in
-  // client-react/.env.local, which is gitignored so the number never leaks
-  // into a public repo). Renders the MIIT-required footer link when present.
-  // Placed INSIDE the scrollable body so it only shows at the very bottom of
-  // the page (after scrolling) instead of being pinned to the viewport — the
-  // MIIT filing requirement is that it sits at the page footer, not that it
-  // is always on-screen.
+  // ICP 备案号 + 公安备案号 — read from the local-only env vars VITE_ICP_BEIAN /
+  // VITE_GONGAN_BEIAN (set in client-react/.env.local, which is gitignored so
+  // the numbers never leak into a public repo). Renders the MIIT + 公安 required
+  // footer links when present. Only shown on the homepage ('/') inside the
+  // scrollable body so it sits at the very bottom of the page (per filing rules
+  // it belongs at the page footer, not pinned to the viewport). Other pages
+  // (admin/stats/cards/房间等) keep the footer hidden.
   const icpBeian = import.meta.env.VITE_ICP_BEIAN as string | undefined;
-  // ICP 备案号只显示在主页，其余页面（admin/stats/cards/房间等）不显示。
-  const footer = (icpBeian && location.pathname === '/') ? (
+  const gonganBeian = import.meta.env.VITE_GONGAN_BEIAN as string | undefined;
+  const footer = ((icpBeian || gonganBeian) && location.pathname === '/') ? (
     <footer className="app-footer">
-      <a
-        href="https://beian.miit.gov.cn/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="app-footer__link"
-      >
-        {icpBeian}
-      </a>
+      {icpBeian && (
+        <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="app-footer__link"
+        >
+          {icpBeian}
+        </a>
+      )}
+      {gonganBeian && (
+        <a
+          href="https://www.beian.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="app-footer__link app-footer__link--gongan"
+        >
+          {gonganBeian}
+        </a>
+      )}
     </footer>
   ) : null;
 

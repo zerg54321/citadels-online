@@ -483,9 +483,9 @@ html[lang="en"] .header--game {
   z-index: 1;
 }
 
-// ICP filing footer — required by MIIT on Chinese-hosted sites. Rendered
-// only when VITE_ICP_BEIAN is set (gitignored .env.local), linking to the
-// official filing lookup site.
+// Filing footer — required by MIIT (ICP) and 公安 (police) on Chinese-hosted
+// sites. Rendered only when VITE_ICP_BEIAN / VITE_GONGAN_BEIAN are set
+// (gitignored .env.local), linking to the official filing lookup sites.
 .app-footer {
   flex: 0 0 auto;
   padding: 0.5rem 1rem;
@@ -498,6 +498,10 @@ html[lang="en"] .header--game {
     color: var(--text-muted);
     text-decoration: none;
     transition: color 0.15s ease;
+
+    & + & {
+      margin-left: 1rem;
+    }
 
     &:hover {
       color: var(--gold);

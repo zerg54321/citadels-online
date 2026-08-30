@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(useAppStore((s) => s.authToken && s.authUser));
   const authUser = useAppStore((s) => s.authUser);
+  const authToken = useAppStore((s) => s.authToken);
   const createRoom = useAppStore((s) => s.createRoom);
   const setConnected = useAppStore((s) => s.setConnected);
 
@@ -59,7 +60,10 @@ export default function HomeScreen() {
     setRoomsError('');
     try {
       // One poll feeds both the room list and the online-player capsules.
-      const { rooms: list, online } = await roomsApi.listWithOnline();
+      // Pass the auth token so the server tags rooms the logged-in user is a
+      // participant of (canResume) — needed to show a "resume game" entry even
+      // for in-game rooms that disallow spectators.
+      const { rooms: list, online } = await roomsApi.listWithOnline(authToken);
       setRooms(list);
       setOnlineUsers(online);
       // Reuse the rooms poll as a liveness probe for the header status pill:
@@ -111,6 +115,9 @@ export default function HomeScreen() {
 
   const goJoin = (roomId: string) => navigate(`/room/${roomId}`);
   const goSpectate = (roomId: string) => navigate(`/room/${roomId}?spectate=1`);
+  // Re-enter an in-progress game the user is a participant of. No ?spectate=1:
+  // RoomEntryScreen then resumes the saved player seat and continues the game.
+  const goResume = (roomId: string) => navigate(`/room/${roomId}`);
 
   // Vue mounted: loadRooms + 4s poll. Vue beforeUnmount: clearInterval.
   useEffect(() => {
@@ -246,6 +253,15 @@ export default function HomeScreen() {
                       {playerNames(room)}
                     </div>
                     <div className="home-rooms__card-actions">
+                      {room.canResume && (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-gold home-rooms__btn"
+                          onClick={() => goResume(room.roomId)}
+                        >
+                          {t('ui.rooms.resume')}
+                        </button>
+                      )}
                       {room.canJoinAsPlayer && (
                         <button
                           type="button"
@@ -265,12 +281,12 @@ export default function HomeScreen() {
                           {t('ui.rooms.spectate')}
                         </button>
                       )}
-                      {!room.canJoinAsPlayer && !room.canSpectate && room.phase === 'in_game' && (
+                      {!room.canResume && !room.canJoinAsPlayer && !room.canSpectate && room.phase === 'in_game' && (
                         <span className="home-rooms__closed text-muted-gold small">
                           {t('ui.rooms.spectate_off')}
                         </span>
                       )}
-                      {!room.canJoinAsPlayer && !room.canSpectate && room.phase !== 'in_game' && (
+                      {!room.canResume && !room.canJoinAsPlayer && !room.canSpectate && room.phase !== 'in_game' && (
                         <span className="home-rooms__closed text-muted-gold small">—</span>
                       )}
                     </div>

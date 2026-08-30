@@ -80,6 +80,7 @@
             "phase_finished": "Finished",
             "join": "Join",
             "spectate": "Spectate",
+            "resume": "Resume",
             "spectate_off": "Spectating off"
         },
         "online": {

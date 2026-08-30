@@ -25,6 +25,11 @@ export type RoomListItem = {
   canSpectate: boolean;
   /** room setting: false → the spectate button is hidden/disabled */
   allowSpectators: boolean;
+  /** Per-requesting-user: true when `userId` is a PLAYER participant of a
+   * currently in-game room (even with spectators off), so the client can offer
+   * a "resume game" re-entry button. Undefined when the caller is anonymous
+   * or not resolved. */
+  canResume?: boolean;
   completeCitySize: number;
 };
 
@@ -48,7 +53,7 @@ export default class Room implements Observer {
     return { status: 'closed' };
   }
 
-  getListItem(): RoomListItem {
+  getListItem(opts: { userId?: string } = {}): RoomListItem {
     const players = Array.from(this.gameState.players.values());
     const seated = players.filter((p) => p.role === PlayerRole.PLAYER);
     const spectators = players.filter((p) => p.role === PlayerRole.SPECTATOR);
@@ -58,6 +63,10 @@ export default class Room implements Observer {
 
     const inLobby = this.gameState.progress === GameProgress.IN_LOBBY;
     const inGame = this.gameState.progress === GameProgress.IN_GAME;
+
+    const mine = opts.userId
+      ? this.gameState.findPlayerByUserId(opts.userId)
+      : undefined;
 
     return {
       roomId: this.roomId,
@@ -74,6 +83,10 @@ export default class Room implements Observer {
       canJoinAsPlayer: inLobby && seated.length < 6,
       canSpectate: (inLobby || inGame) && this.gameState.allowSpectators,
       allowSpectators: this.gameState.allowSpectators,
+      // A participant of an in-progress game must always be able to get back
+      // to their seat, even when spectators are disallowed. Only PLAYER seats
+      // count — a logged-in spectator of this room is not offered "resume".
+      canResume: inGame && mine?.role === PlayerRole.PLAYER,
       completeCitySize: this.gameState.completeCitySize,
     };
   }

@@ -1,7 +1,28 @@
-import { Router, Response } from 'express';
+import {
+  Router,
+  Request,
+  Response,
+  NextFunction,
+} from 'express';
 import { GameProgress } from 'citadels-common';
+import { extractBearerToken, authenticateToken } from '../auth/jwt';
 import { getGameStore } from '../socket/server';
 import { getOnlineUserEntries } from '../socket/onlineUsers';
+
+/**
+ * Optional bearer-token auth: resolves the requesting user's id when a valid
+ * JWT is present and leaves it undefined otherwise. The room list is public —
+ * auth is never mandatory, but knowing the caller lets each room advertise a
+ * per-user "can resume" participant flag.
+ */
+function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const token = extractBearerToken(req.header('authorization'));
+  if (token) {
+    const user = authenticateToken(token);
+    if (user) res.locals.userId = user.id; // eslint-disable-line no-param-reassign
+  }
+  next();
+}
 
 /**
  * Derive a user's live status from the room store at request time. The
@@ -28,12 +49,13 @@ export default function createRoomsRouter(): Router {
    * Also returns the logged-in users currently online, with a live status
    * per user (idle / lobby / playing / spectating).
    */
-  router.get('/', (req, res: Response) => {
+  router.get('/', optionalAuth, (req, res: Response) => {
     try {
       const includeFinished = String(req.query.includeFinished || '') === '1';
       const store = getGameStore();
+      const userId = res.locals?.userId as string | undefined;
       const rooms = store.findAllRooms()
-        .map((room) => room.getListItem())
+        .map((room) => room.getListItem({ userId }))
         .filter((item) => {
           if (includeFinished) return true;
           return item.phase !== 'finished';

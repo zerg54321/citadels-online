@@ -80,6 +80,7 @@
             "phase_finished": "已结束",
             "join": "加入",
             "spectate": "观战",
+            "resume": "继续游戏",
             "spectate_off": "观战已关闭"
         },
         "online": {

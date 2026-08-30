@@ -122,16 +122,24 @@ export default function RoomEntryScreen() {
         return;
       }
 
-      // Deep link spectate
-      if (wantSpectate) {
-        await doJoin('', true);
-        return;
-      }
-
-      // reconnect saved seat
+      // Reconnect the saved seat FIRST. A logged-in participant who reloads,
+      // closes the tab, or arrives via the "watch" deep-link must resume their
+      // own player seat (the server keyed by playerId resumes the seat), not be
+      // dropped into a fresh spectator view. Previously the spectate deep-link
+      // branch ran first and forced a pure spectator join even for a member of
+      // the current game — that is how a mid-game player who reconnects got
+      // stuck unable to re-enter their room (only a manual /room/<id> worked).
       const savedPlayerId = localStorage.getItem(rid);
       if (savedPlayerId && isLoggedIn) {
         await doJoin(savedPlayerId, false);
+        return;
+      }
+
+      // Deep link spectate — only reached when the user is not already seated
+      // in this room (no saved seat / anonymous), so true spectators can still
+      // watch without disturbing players.
+      if (wantSpectate) {
+        await doJoin('', true);
         return;
       }
 

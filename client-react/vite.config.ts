@@ -63,15 +63,14 @@ export default defineConfig({
             type: 'image/png',
           },
           {
+            // 'any maskable': serves both the regular icon and Android's
+            // home-screen maskable icon. Maskable icons must be square — the
+            // old separate 192x512 file was non-square (undefined cropping
+            // behavior on Android launchers) and has been removed.
             src: '/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-          },
-          {
-            src: '/icon-192x512.png',
-            sizes: '192x512',
-            type: 'image/png',
-            purpose: 'maskable',
+            purpose: 'any maskable',
           },
         ],
       },

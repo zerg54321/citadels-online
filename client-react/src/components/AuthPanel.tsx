@@ -37,10 +37,30 @@ export default function AuthPanel() {
   const [busy, setBusy] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [avatarPresets, setAvatarPresets] = useState<string[]>([]);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const avatarFileRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Account dropdown (logged-in state): close on outside click / Escape —
+  // same pattern as LocaleSelector.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   // Vue watch showProfileModal → reset profile fields. Mirror via effect.
   useEffect(() => {
@@ -353,19 +373,38 @@ export default function AuthPanel() {
 
   if (isLoggedIn && authUser) {
     return (
-      <div className="auth-panel auth-panel--in">
-        <span className="auth-panel__who">
-          <img src={userAvatarUrl(authUser)} alt="" className="auth-panel__avatar" />
-          <span className="auth-panel__who-name text-truncate">{authUser.displayName}</span>
-          <span className="auth-panel__dot" title={t('ui.auth.logged_in') as string} />
-        </span>
-        <div className="auth-panel__btns">
-          <button type="button" className="hdr-btn" onClick={() => setShowProfileModal(true)}>
-            {t('ui.auth.profile')}
+      <div className="auth-panel auth-panel--in" ref={menuRef}>
+        <div className="auth-menu">
+          <button
+            type="button"
+            className="auth-menu__btn"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            title={t('ui.auth.logged_in') as string}
+          >
+            <img src={userAvatarUrl(authUser)} alt="" className="auth-panel__avatar" />
+            <span className="auth-menu__name text-truncate">{authUser.displayName}</span>
+            <span className={`locale-select__caret${menuOpen ? ' locale-select__caret--open' : ''}`}>▾</span>
           </button>
-          <button type="button" className="hdr-btn hdr-btn--ghost auth-panel__logout" onClick={logout}>
-            {t('ui.auth.logout')}
-          </button>
+          {menuOpen && (
+            <div className="auth-menu__menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); setShowProfileModal(true); }}
+              >
+                {t('ui.auth.profile')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); logout(); }}
+              >
+                {t('ui.auth.logout')}
+              </button>
+            </div>
+          )}
         </div>
         {authModal}
         {profileModal}
@@ -375,15 +414,10 @@ export default function AuthPanel() {
 
   return (
     <div className="auth-panel auth-panel--guest">
-      <span className="auth-panel__status auth-panel__status--guest">{t('ui.auth.guest')}</span>
-      <div className="auth-panel__btns">
-        <button type="button" className="hdr-btn hdr-btn--gold" onClick={() => openAuth('login')}>
-          {t('ui.auth.login')}
-        </button>
-        <button type="button" className="hdr-btn hdr-btn--ghost" onClick={() => openAuth('register')}>
-          {t('ui.auth.register')}
-        </button>
-      </div>
+      {/* 注册入口收进认证弹窗内的切换链接（switch_to_register），头部只保留登录 */}
+      <button type="button" className="hdr-btn hdr-btn--gold" onClick={() => openAuth('login')}>
+        {t('ui.auth.login')}
+      </button>
       {authModal}
       {profileModal}
     </div>

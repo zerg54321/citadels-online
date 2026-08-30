@@ -82,18 +82,16 @@ header {
       font-size: 0.9rem;
       padding: 0.3rem 0.7rem;
     }
-    .auth-panel__who {
-      font-size: 1.15rem;
+    .auth-menu__btn {
+      font-size: 0.95rem;
+      padding: 0.45rem 0.75rem;
+    }
+    .auth-menu__name {
+      font-size: 1.05rem;
     }
     .auth-panel__avatar {
       width: 1.85rem;
       height: 1.85rem;
-    }
-    // 游戏中隐藏"登出"按钮（资料按钮右边的）：登出在游戏进行中极少操作，
-    // 且加齿轮按钮后顶栏空间紧张会换行。仅在游戏内隐藏，首页/大厅不受影响。
-    // 要恢复：删此规则。
-    .auth-panel__logout {
-      display: none;
     }
   }
 }
@@ -104,7 +102,8 @@ html[lang="en"] .header--game {
   .header-leave-btn { font-size: 0.78rem; }
   .hdr-btn { font-size: 0.78rem; }
   .locale-select__btn { font-size: 0.78rem; }
-  .auth-panel__who { font-size: 0.95rem; }
+  .auth-menu__btn { font-size: 0.78rem; }
+  .auth-menu__name { font-size: 0.95rem; }
 }
 
 // Header layout: brand on the left, actions cluster on the right.
@@ -145,6 +144,19 @@ html[lang="en"] .header--game {
   gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+// Semantic groups inside .header-actions (system status / nav / sound /
+// account / locale). Adjacent groups get a subtle gold divider so the
+// header reads as clusters rather than a flat button row.
+.header-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.header-actions .header-group + .header-group {
+  border-left: 1px solid rgba(212, 175, 55, 0.22);
+  padding-left: 0.75rem;
 }
 
 // In-game leave-room button sits at the LEFT edge of the actions cluster,
@@ -298,20 +310,6 @@ html[lang="en"] .header--game {
   }
 }
 
-.header-extra {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  transition: all 0.25s ease;
-}
-.header-extra--hidden {
-  max-height: 0;
-  opacity: 0;
-  margin-bottom: 0;
-  overflow: hidden;
-  display: none;
-}
-
 // ── AuthPanel ──────────────────────────────────────────────────────────────
 .auth-panel {
   display: flex;
@@ -319,11 +317,6 @@ html[lang="en"] .header--game {
   gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: flex-end;
-
-  &__btns {
-    display: flex;
-    gap: 0.35rem;
-  }
 
   &__status {
     font-family: var(--font-display);
@@ -333,29 +326,11 @@ html[lang="en"] .header--game {
     padding: 0.22rem 0.55rem;
     border-radius: 999px;
     line-height: 1.4;
-    &--guest {
-      color: var(--text-muted);
-      background: rgba(120, 110, 95, 0.18);
-      border: 1px solid rgba(120, 110, 95, 0.4);
-    }
     &--muted {
       color: var(--text-muted);
     }
   }
 
-  // Logged-in: name + online dot
-  &__who {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    max-width: 9rem;
-    font-family: var(--font-body);
-    font-size: 0.92rem;
-    color: var(--parchment);
-  }
-  &__who-name {
-    font-weight: 600;
-  }
   &__avatar {
     width: 1.5rem;
     height: 1.5rem;
@@ -364,17 +339,74 @@ html[lang="en"] .header--game {
     border: 1px solid rgba(212, 175, 55, 0.5);
     flex-shrink: 0;
   }
-  &__dot {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: #7ec47e;
-    box-shadow: 0 0 7px rgba(126, 196, 126, 0.6);
-    flex-shrink: 0;
-  }
+}
 
-  // Compact on narrow widths
-  &--guest &__btns { gap: 0.3rem; }
+// Logged-in account dropdown (avatar + name ▾ → 资料/退出). Mirrors the
+// .locale-select pill/dropdown styling for a consistent control vocabulary.
+.auth-menu {
+  position: relative;
+  display: inline-block;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 10rem;
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    background: rgba(13, 11, 8, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 6px;
+    padding: 0.28rem 0.55rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    &:hover {
+      border-color: var(--gold-bright);
+      color: var(--gold-bright);
+      background: rgba(20, 16, 10, 0.7);
+    }
+  }
+  &__name {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--parchment);
+    white-space: nowrap;
+  }
+  &__menu {
+    position: absolute;
+    top: calc(100% + 0.3rem);
+    right: 0;
+    z-index: 1060;
+    display: flex;
+    flex-direction: column;
+    min-width: 7rem;
+    padding: 0.3rem;
+    background: var(--bg-panel-2);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 8px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 175, 55, 0.12);
+
+    button {
+      all: unset;
+      box-sizing: border-box;
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      padding: 0.4rem 0.55rem;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: left;
+      white-space: nowrap;
+      &:hover {
+        background: rgba(212, 175, 55, 0.12);
+        color: var(--gold-bright);
+      }
+    }
+  }
 }
 
 // ── LocaleSelector (custom dropdown, replaces native white <select>) ───────
@@ -507,6 +539,15 @@ html[lang="en"] .header--game {
       color: var(--gold);
       text-decoration: underline;
     }
+
+    // 关于入口是一个 button（开 About 弹窗）而非 <a>；只重置 button 的
+    // 默认外观，字号/颜色/间距沿用 __link 的规则
+    &--btn {
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+    }
   }
 }
 
@@ -634,61 +675,19 @@ html[lang="en"] .header--game {
   }
 }
 
-// ── Settings panel controls (inside .app-modal) ───────────────────────────
-// Bootstrap's form-check/form-switch/form-range were NOT kept after the
-// Bootstrap removal, so the volume slider + mute toggle use self-maintained
-// styling coordinated with the dark/gold theme.
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.55rem 0;
-
-  &__label {
-    font-family: var(--font-display);
-    font-size: 0.8rem;
-    letter-spacing: 0.05em;
-    color: var(--gold);
-  }
-}
-
-.settings-range {
-  flex: 1;
-  max-width: 12rem;
-  accent-color: var(--gold);
-  cursor: pointer;
-}
-
-.settings-toggle {
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.3rem 1rem;
-  min-width: 3.4rem;
-  border-radius: 999px;
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-
-  &.is-on {
-    background: linear-gradient(180deg, #f0d77b 0%, #d4af37 100%);
-    border-color: #b8922e;
-    color: #1a1410;
-  }
-}
-
-// Icon-only gear button in the header. Sits alongside .hdr-btn so it inherits
-// the .header--game ~1.3× pre-enlargement; this just centers the twemoji icon.
-.settings-gear {
+// Icon-only sound toggle in the header (replaced the old settings gear when
+// the settings modal was removed along with the volume slider). Sits
+// alongside .hdr-btn so it inherits the .header--game ~1.3× pre-enlargement;
+// muted state dims the icon so the state is visible at a glance.
+.hdr-sound {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  &.is-muted {
+    color: var(--text-muted);
+    opacity: 0.75;
+  }
 }
 
 // Avatar picker — lives inside the profile modal (.app-modal). A current

@@ -1417,6 +1417,21 @@ export function pickAndApplyAutoplayMove(
 			}
 		}
 
+		// Magician 例外：技能必须在本轮拿资源（拿金/抽牌）之前使用，否则
+		// gatherResources 会清除 canDoSpecialAction[MAGICIAN] 导致本回合
+		// 无法再用交换/弃牌技能。故在此（资源选择之前）优先推技能。
+		if (canSpecial && character === CharacterType.MAGICIAN) {
+			const seats = magicianExchangeTargets(gameState, actorId);
+			if (seats.length) {
+				moves.push({ type: MoveType.MAGICIAN_EXCHANGE_HAND });
+			} else if (hand.length > 0) {
+				const allDuplicate = hand.every((c) => player.city.includes(c));
+				if (hand.length <= 1 || affordable.length === 0 || allDuplicate) {
+					moves.push({ type: MoveType.MAGICIAN_DISCARD_CARDS });
+				}
+			}
+		}
+
 		// 最终资源选择：拿金 vs 抽牌
 		if (shouldDrawCards(gameState, actorId)) {
 			moves.push({ type: MoveType.DRAW_CARDS }, { type: MoveType.TAKE_GOLD });

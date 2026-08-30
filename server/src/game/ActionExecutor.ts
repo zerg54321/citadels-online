@@ -162,6 +162,16 @@ export default class ActionExecutor {
         return false;
     }
 
+    // Rule: the Magician's special (exchange/discard) must be used BEFORE
+    // taking the normal resource action (draw/gold). Once resources are taken,
+    // the special is forfeit for the rest of the turn — mirroring the existing
+    // build-forfeit rule so a player can't draw their whole hand first and then
+    // dump it onto an opponent.
+    if (cm.hasTakenResources
+        && cm.getCurrentCharacter() === CharacterType.MAGICIAN) {
+      cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
+    }
+
     return true;
   }
 
@@ -202,6 +212,12 @@ export default class ActionExecutor {
     player.tmpHand = [];
 
     cm.hasTakenResources = true;
+
+    // Magician forfeits the special once resources are taken (see gatherResources).
+    if (cm.getCurrentCharacter() === CharacterType.MAGICIAN) {
+      cm.canDoSpecialAction[CharacterType.MAGICIAN] = false;
+    }
+
     cm.jumpToActionsState();
 
     return true;

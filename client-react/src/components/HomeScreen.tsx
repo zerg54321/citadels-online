@@ -43,7 +43,6 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(useAppStore((s) => s.authToken && s.authUser));
   const authUser = useAppStore((s) => s.authUser);
-  const authToken = useAppStore((s) => s.authToken);
   const createRoom = useAppStore((s) => s.createRoom);
   const setConnected = useAppStore((s) => s.setConnected);
 
@@ -62,8 +61,13 @@ export default function HomeScreen() {
       // One poll feeds both the room list and the online-player capsules.
       // Pass the auth token so the server tags rooms the logged-in user is a
       // participant of (canResume) — needed to show a "resume game" entry even
-      // for in-game rooms that disallow spectators.
-      const { rooms: list, online } = await roomsApi.listWithOnline(authToken);
+      // for in-game rooms that disallow spectators. Read the token fresh from
+      // the store: the 4s polling interval was created on the first render,
+      // when auth may not have finished restoring (initAuth is async in
+      // main.tsx), so a captured const would be stale null and every later
+      // poll would silently drop the Authorization header.
+      const token = useAppStore.getState().authToken;
+      const { rooms: list, online } = await roomsApi.listWithOnline(token);
       setRooms(list);
       setOnlineUsers(online);
       // Reuse the rooms poll as a liveness probe for the header status pill:

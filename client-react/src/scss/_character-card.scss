@@ -260,21 +260,19 @@
 // turn it is" cue is consistent between the centre role grid and the seat
 // panels. Kept as a separate keyframe name to stay self-contained in this
 // file (no cross-file dependency on _board-table.scss's animation).
+// The pulse animates ONLY the outer gold ring/glow. The large translucent
+// blur radii and the inset glow used to spread across the role art, which
+// made the card image appear to breathe/flicker on the phone; those layers
+// are removed so the picture stays static and only the outer flash breathes.
 @keyframes char-card-current-pulse {
   0%, 100% {
     box-shadow:
       0 0 0 2px var(--gold-bright),
-      0 0 0 4px rgba(240, 215, 123, 0.3),
-      0 0 18px rgba(240, 215, 123, 0.5),
-      0 0 36px rgba(212, 175, 55, 0.3),
-      inset 0 0 14px rgba(240, 215, 123, 0.1);
+      0 0 10px rgba(240, 215, 123, 0.45);
   }
   50% {
     box-shadow:
       0 0 0 2px #fff3c4,
-      0 0 0 6px rgba(240, 215, 123, 0.45),
-      0 0 28px rgba(240, 215, 123, 0.7),
-      0 0 52px rgba(212, 175, 55, 0.45),
-      inset 0 0 20px rgba(240, 215, 123, 0.18);
+      0 0 22px rgba(240, 215, 123, 0.7);
   }
 }

@@ -1,0 +1,273 @@
+// DEV AI Panel — development-only AI thinking viewer (DevAiPanel.tsx).
+// Same visual language as _dev-av-panel.scss: dark/gold theme, portaled to
+// <body>, never shipped to production builds.
+
+.dev-ai {
+  position: fixed;
+  z-index: 10050; // above game modals, same layer as the AV panel
+  right: 0.75rem;
+  // Sits above the AV fab (which occupies the bottom-right corner) so both
+  // stay reachable at the same time.
+  bottom: 4rem;
+  font-family: var(--font-readable);
+  color: var(--parchment);
+
+  &__fab {
+    position: relative;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+    background: linear-gradient(180deg, #241c14, #14100a);
+    color: var(--gold-bright);
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(212, 175, 55, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 14px rgba(212, 175, 55, 0.45);
+    }
+  }
+
+  &__fab-count {
+    position: absolute;
+    top: -0.35rem;
+    right: -0.45rem;
+    min-width: 1rem;
+    padding: 0 0.2rem;
+    border-radius: 0.5rem;
+    background: #8a2b2b;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  &__panel {
+    width: 24rem;
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100vh - 6rem);
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0.6rem 0.6rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  }
+  &__title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--gold-bright);
+    font-size: 0.95rem;
+  }
+  &__badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #0d0b08;
+    background: var(--gold);
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+  }
+  &__count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  &__btn {
+    background: none;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 3px;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    padding: 0.05rem 0.35rem;
+    cursor: pointer;
+    &:hover { color: var(--parchment); border-color: var(--gold); }
+  }
+  &__x {
+    margin-left: auto;
+    background: none;
+    border: 0;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    &:hover { color: var(--parchment); }
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.4rem 0;
+  }
+  &__chip {
+    background: none;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    padding: 0.05rem 0.45rem;
+    cursor: pointer;
+    &:hover { color: var(--parchment); }
+    &.is-active {
+      color: #0d0b08;
+      background: var(--gold);
+      border-color: var(--gold);
+      font-weight: 700;
+    }
+  }
+
+  &__list {
+    flex: 1;
+    min-height: 8rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  &__empty {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.8rem 0.4rem;
+    line-height: 1.6;
+  }
+
+  &__entry {
+    border: 1px solid rgba(212, 175, 55, 0.18);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    &.is-expanded { border-color: rgba(212, 175, 55, 0.55); }
+  }
+  &__entry-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    background: none;
+    border: 0;
+    color: var(--parchment);
+    font-family: var(--font-readable);
+    font-size: 0.72rem;
+    padding: 0.3rem 0.4rem;
+    cursor: pointer;
+    text-align: left;
+    &:hover { background: rgba(212, 175, 55, 0.07); }
+  }
+  &__entry-round {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+  &__entry-decision {
+    font-weight: 700;
+    font-size: 0.65rem;
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+    flex-shrink: 0;
+  }
+  &__entry-actor {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+  &__entry-chosen {
+    margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gold-bright);
+    font-size: 0.68rem;
+  }
+
+  &__tone--gold { background: rgba(212, 175, 55, 0.25); color: var(--gold-bright); }
+  &__tone--red { background: rgba(150, 45, 45, 0.35); color: #e8a3a3; }
+  &__tone--blue { background: rgba(60, 90, 150, 0.35); color: #a3c0e8; }
+  &__tone--green { background: rgba(70, 130, 70, 0.3); color: #a8d8a8; }
+  &__tone--gray { background: rgba(120, 120, 120, 0.25); color: var(--text-muted); }
+
+  &__entry-body {
+    padding: 0.3rem 0.45rem 0.45rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+  }
+  &__cand {
+    padding: 0.1rem 0;
+    font-size: 0.7rem;
+    &.is-chosen .dev-ai__cand-label { color: var(--gold-bright); font-weight: 700; }
+  }
+  &__cand-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  &__cand-label {
+    width: 9.5rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--parchment);
+  }
+  &__factors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    padding: 0.15rem 0 0.1rem 9.9rem;
+  }
+  &__factor {
+    font-size: 0.6rem;
+    color: #a8d8a8;
+    background: rgba(70, 130, 70, 0.18);
+    border: 1px solid rgba(70, 130, 70, 0.35);
+    border-radius: 3px;
+    padding: 0 0.25rem;
+    white-space: nowrap;
+    &.is-negative {
+      color: #e8a3a3;
+      background: rgba(150, 45, 45, 0.18);
+      border-color: rgba(150, 45, 45, 0.35);
+    }
+  }
+  &__cand-bar-wrap {
+    flex: 1;
+    height: 0.45rem;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+  &__cand-bar {
+    display: block;
+    height: 100%;
+    background: var(--gold);
+    border-radius: 2px;
+    &.is-negative { background: #8a2b2b; }
+  }
+  &__cand-score {
+    width: 2.6rem;
+    flex-shrink: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+  }
+  &__entry-note {
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px dashed rgba(212, 175, 55, 0.2);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    line-height: 1.5;
+  }
+}

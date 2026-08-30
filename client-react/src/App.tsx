@@ -9,6 +9,7 @@ import LocaleSelector from './components/common/LocaleSelector';
 import GameTopBar from './components/game/GameTopBar';
 import GameStage from './components/game/GameStage';
 import DevAvPanel from './components/dev/DevAvPanel';
+import DevAiPanel from './components/dev/DevAiPanel';
 import {
   useAppStore, useGameProgress, useIsConnected, useSfxVolume, useMuted,
 } from './store';
@@ -244,7 +245,12 @@ export default function App() {
   // DEV AV Panel — audio/visual debug harness. Portals to <body> internally
   // (escapes GameStage scaling) so it can sit in both the in-play and
   // non-in-play branches. Gated on Vite's DEV flag so it never ships.
-  const devPanel = import.meta.env.DEV && <DevAvPanel />;
+  const devPanel = import.meta.env.DEV && (
+    <>
+      <DevAvPanel />
+      <DevAiPanel />
+    </>
+  );
 
   // In-play: wrap header + body in GameStage so the whole shell scales as a
   // unit to fit any landscape viewport (iPad Pro/Air/mini, PC). The action

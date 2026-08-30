@@ -9,6 +9,26 @@ import {
 import Room from './Room';
 import { pickAndApplyAutoplayMove } from '../game/AutoplayPolicy';
 import { CharacterType, TurnState } from '../game/CharacterManager';
+import type { AiExplainCollector } from '../game/AiExplainer';
+
+/**
+ * AI 思考实时可视化开关（默认关闭，生产环境不设置）。
+ * 本地/测试服以 AI_DEBUG=1 启动后，所有含 AI 的普通房间都会把每次
+ * AI 决策（候选+分数+选中项，格式见 AiExplainer.ts）通过 'ai-explain'
+ * 事件广播给房间客户端；前端仅在 dev 构建中渲染 DevAiPanel。
+ * 生产环境：不设置该变量 → 不采集、不广播，行为与线上现状完全一致。
+ */
+const AI_DEBUG_ENABLED = process.env.AI_DEBUG === '1';
+
+function makeExplainCollector(room: Room): AiExplainCollector {
+  return (r) => {
+    try {
+      room.io.to(room.roomId).emit('ai-explain', r);
+    } catch {
+      // 广播故障不应中断 AI 行动
+    }
+  };
+}
 
 /**
  * P4/P5: action deadline + AI/autoplay + system AUTO.
@@ -215,14 +235,24 @@ export class TurnTimer {
       const actorId = gs.board?.getCurrentPlayerId();
       const actor = actorId ? gs.players.get(actorId) : undefined;
       if (actor && actor.role === PlayerRole.PLAYER && (actor.isAi || actor.isAutoplay)) {
-        const move = pickAndApplyAutoplayMove(gs);
+        const move = pickAndApplyAutoplayMove(
+          gs,
+          'v2',
+          true,
+          AI_DEBUG_ENABLED ? makeExplainCollector(this.room) : undefined,
+        );
         if (move && actorId) {
           gs.markEffectiveAiControl(actorId);
         } else {
           // try harder: AUTO then one more policy attempt
           gs.step({ type: MoveType.AUTO });
           if (this.shouldDriveNow()) {
-            const m2 = pickAndApplyAutoplayMove(gs);
+            const m2 = pickAndApplyAutoplayMove(
+              gs,
+              'v2',
+              true,
+              AI_DEBUG_ENABLED ? makeExplainCollector(this.room) : undefined,
+            );
             if (m2 && actorId) gs.markEffectiveAiControl(actorId);
           }
         }

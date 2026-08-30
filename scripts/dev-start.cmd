@@ -8,10 +8,17 @@ set "LOG_DIR=%ROOT%\.dev-logs"
 set "SERVER_PORT=8081"
 set "REACT_PORT=3010"
 
+REM Optional first arg "ai" (or use scripts\dev-start-ai.cmd) enables
+REM AI_DEBUG=1: the server broadcasts 'ai-explain' events for every AI
+REM decision, which the dev-only DevAiPanel renders in real time.
+set "AI_DEBUG_FLAG="
+if /i "%~1"=="ai" set "AI_DEBUG_FLAG=1"
+
 if not exist "%PID_DIR%" mkdir "%PID_DIR%"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
 echo [dev-start] root: %ROOT%
+if defined AI_DEBUG_FLAG echo [dev-start] AI_DEBUG=1 ^(AI thinking stream enabled^)
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -84,7 +91,7 @@ REM long-lived node process does not inherit the caller's stdout pipe handle
 REM (which would block `cmd /c dev-start.cmd` from returning). The inner
 REM `cmd /c` `>` / `2>` redirects node output to the log files instead.
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$env:CITADELS_FAST='1'; $env:ADMIN_TOKEN='dev-only-admin-token-0123456789abcdef0123456789abcdef0123456789abcdef'; $env:ADMIN_ALLOW_IPS='127.0.0.1,::1'; $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c node dist\index.js > %LOG_DIR%\server.out.log 2> %LOG_DIR%\server.err.log' -WorkingDirectory '%ROOT%\server' -WindowStyle Hidden -PassThru; Set-Content -Path '%PID_DIR%\server.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] server pid ' + $p.Id + ' CITADELS_FAST=1')"
+  "$env:CITADELS_FAST='1'; $env:ADMIN_TOKEN='dev-only-admin-token-0123456789abcdef0123456789abcdef0123456789abcdef'; $env:ADMIN_ALLOW_IPS='127.0.0.1,::1'; $env:AI_DEBUG='%AI_DEBUG_FLAG%'; $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c node dist\index.js > %LOG_DIR%\server.out.log 2> %LOG_DIR%\server.err.log' -WorkingDirectory '%ROOT%\server' -WindowStyle Hidden -PassThru; Set-Content -Path '%PID_DIR%\server.pid' -Value $p.Id -Encoding ascii; Write-Host ('[dev-start] server pid ' + $p.Id + ' CITADELS_FAST=1' + $(if ('%AI_DEBUG_FLAG%' -eq '1') {' AI_DEBUG=1'}))"
 if errorlevel 1 (
   echo [dev-start] ERROR: failed to start server
   exit /b 1

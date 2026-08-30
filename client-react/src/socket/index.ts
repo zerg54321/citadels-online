@@ -1,6 +1,7 @@
 import { io, type Socket } from 'socket.io-client';
 import { parseClientGameState } from 'citadels-common';
 import { useAppStore } from '../store';
+import type { AiExplainRecord } from '../store/aiExplainSlice';
 
 // Single socket instance for the whole app. Path matches server's Socket.IO
 // mount point (/s/) proxied to localhost:8081 in dev.
@@ -80,6 +81,11 @@ socket.on('chat message', (msg: { playerId: string; username: string; text: stri
 if (import.meta.env.DEV) {
   socket.onAny((event: string, ...args: unknown[]) => {
     console.log('[socket]', event, args);
+  });
+
+  // AI 思考流：仅 AI_DEBUG 服务器会广播此事件（dev-only，生产构建不注册）
+  socket.on('ai-explain', (record: unknown) => {
+    useAppStore.getState().addAiExplain(record as AiExplainRecord);
   });
 }
 

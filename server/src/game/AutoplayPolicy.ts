@@ -28,6 +28,8 @@ import {
 import GameState from './GameState';
 import { CharacterPosition, CharacterType } from './CharacterManager';
 import DistrictCard, { ALL_DISTRICTS, DistrictType } from './DistrictCard';
+import type { AiExplainCandidate, AiExplainCollector, AiExplainFactor } from './AiExplainer';
+import { CHAR_NAMES, round1 } from './AiExplainer';
 
 // ---------------------------------------------------------------------------
 // 基础数据：卡牌造价/类型/额外分
@@ -51,6 +53,27 @@ const CARD_EXTRA: Record<string, number> = Object.fromEntries(
 const GE_GOLD = 1;
 const GE_CARD = 2; // 早期基准：1张牌 ≈ 2金（抽牌机会成本）
 const COMPLETE_DEFAULT = 8;
+
+/** MoveType → 可读标签（仅用于解释输出） */
+const MOVE_LABEL: Record<number, string> = {
+	[MoveType.TAKE_GOLD]: '拿金',
+	[MoveType.DRAW_CARDS]: '抽牌',
+	[MoveType.TAKE_GOLD_EARNINGS]: '收租',
+	[MoveType.BUILD_DISTRICT]: '建造',
+	[MoveType.CHOOSE_CHARACTER]: '选角',
+	[MoveType.ASSASSIN_KILL]: '刺杀',
+	[MoveType.THIEF_ROB]: '偷窃',
+	[MoveType.MAGICIAN_EXCHANGE_HAND]: '交换手牌',
+	[MoveType.MAGICIAN_DISCARD_CARDS]: '弃牌换牌',
+	[MoveType.WARLORD_DESTROY_DISTRICT]: '拆房',
+	[MoveType.SMITHY_DRAW_CARDS]: '铁匠铺抽3牌',
+	[MoveType.LABORATORY_DISCARD_CARD]: '实验室卖牌',
+	[MoveType.GRAVEYARD_RECOVER_DISTRICT]: '墓地回收',
+	[MoveType.FINISH_TURN]: '结束回合',
+	[MoveType.DECLINE]: '放弃',
+	[MoveType.AUTO]: '系统自动',
+};
+const moveLabel = (t: number): string => MOVE_LABEL[t] ?? `move:${t}`;
 
 // ---------------------------------------------------------------------------
 // 工具函数
@@ -406,15 +429,19 @@ function estimatePickEV(
  * - 首发拿刺客由 forceAssassin 硬编码保证（不依赖本评分）
  * - 口诀先验（seatWeights/colorIntercept/双持）叠在 EV 之上，保证 AI 像人预期那样选
  */
-function scoreCharacterPick(
+/**
+ * 选角评分的因子分解：返回各命名成分（供解释输出展示），总和即评分。
+ * scoreCharacterPick = 各因子之和；本函数是唯一事实来源，改评分结构必须改这里。
+ */
+function characterPickFactors(
 	gs: GameState,
 	actorId: string,
 	character: CharacterType,
 	remaining: CharacterType[],
-	useSeatWeights = true, // V1: 启用座位权重/口诀策略
-	useTeamAware = true, // 团队感知：颜色亲和度 + 队友已选互补（预测时关闭）
-): number {
-	if (!remaining.includes(character)) return -999;
+	useSeatWeights = true,
+	useTeamAware = true,
+): AiExplainFactor[] {
+	if (!remaining.includes(character)) return [{ label: '不可选', value: -999 }];
 
 	const city = cityOf(gs, actorId);
 	const hand = handOf(gs, actorId);
@@ -430,37 +457,54 @@ function scoreCharacterPick(
 	const hasSmithy = hasDistrict(actorId, gs, 'smithy');
 	const tSeat = gs.board?.playerOrder.indexOf(actorId) ?? -1;
 
+	const factors: AiExplainFactor[] = [];
+
 	// 基础分 = 该角色本回合的预期收益（EV，单位 GE）
-	let score = estimatePickEV(gs, actorId, character, {
-		city, hand, stash, hc, selfCity, limit, tempo, enemyMax, allyHasCrown, hasLab, hasSmithy,
+	factors.push({
+		label: '本回合预期收益EV',
+		value: estimatePickEV(gs, actorId, character, {
+			city, hand, stash, hc, selfCity, limit, tempo, enemyMax, allyHasCrown, hasLab, hasSmithy,
+		}),
 	});
 
 	// 轻微随机扰动，避免评分相同时总选同一个
-	score += Math.random() * 0.3;
+	factors.push({ label: '随机扰动(≤0.3)', value: Math.random() * 0.3 });
 
 	// V1 专属：座位权重 + 同色截断 + 功能建筑联动（人类口诀先验，叠在 EV 之上）
 	if (useSeatWeights) {
-		score += seatWeights(gs, actorId, character, tSeat, selfCity, stash, hc);
-		score += colorInterceptScore(gs, actorId, character, tSeat);
+		factors.push({ label: '座位权重', value: seatWeights(gs, actorId, character, tSeat, selfCity, stash, hc) });
+		factors.push({ label: '同色截断', value: colorInterceptScore(gs, actorId, character, tSeat) });
 		if (hasSmithy || hasLab) {
-			if (character === CharacterType.KING) score += 4;
+			if (character === CharacterType.KING) factors.push({ label: '功能建筑联动', value: 4 });
 		}
 		// 图书馆+天文台双持：抽牌类角色的价值激增
 		const hasLib = city.includes('library');
 		const hasObs = city.includes('observatory');
 		if (hasLib && hasObs) {
-			if (character === CharacterType.ARCHITECT) score += 5;
-			if (character === CharacterType.MAGICIAN) score += 3;
+			if (character === CharacterType.ARCHITECT) factors.push({ label: '双持图书馆+天文台', value: 5 });
+			if (character === CharacterType.MAGICIAN) factors.push({ label: '双持图书馆+天文台', value: 3 });
 		}
 	}
 
 	// 团队感知（仅选角时启用，预测时关闭以避免循环惩罚）
 	if (useTeamAware) {
-		score += colorAffinityBonus(gs, actorId, character);
-		score += teamSynergyScore(gs, actorId, character);
+		factors.push({ label: '颜色亲和', value: colorAffinityBonus(gs, actorId, character) });
+		factors.push({ label: '队友协同', value: teamSynergyScore(gs, actorId, character) });
 	}
 
-	return score;
+	return factors;
+}
+
+function scoreCharacterPick(
+	gs: GameState,
+	actorId: string,
+	character: CharacterType,
+	remaining: CharacterType[],
+	useSeatWeights = true, // V1: 启用座位权重/口诀策略
+	useTeamAware = true, // 团队感知：颜色亲和度 + 队友已选互补（预测时关闭）
+): number {
+	return characterPickFactors(gs, actorId, character, remaining, useSeatWeights, useTeamAware)
+		.reduce((sum, f) => sum + f.value, 0);
 }
 
 /** V1 座位权重 */
@@ -772,7 +816,7 @@ function predictLikelyRoles(gs: GameState, targetId: string): CharacterType[] {
  *    V 综合考虑：城市规模、金库、手牌、角色功能威胁、终局节奏
  * 3. 按组合 EV 降序输出——自然实现「先锁定最大威胁的敌人，再打他最可能的角色」
  */
-function assassinTargets(gs: GameState, actorId: string): number[] {
+function assassinTargetCombos(gs: GameState, actorId: string): { clientId: number; ev: number; factors: AiExplainFactor[] }[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
 	const tempo = detectTempo(gs, actorId);
@@ -841,12 +885,25 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
 	// 净 EV = 敌人阻止收益 - 队友误伤成本
 	// 误杀队友 = 浪费其整个回合（资产+角色收入损失），约 12 GE 当量
 	const ALLY_KILL_PENALTY = 12;
-	const combos = pool.map((ch) => ({
-		clientId: ch + 1,
-		ev: (gainEV.get(ch) ?? 0) - (allyP.get(ch) ?? 0) * ALLY_KILL_PENALTY,
-	}));
+	const combos = pool.map((ch) => {
+		const gain = gainEV.get(ch) ?? 0;
+		const allyPenalty = (allyP.get(ch) ?? 0) * ALLY_KILL_PENALTY;
+		return {
+			clientId: ch + 1,
+			ev: gain - allyPenalty,
+			factors: [
+				{ label: '敌人阻止收益(P×V)', value: gain },
+				{ label: '队友误伤惩罚(P×12)', value: -allyPenalty },
+			],
+		};
+	});
 	combos.sort((a, b) => b.ev - a.ev);
-	return combos.map((c) => c.clientId);
+	return combos;
+}
+
+/** 刺杀目标优先队列（clientId 降序 EV）；带分数的版本见 assassinTargetCombos */
+function assassinTargets(gs: GameState, actorId: string): number[] {
+	return assassinTargetCombos(gs, actorId).map((c) => c.clientId);
 }
 
 /**
@@ -863,7 +920,7 @@ function assassinTargets(gs: GameState, actorId: string): number[] {
  * 2. 对每个 (敌人, 角色) 组合计算 EV = P(持有) × 预期金币
  * 3. 按 EV 降序输出——谁最富就偷谁最可能的角色，而非固定偷商人
  */
-function thiefTargets(gs: GameState, actorId: string): number[] {
+function thiefTargetCombos(gs: GameState, actorId: string): { clientId: number; ev: number; factors: AiExplainFactor[] }[] {
 	if (!gs.board) return [];
 	const cm = gs.board.characterManager;
 	const limit = completeSize(gs);
@@ -914,12 +971,25 @@ function thiefTargets(gs: GameState, actorId: string): number[] {
 	// 净 EV = 敌人金币摇摆收益 - 队友误偷成本
 	// 误偷队友：金币只是在队内转移（总量不变），但打乱其建造计划 + 浪费一次偷窃机会
 	const ALLY_ROB_PENALTY = 4;
-	const combos = pool.map((ch) => ({
-		clientId: ch + 1,
-		ev: (gainEV.get(ch) ?? 0) - (allyP.get(ch) ?? 0) * ALLY_ROB_PENALTY,
-	}));
+	const combos = pool.map((ch) => {
+		const gain = gainEV.get(ch) ?? 0;
+		const allyPenalty = (allyP.get(ch) ?? 0) * ALLY_ROB_PENALTY;
+		return {
+			clientId: ch + 1,
+			ev: gain - allyPenalty,
+			factors: [
+				{ label: '敌人金币摇摆收益(P×预期金×2)', value: gain },
+				{ label: '队友误偷惩罚(P×4)', value: -allyPenalty },
+			],
+		};
+	});
 	combos.sort((a, b) => b.ev - a.ev);
-	return combos.map((c) => c.clientId);
+	return combos;
+}
+
+/** 偷窃目标优先队列（clientId 降序 EV）；带分数的版本见 thiefTargetCombos */
+function thiefTargets(gs: GameState, actorId: string): number[] {
+	return thiefTargetCombos(gs, actorId).map((c) => c.clientId);
 }
 
 /** 估算一手牌的总建造价值（用于魔术师交换决策） */
@@ -933,12 +1003,12 @@ function handQuality(hand: DistrictId[], city: DistrictId[]): number {
 }
 
 /** 魔术师交换目标：综合手牌数量差和质量差，避免拿高价值牌换垃圾 */
-function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
+function magicianExchangeScored(gs: GameState, actorId: string): { seat: number; score: number; factors: AiExplainFactor[] }[] {
 	if (!gs.board) return [];
 	const myHand = handOf(gs, actorId);
 	const myCity = cityOf(gs, actorId);
 	const myQuality = handQuality(myHand, myCity);
-	const scored: { seat: number; score: number }[] = [];
+	const scored: { seat: number; score: number; factors: AiExplainFactor[] }[] = [];
 
 	gs.board.playerOrder.forEach((pid, seat) => {
 		if (!isEnemy(gs, actorId, pid)) return;
@@ -949,12 +1019,25 @@ function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
 		const quantityGain = deltaCards * cardMarginalValue(gs, actorId);
 		// 质量保护：我给出的牌越值钱，交换越不划算
 		// 只有数量收益明显超过质量损失时才交换
-		const netGain = quantityGain - myQuality * 0.4;
+		const qualityLoss = myQuality * 0.4;
+		const netGain = quantityGain - qualityLoss;
 		if (netGain <= 0) return;
-		scored.push({ seat, score: netGain * 10 + their });
+		scored.push({
+			seat,
+			score: netGain * 10 + their,
+			factors: [
+				{ label: `数量收益(多${deltaCards}张×卡值)`, value: quantityGain },
+				{ label: '质量损失(我方手牌×0.4)', value: -qualityLoss },
+			],
+		});
 	});
 	scored.sort((a, b) => b.score - a.score);
-	return scored.map((s) => s.seat);
+	return scored;
+}
+
+/** 魔术师交换目标优先队列（座位降序分）；带分数的版本见 magicianExchangeScored */
+function magicianExchangeTargets(gs: GameState, actorId: string): number[] {
+	return magicianExchangeScored(gs, actorId).map((s) => s.seat);
 }
 
 type DestroyCandidate = { seat: number; card: DistrictId; score: number };
@@ -1123,7 +1206,12 @@ function shouldDrawCards(gs: GameState, actorId: string): boolean {
 // 主入口：根据当前游戏的回合状态生成并执行下一步
 // ---------------------------------------------------------------------------
 
-export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | 'v1' | 'v2' | 'v3' = 'v2', forceAssassin = true): Move | null {
+export function pickAndApplyAutoplayMove(
+	gameState: GameState,
+	version: 'v0' | 'v1' | 'v2' | 'v3' = 'v2',
+	forceAssassin = true,
+	explain?: AiExplainCollector,
+): Move | null {
 	if (!gameState.board) return null;
 	const { board } = gameState;
 	const cm = board.characterManager;
@@ -1131,6 +1219,37 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	if (!actorId) return null;
 	const player = board.players.get(actorId);
 	if (!player) return null;
+
+	// ── 解释输出（旁路观测）：不传 explain 时零开销，收集器异常也不影响对局 ──
+	const record = (decision: string, candidates: AiExplainCandidate[], chosen: string, note?: string) => {
+		if (!explain) return;
+		try {
+			explain({
+				round: gameState.roundNumber,
+				version,
+				actor: gameState.players.get(actorId)?.username ?? actorId,
+				decision,
+				candidates,
+				chosen,
+				note,
+			});
+		} catch {
+			// 观测器故障不应中断 AI 行动
+		}
+	};
+	const charLabel = (ch: number) => `角色:${CHAR_NAMES[ch] ?? ch}`;
+	// 选角候选（含因子分解）：分值 = 各因子之和，与 scoreCharacterPick 同源
+	const pickCandidatesWithFactors = (chs: CharacterType[]) => chs
+		.map((ch) => {
+			const factors = characterPickFactors(gameState, actorId, ch, chs, useSeatWeights);
+			return {
+				ch,
+				score: factors.reduce((s, f) => s + f.value, 0),
+				// 展示时省略贡献可忽略的因子（如 0.1 以下的随机扰动）
+				factors: factors.filter((f) => Math.abs(f.value) >= 0.1),
+			};
+		})
+		.sort((a, b) => b.score - a.score);
 
 	// =====================================================================
 	// 初始二选一手牌阶段
@@ -1155,22 +1274,45 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 		if (t === CCST.PUT_ASIDE_FACE_UP || t === CCST.PUT_ASIDE_FACE_DOWN) {
 			// 天绝/弃牌：把对自己最没用的牌丢掉
 			const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
-			const scored = remaining.map((ch, idx) => ({
-				idx, score: scoreCharacterPick(gameState, actorId, ch, remaining, useSeatWeights),
-			}));
-			scored.sort((a, b) => a.score - b.score);
-			const moves = scored.map((s) => ({ type: MoveType.CHOOSE_CHARACTER, data: s.idx } as Move));
+			const ranked = pickCandidatesWithFactors(remaining);
+			const moves = [...ranked].reverse().map((s) => ({
+				type: MoveType.CHOOSE_CHARACTER, data: remaining.indexOf(s.ch),
+			} as Move));
 			if (!moves.length) moves.push({ type: MoveType.CHOOSE_CHARACTER, data: 0 });
-			return tryMoves(gameState, moves);
+			const m = tryMoves(gameState, moves);
+			const asideCh = m && typeof m.data === 'number' ? remaining[m.data] : undefined;
+			record(
+				t === CCST.PUT_ASIDE_FACE_UP ? '天绝扣牌(明置)' : '扣牌(暗置)',
+				ranked.map((s) => ({
+					label: charLabel(s.ch),
+					score: round1(s.score),
+					factors: s.factors,
+				})),
+				asideCh !== undefined ? charLabel(asideCh) : '（无）',
+				'扣置评分最低的角色',
+			);
+			return m;
 		}
 		if (t === CCST.CHOOSE_CHARACTER || t === CCST.PUT_ASIDE_FACE_DOWN_UP) {
 			if (t === CCST.PUT_ASIDE_FACE_DOWN_UP) {
 				const remaining = cm.getCharactersAtPosition(CharacterPosition.NOT_CHOSEN);
-				const order = remaining
-					.map((ch, idx) => ({ idx, score: scoreCharacterPick(gameState, actorId, ch, remaining, useSeatWeights) }))
-					.sort((a, b) => a.score - b.score);
-				const moves = order.map((o) => ({ type: MoveType.CHOOSE_CHARACTER, data: o.idx } as Move));
-				return tryMoves(gameState, moves.length ? moves : [{ type: MoveType.CHOOSE_CHARACTER, data: 0 }]);
+				const ranked = pickCandidatesWithFactors(remaining);
+				const moves = [...ranked].reverse().map((o) => ({
+					type: MoveType.CHOOSE_CHARACTER, data: remaining.indexOf(o.ch),
+				} as Move));
+				const m = tryMoves(gameState, moves.length ? moves : [{ type: MoveType.CHOOSE_CHARACTER, data: 0 }]);
+				const asideCh = m && typeof m.data === 'number' ? remaining[m.data] : undefined;
+				record(
+					'末位选角(先选1扣1)',
+					ranked.map((s) => ({
+						label: charLabel(s.ch),
+						score: round1(s.score),
+						factors: s.factors,
+					})),
+					asideCh !== undefined ? charLabel(asideCh) : '（无）',
+					'选评分最高、扣评分最低',
+				);
+				return m;
 			}
 			// pickBestCharacterIndex 在 forceAssassin=true 且刺客可用时硬编码返回刺客索引（首发必拿刺客）
 			const best = pickBestCharacterIndex(gameState, actorId, useSeatWeights, forceAssassin);
@@ -1184,12 +1326,39 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 				const meta = gameState.players.get(actorId);
 				const mctsMove = mctsPick(gameState, actorId, remaining, meta?.team ?? TeamId.NONE);
 				if (mctsMove) {
-					return tryMoves(gameState, [mctsMove]);
+					const m = tryMoves(gameState, [mctsMove]);
+					const ranked = pickCandidatesWithFactors(remaining);
+					const mctsCh = typeof mctsMove.data === 'number' ? remaining[mctsMove.data] : undefined;
+					record(
+						'选角',
+						ranked.map((s) => ({
+							label: charLabel(s.ch),
+							score: round1(s.score),
+							factors: s.factors,
+						})),
+						mctsCh !== undefined ? charLabel(mctsCh) : '（无）',
+						'V3 MCTS 覆盖规则评分（候选分列为规则评分，非 rollout 分）',
+					);
+					return m;
 				}
 			}
 
+			// 解释用评分快照（与 pickBestCharacterIndex 各自独立计算，含 ±0.3 随机扰动，
+			// 排名偶有浮动属预期）。仅在观测时计算，避免拖慢 rollout。
+			const explainScores = explain ? pickCandidatesWithFactors(remaining) : [];
 			for (let i = 0; i < 8; i += 1) if (i !== best) moves.push({ type: MoveType.CHOOSE_CHARACTER, data: i });
-			return tryMoves(gameState, moves);
+			const m = tryMoves(gameState, moves);
+			record(
+				'选角',
+				explainScores.map((s) => ({
+					label: charLabel(s.ch),
+					score: round1(s.score),
+					factors: s.factors,
+				})),
+				best < remaining.length ? charLabel(remaining[best]) : '（无）',
+				forceAssassin && assassinAvailable ? '首发硬编码必拿刺客，评分仅作参考' : undefined,
+			);
+			return m;
 		}
 		return null;
 	}
@@ -1254,7 +1423,14 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 		} else {
 			moves.push({ type: MoveType.TAKE_GOLD }, { type: MoveType.DRAW_CARDS });
 		}
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'资源行动(优先级序)',
+			moves.map((mv) => ({ label: moveLabel(mv.type) })),
+			m ? moveLabel(m.type) : '（无）',
+			'按优先级尝试，首个合法项被执行',
+		);
+		return m;
 	}
 
 	// -----------------------------------------------------------------------
@@ -1271,7 +1447,13 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 		scored.sort((a, b) => b.score - a.score);
 		const moves = scored.map((s) => ({ type: MoveType.DRAW_CARDS, data: s.card } as Move));
 		if (!moves.length) moves.push({ type: MoveType.DRAW_CARDS, data: null });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'二选一选牌',
+			scored.map((s) => ({ label: `牌:${s.card}(费${costOf(s.card)})`, score: round1(s.score) })),
+			m && typeof m.data === 'string' ? `牌:${m.data}(费${costOf(m.data)})` : '（无）',
+		);
+		return m;
 	}
 
 	// -----------------------------------------------------------------------
@@ -1338,7 +1520,14 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 
 		moves.push({ type: MoveType.FINISH_TURN });
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'可选行动(优先级序)',
+			moves.map((mv) => ({ label: moveLabel(mv.type) })),
+			m ? moveLabel(m.type) : '（无）',
+			'按优先级尝试，首个合法项被执行',
+		);
+		return m;
 	}
 
 	// -----------------------------------------------------------------------
@@ -1347,34 +1536,59 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 	case ClientTurnState.BUILD_DISTRICT: {
 		const moves = buildOrder.map((c) => ({ type: MoveType.BUILD_DISTRICT, data: c } as Move));
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'建造顺序',
+			buildOrder.map((c) => ({ label: `牌:${c}(费${costOf(c)})`, score: round1(buildScore(gameState, actorId, c, tempo)) })),
+			m && m.type === MoveType.BUILD_DISTRICT && typeof m.data === 'string'
+				? `牌:${m.data}(费${costOf(m.data)})`
+				: moveLabel(m?.type ?? MoveType.DECLINE),
+		);
+		return m;
 	}
 
 	// -----------------------------------------------------------------------
 	// 特殊能力状态（刺杀/偷窃/交换/摧毁/墓地/实验室）
 	// -----------------------------------------------------------------------
 	case ClientTurnState.ASSASSIN_KILL: {
-		const targets = assassinTargets(gameState, actorId);
+		const combos = assassinTargetCombos(gameState, actorId);
+		const targets = combos.map((c) => c.clientId);
 		const moves = targets.map((id) => ({ type: MoveType.ASSASSIN_KILL, data: id } as Move));
 		for (let cid = 2; cid <= 8; cid += 1) if (!targets.includes(cid)) moves.push({ type: MoveType.ASSASSIN_KILL, data: cid });
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'刺客目标',
+			combos.map((c) => ({ label: charLabel(c.clientId - 1), score: round1(c.ev), factors: c.factors })),
+			m && typeof m.data === 'number' ? charLabel(m.data - 1) : moveLabel(m?.type ?? MoveType.DECLINE),
+			'EV = P(敌人持有)×阻止价值 − P(队友持有)×误伤惩罚',
+		);
+		return m;
 	}
 
 	case ClientTurnState.THIEF_ROB: {
 		const killedClientId = cm.killedCharacter >= 0 ? cm.killedCharacter + 1 : -1;
-		const targets = thiefTargets(gameState, actorId).filter((id) => id !== killedClientId);
+		const combos = thiefTargetCombos(gameState, actorId).filter((c) => c.clientId !== killedClientId);
+		const targets = combos.map((c) => c.clientId);
 		const moves = targets.map((id) => ({ type: MoveType.THIEF_ROB, data: id } as Move));
 		for (let cid = 3; cid <= 8; cid += 1) {
 			if (cid === killedClientId) continue;
 			if (!targets.includes(cid)) moves.push({ type: MoveType.THIEF_ROB, data: cid });
 		}
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'盗贼目标',
+			combos.map((c) => ({ label: charLabel(c.clientId - 1), score: round1(c.ev), factors: c.factors })),
+			m && typeof m.data === 'number' ? charLabel(m.data - 1) : moveLabel(m?.type ?? MoveType.DECLINE),
+			'EV = P(敌人持有)×预期金币×摇摆因子 − 误偷队友惩罚',
+		);
+		return m;
 	}
 
 	case ClientTurnState.MAGICIAN_EXCHANGE_HAND: {
-		const seats = magicianExchangeTargets(gameState, actorId);
+		const scored = magicianExchangeScored(gameState, actorId);
+		const seats = scored.map((s) => s.seat);
 		const moves = seats.map((seat) => ({ type: MoveType.MAGICIAN_EXCHANGE_HAND, data: seat } as Move));
 		board.playerOrder.forEach((pid, idx) => {
 			if (pid !== actorId && isEnemy(gameState, actorId, pid) && !seats.includes(idx)) {
@@ -1382,7 +1596,14 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 			}
 		});
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		record(
+			'魔术师交换目标',
+			scored.map((s) => ({ label: `座位${s.seat}`, score: round1(s.score), factors: s.factors })),
+			m && typeof m.data === 'number' ? `座位${m.data}` : moveLabel(m?.type ?? MoveType.DECLINE),
+			'净收益 = 数量收益 − 我方手牌质量损失',
+		);
+		return m;
 	}
 
 	case ClientTurnState.MAGICIAN_DISCARD_CARDS: {
@@ -1400,7 +1621,16 @@ export function pickAndApplyAutoplayMove(gameState: GameState, version: 'v0' | '
 			data: { player: c.seat, card: c.card },
 		}));
 		moves.push({ type: MoveType.DECLINE });
-		return tryMoves(gameState, moves);
+		const m = tryMoves(gameState, moves);
+		const chosenData = m && m.type === MoveType.WARLORD_DESTROY_DISTRICT && m.data
+			? m.data as { player: number; card: DistrictId }
+			: undefined;
+		record(
+			'军阀拆房目标',
+			cands.map((c) => ({ label: `座位${c.seat}的${c.card}`, score: round1(c.score) })),
+			chosenData ? `座位${chosenData.player}的${chosenData.card}` : moveLabel(m?.type ?? MoveType.DECLINE),
+		);
+		return m;
 	}
 
 	case ClientTurnState.GRAVEYARD_RECOVER_DISTRICT: {
